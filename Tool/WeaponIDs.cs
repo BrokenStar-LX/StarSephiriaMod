@@ -48,7 +48,7 @@ namespace SPMod.Tool
         public const int Hypersensitivity = 11;                     // 过敏
         public const int SwarmingShadow = 12;                       // 聚集的阴影
         public const int Minimalism = 13;                           // 极简主义
-        public const int Negligence = 14;                           // 默杀
+        public const int Negligence = 14;                           // 无视
         public const int LovingGaze = 15;                           // 爱的眼神
         public const int SwiftRegret = 16;                          // 短暂自责
         public const int TroublingDelight = 17;                     // 不便的喜悦

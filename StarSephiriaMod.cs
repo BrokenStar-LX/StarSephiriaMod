@@ -18,6 +18,7 @@ using static SPMod.ModContent.LoadModContent;
 using static SPMod.StarSephiriaPatches;
 using static SPMod.Tool.EffectConstant;
 using static SPMod.Tool.ModuleComponents;
+using static UnityEngine.GraphicsBuffer;
 using Component = UnityEngine.Component;
 using Object = UnityEngine.Object;
 
@@ -733,6 +734,25 @@ namespace SPMod
                     Attack.attackDashTime *= 0.5f;
                     Attack.swingFxPrefab = null;
                 });//耀目的寂静
+                WeaponDatabase.Modify(WeaponIDs.LightningGreatSwordE3G, Weapon =>
+                {
+                    Weapon.mainWeaponPrefab.GetComponent<WeaponSimple_GreatSword>().sweepCost = 0;
+                });// 电击大剑[E3G]
+                WeaponDatabase.Modify(WeaponIDs.Lazarion, Weapon =>
+                {
+                    Weapon.mainWeaponPrefab.GetComponent<WeaponSimple_GreatSword>().sweepCost = 10;
+                });// 拉扎里恩
+                WeaponDatabase.Modify(WeaponIDs.Negligence, Weapon =>
+                {
+                    WeaponSimple_GreatSword Target = Weapon.mainWeaponPrefab.GetComponent<WeaponSimple_GreatSword>();
+                    Target.sweepCost = 3;
+                    NewWeaponFireData_MeleeAttack Special = (NewWeaponFireData_MeleeAttack)Object.Instantiate(Target.specialAttacks[0]);
+                    Special.attackDashCurveType = EAttackDashCurveType.Deceleration;
+                    Special.attackDashSpeed = 0f;
+                    Special.attackDashTime = 0f;
+                    Special.damageMultiplier = 2f;
+                    Target.specialAttacks[0] = Special;
+                });// 无视
                 WeaponDatabase.Modify(WeaponIDs.Minimalism, Weapon =>
                 {
                     WeaponSimple Target = WeaponDatabase.FindWeaponById(513).mainWeaponPrefab.GetComponent<WeaponSimple>();
@@ -798,6 +818,8 @@ namespace SPMod
                 WeaponDatabase.Modify(WeaponIDs.ScattershotShooter, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1f, 1, 2, 2));//散弹发射器
                 WeaponDatabase.Modify(WeaponIDs.GunpowderSynthesis, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1f, -1, 2, 2));//火药合成
             }
+
+            Skin.GetAddAllModSkin();
         }
 
         public static void OnLoadItemDatabase()
@@ -1174,7 +1196,7 @@ namespace SPMod
                 MiracleDatabase.Modify("Electromancer", modifier =>
                 {
                     if (modifier is Miracle_StatusInstance MiracleStatus)
-                        MiracleStatus.miracleImage = Tools.LoadEmbeddedSprite($"Miracle_Engineer");
+                        MiracleStatus.miracleImage = Tools.LoadModSprite($"Miracle_Engineer");
                 });
                 MiracleDatabase.Modify("Elementalist", modifier =>
                 {
@@ -1508,17 +1530,13 @@ namespace SPMod
             {
                 if (ID.EqualsAny(TextFile.SpecialAttackSpeed))
                 {
-                    Result += 15 + (int)(100 * Tools.NegligenceAttackMult(Player.GetCustomStatUnsafe(TextFile.AttackSpeed), 0.75f));
+                    Result += 15;// + Player.GetCustomStatUnsafe(TextFile.AttackSpeed);
                 }
-                if (ID.EqualsAny(TextFile.SpecialAttackCostReduction))
+                if (ID.EqualsAny(TextFile.SpecialAttackChargeSpeed))
                 {
-                    Result += 100.IntMult(Tools.NegligenceAttackMult(Player.GetCustomStatUnsafe(TextFile.AttackSpeed), 1f));
+                    Result += Player.GetCustomStatUnsafe(TextFile.AttackSpeed);
                 }
-                if (ID.EqualsAny(TextFile.SpecialAttackDamageBonus))
-                {
-                    Result -= 15;
-                }
-            }//默杀 特殊攻击速度/消耗受攻击速度影响
+            }//默杀 特殊攻击速度/特殊攻击蓄力速度
 
             if (Player.IsWeaponUseNet(WeaponIDs.Superconductor))
             {

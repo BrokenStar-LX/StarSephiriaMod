@@ -138,6 +138,7 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_Drífa", true, IceColor),
             new ModKeyWord("ModWeaponEffect_Minigun", true, LightningColor),
             new ModKeyWord("ModWeaponEffect_MarkStabilization", true, WeaponColor),
+            new ModKeyWord("ModWeaponEffect_Negligence", true, WeaponColor),
             new ModKeyWord("Stealth", true, WeaponColor),
         };
         //模组HUD
@@ -754,7 +755,7 @@ namespace SPMod.ModContent
                 Effect.unitPrefab = UnitDatabase.GetSpawnEntity("SamuraiDemon").spawnTargets[0];
                 UnitAvatar component = Effect.unitPrefab.GetComponent<UnitAvatar>();
                 Effect.unitName = new LocalizedString(component.defaultNameKey);
-                component.miniFaceChipSprite = Tools.LoadEmbeddedSprite("Item_DevilPact_MiniIcon");
+                component.miniFaceChipSprite = Tools.LoadModSprite("Item_DevilPact_MiniIcon");
             }),//恶魔契约
 
             new ModItem("BottledLightning").CreateItem(true)

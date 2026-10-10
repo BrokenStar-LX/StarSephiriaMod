@@ -117,7 +117,7 @@
   "Minimalism": "{+40%}<tag=AttackSpeed>\n<tag=WeaponAction_BasicAttack>获得1层<tag=ModWeaponEffect_Minimalism>\n<tag=WeaponAction_DashAttack>的倍率改为200%，位移距离更远\n<tag=WeaponAction_DashAttack>时获得短暂无敌，<tag=ModWeaponEffect_Minimalism>会延长无敌时间",
   "TheSecond": "第一次释放<tag=WeaponAction_DashAttack>不消耗<tag=ModWeaponEffect_Minimalism>",
   "BlackIronHalberd": "{+40%}<tag=AttackSpeed>\n{+2}<tag=ModWeaponEffect_Minimalism>叠加上限",
-  "Negligence": "<tag=WeaponAction_Whirlwind>立刻充能\n<tag=AttackSpeed>会影响以下属性：\n<tag=SpecialAttackSpeed>\n<tag=SpecialAttackCostReduction>\n<tag=WeaponAction_Whirlwind>造成的伤害",
+  "Negligence": "<tag=WeaponAction_SpecialAttack>改为<tag=ModWeaponEffect_Negligence>(3<tag=MP>)",
   "LovingGaze": "{+50%}<tag=WeaponAction_Whirlwind>的<tag=CriticalChance>\n{+50%}<tag=SpecialAttackSpeed>\n<tag=WeaponAction_Whirlwind>受到200%<tag=CriticalDamageRate>影响",
 
   "SafeStart": "每2点<tag=Defense>{+1%}<tag=WeaponAction_SpecialAttack>的伤害\n<tag=WeaponAction_Parry>获得强化：\n位移距离和判断时间增加，<tag=MP>消耗减少",
@@ -333,6 +333,8 @@
   "ModKeyword_ModWeaponEffect_Minigun_Effect": "造成200%<tag=WeaponAction_LightningArrow>的伤害",
   "ModKeyword_ModWeaponEffect_MarkStabilization": "<tag=WeaponAction_SpecialAttack>：荷电粒子炮",
   "ModKeyword_ModWeaponEffect_MarkStabilization_Effect": "伤害：720%<tag=LightningDamage>\n每1%<tag=AdvancedElectric>概率{+1%}伤害\n每层额外<tag=Electric>叠加上限{+33%}伤害\n此效果受<tag=Electric><tag=Stat_Reinforce>\n需要消耗5层电荷发射",
+  "ModKeyword_ModWeaponEffect_Negligence": "<tag=WeaponAction_SpecialAttack>：大旋风",
+  "ModKeyword_ModWeaponEffect_Negligence_Effect": "持续释放旋风斩，可以自由移动\n伤害：200%<tag=PhysicalDamage>\n此效果受<tag=AttackSpeed>影响",
   "ModKeyword_Stealth": "潜行状态",
   "ModKeyword_Stealth_Effect": "效果期间拥有以下效果：\n{+100%}<tag=MoveSpeed>\n{-70%}造成的伤害\n受击必定<tag=Evasion>且获得短暂无敌时间",
 

@@ -196,7 +196,7 @@ namespace SPMod.ModContent
                 return base.GetCustomIcon(pos, isInstance);
             }
             if (ActiveIcon == null)
-                ActiveIcon = Tools.LoadEmbeddedSprite($"Item_BluePointer2");
+                ActiveIcon = Tools.LoadModSprite($"Item_BluePointer2");
             if (ActiveIcon != null && AssignedCategory.Count > 0)
             {
                 return ActiveIcon;

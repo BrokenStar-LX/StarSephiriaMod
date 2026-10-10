@@ -1653,6 +1653,7 @@ namespace SPMod
                     }
                 }
 
+                __instance.UpdateModEffectTime(ref WeaponPatch.InvincibleSpecialAttackCD);
                 __instance.UpdateModEffectTime(ref WeaponPatch.DraftbladeAttack);
                 __instance.UpdateModEffectTime(ref StarSephiriaMod.Otter3_AddCrit);
                 __instance.UpdateModEffectTime(ref SolisImberEffect);
@@ -2803,7 +2804,7 @@ namespace SPMod
 
                     if (HardLevel == null)
                     {
-                        Sprite? Icon = Tools.LoadEmbeddedSprite("HardIcon");
+                        Sprite? Icon = Tools.LoadModSprite("HardIcon");
                         if(Icon != null)
                         {
                             int Value = SaveManager.Current.GetInt("[Star's Sephiria Mod]HardModePoint_Weapon_" + Orig.id, 0);

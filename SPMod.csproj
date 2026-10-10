@@ -12,6 +12,7 @@
     <None Remove="Localization\zh-CN.json" />
     <None Remove="ModContent\ComboEffect_Comet.prefab" />
     <None Remove="ModContent\modassetbundle" />
+    <None Remove="Sprites\Weapon\**\*.png" />
     <None Remove="Sprites\Categories_Comet.png" />
     <None Remove="Sprites\Categories_Fortune.png" />
     <None Remove="Sprites\Engineer.png" />
@@ -195,6 +196,7 @@
     <EmbeddedResource Include="Sprites\ModEffectHUD_Rosion.png" />
     <EmbeddedResource Include="Sprites\ModEffectHUD_SpearofZeus.png" />
     <EmbeddedResource Include="Sprites\ModEffectHUD_ThunderBeast.png" />
+    <EmbeddedResource Include="Sprites\Weapon\**\*.png" />
   </ItemGroup>
 
   <ItemGroup>

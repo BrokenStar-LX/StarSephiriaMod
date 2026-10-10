@@ -16,6 +16,7 @@ using static SPMod.Tool.WeaponIDs;
 using static UnityEngine.GraphicsBuffer;
 using static UnityEngine.UI.GridLayoutGroup;
 using Color = UnityEngine.Color;
+using Object = UnityEngine.Object;
 using Random = System.Random;
 
 namespace SPMod
@@ -64,11 +65,13 @@ namespace SPMod
         public static Dictionary<UnitAvatar, int> XRA9Effect = new Dictionary<UnitAvatar, int>();
         public static Dictionary<UnitAvatar, int> MarkStabilizationEffect = new Dictionary<UnitAvatar, int>();
         public static Dictionary<UnitAvatar, float> OverhangingStormCloudEffect = new Dictionary<UnitAvatar, float>();
+        public static Dictionary<UnitAvatar, bool> AutoSweepSwing = new Dictionary<UnitAvatar, bool>();
 
         public static event Action? OnCrossbowUseReLoad = null;
         private static void InitializeModEffect(WeaponSimple __instance)
         {
             UnitAvatar Player = __instance.Networkowner.unitAvatar;
+            if (Player.blockMoveByInput < 0) Player.blockMoveByInput = 0;
             LightningsWrathEffect.SafeRemove(Player);
             LightningsWrathEffect2.SafeRemove(Player);
             DarkVeilBuff.SafeRemove(Player);
@@ -80,14 +83,15 @@ namespace SPMod
             SilenceofEverfrostAttack.SafeRemove(Player);
             SilenceofEverfrostCharm.SafeRemove(Player);
             SilenceofEverfrostCharmDamage.SafeRemove(Player);
-            if (WeaponPatch.MarkStabilizationEffect.ContainsKey(Player))
+            AutoSweepSwing.SafeRemove(Player);
+            if (MarkStabilizationEffect.ContainsKey(Player))
             {
-                WeaponPatch.MarkStabilizationEffect.SafeRemove(Player);
+                MarkStabilizationEffect.SafeRemove(Player);
                 Player.DestroyEffectHUD("MarkStabilizationCharge");
             }
 
             if (!ModConfig.Instance.EnableWeaponModifier) return;
-            if (__instance.entityId == WeaponIDs.GrippingFear)
+            if (__instance.entityId == GrippingFear)
             {
                 if (!GrippingFearBuff.Add(Player))
                     Player.additionalPerfectGuardTime += Player.perfectGuardTime * 0.5f;
@@ -1097,6 +1101,53 @@ namespace SPMod
                 return true;
             }
 
+            private static GameObject? IceEclipseStateUnlitObject = null;
+            [HarmonyPatch("OnEclipseBuffActivatedChanged")]
+            [HarmonyPrefix]
+            static bool OnEclipseBuffActivatedChanged_Prefix(WeaponSimple_Katana __instance, bool oldValue, bool newValue)
+            {
+                if (!ModConfig.Instance.EnableWeaponModifier) return false;
+                if (newValue)
+                {
+                    if (__instance.eclipseStateUnlitObject != null)
+                    {
+                        UnitAvatar Player = __instance.Networkowner.unitAvatar;
+                        if (IceEclipseStateUnlitObject == null)
+                        {
+                            GameObject Target = __instance.eclipseStateUnlitObject;
+                            IceEclipseStateUnlitObject = Object.Instantiate(Target, Target.transform.parent);
+                            if (IceEclipseStateUnlitObject.TryGetComponent<SpriteRenderer>(out var Renderer) && Renderer.sprite != null)
+                            {
+                                Sprite? Value = Tools.LoadModSpriteForPath("Weapon.SolisEkli", "katana_Fire_FlameSword_In");
+                                if (Value != null)
+                                    Renderer.sprite = Skin.FixPivot(Renderer.sprite, Value);
+                            }
+                        }
+                        if (IceEclipseStateUnlitObject != null)
+                        {
+                            if (Player.GetCustomStatUnsafe(TextFile.FlameSwordFrost) > 0)
+                            {
+                                __instance.defaultStateUnlitObject?.SetActive(false);
+                                if (__instance.eclipseActivateFxPrefab != null)
+                                {
+                                    SpriteFx.Pool.Spawn(__instance.eclipseActivateFxPrefab, __instance.mainWeaponRenderer.transform.position, null);
+                                }
+                                IceEclipseStateUnlitObject.SetActive(true);
+                                return false;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (IceEclipseStateUnlitObject != null)
+                    {
+                        IceEclipseStateUnlitObject.SetActive(false);
+                    }
+                }
+                return true;
+            }
+
             public static void ShootMagicBlade(WeaponSimple_Katana __instance, float DamageMult = 1f)
             {
                 UnitAvatar Player = __instance.Networkowner.unitAvatar;
@@ -1638,55 +1689,59 @@ namespace SPMod
                 {
                     return true;
                 }
-
-                if (sweepSwingField == null || sweepRequestField == null || sweepTimerField == null || RpcCreateCompleteChargeFxMethod == null)
+                if (!ModConfig.Instance.EnableWeaponModifier) return true;
+                if (sweepRequestField == null || sweepTimerField == null || RpcCreateCompleteChargeFxMethod == null)
                 {
                     LogError("[WeaponSimple_GreatSword][Update]反射获取失败");
                     return true;
                 }
 
-                bool sweepSwing = (bool)sweepSwingField.GetValue(__instance);
                 bool sweepRequest = (bool)sweepRequestField.GetValue(__instance);
                 Timer sweepTimer = (Timer)sweepTimerField.GetValue(__instance);
                 UnitAvatar Player = __instance.Networkowner.unitAvatar;
-                if (InvincibleSpecialAttackCD.ContainsKey(Player))
+                if (AutoSweepSwing.TryGetValue(Player, out bool falg) && falg)
                 {
-                    if (InvincibleSpecialAttackCD[Player].Update(Time.deltaTime))
-                        InvincibleSpecialAttackCD.Remove(Player);
+                    return false;
                 }
-                if (sweepSwing && !Player.IsWeapon(WeaponIDs.Compliance))
+                if (__instance.sweepSwing && !Player.IsWeapon(WeaponIDs.Compliance))
                 {
                     float SpAtSpeed = Time.deltaTime;
-
-                    // 添加蓄力速度自定义属性
-                    int chargeSpeedStat = Player.GetCustomStatUnsafe("SPECIALATTACKCHARGESPEED");
-                    if (chargeSpeedStat != 0)
-                    {
-                        SpAtSpeed *= (1f + chargeSpeedStat / 100f);
-                    }
-
+                    SpAtSpeed *= (1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackChargeSpeed) * 0.01f);
                     if (__instance.longCharge && !ModConfig.Instance.EnableWeaponModifier)
                     {
                         SpAtSpeed *= 0.6f;
-                    }
-                    if (__instance.superQuickSweep)
-                    {
-                        SpAtSpeed *= 100f;
                     }
                     if (__instance.quickSweep)
                     {
                         SpAtSpeed *= 1.5f;
                     }
-
+                    if (__instance.superQuickSweep)
+                    {
+                        SpAtSpeed *= 2f;
+                    }
+                    if (!sweepRequest && __instance.entityId == WeaponIDs.Negligence)
+                    {
+                        __instance.Networkowner.animator.speed = 1f + Player.GetCustomStatUnsafe(TextFile.AttackSpeed) * 0.01f;
+                        __instance.Networkowner.animator.speed *= 2f;
+                        __instance.Networkowner.SetAnimationBool(AnimHashContainer.Instance.IsChargingHash, true);
+                    }
                     if (!sweepRequest && sweepTimer.Update(SpAtSpeed) && Player.MP >= __instance.SweepCost)
                     {
                         RpcCreateCompleteChargeFxMethod.Invoke(__instance, null);
                         sweepRequestField.SetValue(__instance, true);
+                        if (__instance.entityId == WeaponIDs.Negligence)
+                        {
+                            AutoAttackButtonUp(__instance);
+                        }
                     }
                     __instance.Networkowner.NetworkchargingRatioForUI = sweepTimer.Ratio;
                 }
                 else
                 {
+                    if (__instance.entityId == WeaponIDs.Negligence)
+                    {
+                        __instance.Networkowner.animator.speed = 1f;
+                    }
                     sweepRequestField.SetValue(__instance, false);
                     sweepTimer.SetTimer(0f);
                     __instance.Networkowner.NetworkchargingRatioForUI = 0f;
@@ -1703,12 +1758,15 @@ namespace SPMod
                         Player.DestroyEffectHUD("GreatswordTransformed");
                     }
                 }
+                if (__instance.entityId == WeaponIDs.Negligence)
+                {
+                    Player.blockMoveByInput = -1;
+                }
                 if (Player.IsWeapon(WeaponIDs.Minimalism, WeaponIDs.TheSecond, WeaponIDs.BlackIronHalberd))
                 {
                     __instance.outsideBonus = false;
                     __instance.doubleWhirlwind = false;
                 }
-
                 if (Player.IsWeapon(WeaponIDs.TroublingDelight, WeaponIDs.LegacyofTheIllusionist, WeaponIDs.Lazarion, WeaponIDs.PristineForm))
                 {
                     if (__instance.entityId == WeaponIDs.TroublingDelight ||
@@ -1717,17 +1775,37 @@ namespace SPMod
                         __instance.entityId == WeaponIDs.PristineForm)
                         __instance.attackWeightPerSwing = 0.22f;
                 }
-                if (Player.IsWeapon(WeaponIDs.LegacyofTheIllusionist) && __instance.entityId == WeaponIDs.LegacyofTheIllusionist)
+                if (__instance.entityId == WeaponIDs.LegacyofTheIllusionist)
                 {
                     if (LegacyofTheIllusionistAttack.TryGetValue(Player.Name, out LegacyofTheIllusionistAttackData Attack))
                         if (Player.IsInBattle)
                             Attack.Update(__instance, Player);
                 }
-                if (Player.IsWeapon(WeaponIDs.BloodlettingGearblade) && __instance.entityId == WeaponIDs.BloodlettingGearblade)
+                if (__instance.entityId == WeaponIDs.BloodlettingGearblade)
                 {
                     if (!__instance.NetworkisTransformed) __instance.Networkowner.animator.speed = 1f;
                 }
                 return false;
+            }
+
+            private static void AutoAttackButtonUp(WeaponSimple_GreatSword __instance)
+            {
+                UnitAvatar Player = __instance.Networkowner.unitAvatar;
+                if (!AutoSweepSwing.ContainsKey(Player))
+                    AutoSweepSwing[Player] = false;
+                if (!AutoSweepSwing[Player])
+                {
+                    if (__instance.Networkowner.unitAvatar.MP >= __instance.SweepCost)
+                    {
+                        __instance.Networkowner.NetworkattackDirection = __instance.Networkowner.aimedPositionClientside - __instance.Networkowner.transform.position;
+                        __instance.Networkowner.SetAnimationBool(AnimHashContainer.Instance.IsChargingHash, false);
+                        __instance.Networkowner.SetAnimationTrigger(AnimHashContainer.Instance.SweepHash);
+                        __instance.Networkowner.unitAvatar.UseMp(__instance.SweepCost);
+                        __instance.Networkowner.SetMpConsumedAttackTriggerFromAnimationValue(__instance.SweepCost);
+                        __instance.Networkowner.SetAnimationInt(AnimHashContainer.Instance.SweepNumHash, 200);
+                        AutoSweepSwing[Player] = true;
+                    }
+                }
             }
 
             [HarmonyPatch("AttackButtonDown")]
@@ -1754,21 +1832,6 @@ namespace SPMod
                 return true;
             }
 
-            [HarmonyPatch("get_SweepCost")]
-            [HarmonyPostfix]
-            static void SweepCost_Postfix(WeaponSimple_GreatSword __instance, ref int __result)
-            {
-                UnitAvatar Player = __instance.Networkowner.unitAvatar;
-                if (Player.IsWeapon(WeaponIDs.LightningGreatSwordE3G) && __instance.entityId == WeaponIDs.LightningGreatSwordE3G)
-                {
-                    __result = 0;
-                }
-                if (Player.IsWeapon(WeaponIDs.Lazarion) && __instance.entityId == WeaponIDs.Lazarion)
-                {
-                    __result = __result.IntMult(10f / 24f);
-                }
-            }
-
             [HarmonyPatch("SubAttackButtonUp")]
             [HarmonyPostfix]
             static void SubAttackButtonUp_Postfix(WeaponSimple_GreatSword __instance)
@@ -1785,6 +1848,10 @@ namespace SPMod
                 }
 
                 UnitAvatar Player = __instance.Networkowner.unitAvatar;
+                if (AutoSweepSwing.TryGetValue(Player, out bool falg) && falg)
+                {
+                    AutoSweepSwing[Player] = false;
+                }
                 if (Player.GetCustomStatUnsafe(TextFile.InvincinleSpiceialAttack) > 0)
                 {
                     if ((bool)sweepRequestField.GetValue(__instance))
@@ -1807,11 +1874,23 @@ namespace SPMod
                     return;
                 }
 
+                UnitAvatar Player = __instance.Networkowner.unitAvatar;
                 if (__instance.rapidWhirlwind && (bool)projectile)
                 {
-                    UnitAvatar Player = __instance.Networkowner.unitAvatar;
                     projectile.additionalCriticalChancePercent -= 50f;
                     projectile.additionalCriticalDamageRate += Player.GetCustomStatUnsafe(TextFile.CriticalDamageBonus).IntMult(1f);
+                }
+                if (Player.IsWeapon(WeaponIDs.Negligence) && __instance.entityId == WeaponIDs.Negligence)
+                {
+                    if (AutoSweepSwing.TryGetValue(Player, out bool falg) && falg)
+                    {
+                        if (sweepRequestField == null || sweepTimerField == null) return;
+                        Timer sweepTimer = (Timer)sweepTimerField.GetValue(__instance);
+                        sweepTimer.Ratio = 0f;
+                        sweepTimerField.SetValue(__instance, sweepTimer);
+                        sweepRequestField.SetValue(__instance, false);
+                        AutoSweepSwing[Player] = false;
+                    }
                 }
             }
         }
@@ -2717,6 +2796,55 @@ namespace SPMod
             }//纳斯特朗的碎片效果
         }
 
+        [HarmonyPatch(typeof(WeaponAddonCommon_AdditionalElementalDamage))]
+        public static class WeaponAddonCommon_AdditionalElementalDamage_Patches
+        {
+            public static void ModifiersAddElementalDamagValue(WeaponAddonCommon_AdditionalElementalDamage Common)
+            {
+                if (!ModConfig.Instance.EnableWeaponModifier) return;
+
+                WeaponSimple Weapon = Common.parent;
+                UnitAvatar Player = Common.parent.Networkowner.unitAvatar;
+                if (Player != null)
+                {
+                    if (Weapon.entityId == WeaponIDs.SolisEkli)
+                    {
+                        if (Player.GetCustomStatUnsafe(TextFile.FlameSwordFrost) > 0)
+                        {
+                            Common.statId = ECustomStat.IceDamage;
+                            Common.elementalType = EDamageElementalType.Ice;
+                        }
+                        else
+                        {
+                            Common.statId = ECustomStat.FireDamage;
+                            Common.elementalType = EDamageElementalType.Fire;
+                        }
+                    }
+                }
+            }
+
+            [HarmonyPatch("OnBasicAttackUnit")]
+            [HarmonyPrefix]
+            private static void OnBasicAttackUnit_Prefix(WeaponAddonCommon_AdditionalElementalDamage __instance, CombatBehaviour avatar, DamageInstance instance, ProjectileBase projectile)
+            {
+                ModifiersAddElementalDamagValue(__instance);
+            }
+
+            [HarmonyPatch("OnSpecialAttackUnit")]
+            [HarmonyPrefix]
+            private static void OnSpecialAttackUnit_Prefix(WeaponAddonCommon_AdditionalElementalDamage __instance, CombatBehaviour avatar, DamageInstance instance, ProjectileBase projectile)
+            {
+                ModifiersAddElementalDamagValue(__instance);
+            }
+
+            [HarmonyPatch("OnDashAttackUnit")]
+            [HarmonyPrefix]
+            private static void OnDashAttackUnit_Prefix(WeaponAddonCommon_AdditionalElementalDamage __instance, CombatBehaviour avatar, DamageInstance instance, ProjectileBase projectile)
+            {
+                ModifiersAddElementalDamagValue(__instance);
+            }
+        }
+
         [HarmonyPatch(typeof(WeaponAddomCommon_BasicAttackWithFollowerDamage))]
         public static class WeaponAddomCommon_BasicAttackWithFollowerDamage_Patches
         {
@@ -3058,7 +3186,6 @@ namespace SPMod
             }
         }
 
-        public static WeaponSimple_Katana? LightningFlashSimple = null;
         [HarmonyPatch(typeof(NewWeaponFireData_Bullet))]
         public static class NewWeaponFireData_Bullet_Patches
         {
@@ -3665,11 +3792,6 @@ namespace SPMod
                                 else HeidiDashAttack[owner.Name] = 1;
                             }
                         }//海蒂
-                        if (Type == WeaponIDs.Negligence && Data.AttackType == "Special")
-                        {
-                            float Mult = 1f + Tools.NegligenceAttackMult(owner.GetCustomStatUnsafe(TextFile.AttackSpeed), 1.5f);
-                            damage *= Mult;
-                        }//默杀
                         if (Type == WeaponIDs.BeastMarksSwordHou && Data.AttackType == "Special")
                         {
                             if (__instance.damageMultiplier == 1.175f)

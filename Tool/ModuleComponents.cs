@@ -22,6 +22,44 @@ namespace SPMod.Tool
     }
     public static class ModuleComponents
     {
+        public class SpriteReplaceData
+        {
+            public Func<UnitAvatar, bool> UseReplace;
+            public Dictionary<string, Sprite> Sprites = new Dictionary<string, Sprite>();
+            public SpriteReplaceData(Func<UnitAvatar, bool> Condition, List<string> SpriteName, string Path = "")
+            {
+                UseReplace = Condition;
+                bool falg = Path == "";
+                foreach (string TargetName in SpriteName)
+                {
+                    Sprite? Value;
+                    if (falg)
+                    {
+                        Value = Tools.LoadModSprite(TargetName);
+                    }
+                    else
+                    {
+                        Value = Tools.LoadModSpriteForPath(Path, TargetName);
+                    }
+                    if (Value != null)
+                        Sprites[TargetName] = Value;
+                }
+            }
+            public bool GetModSprite(UnitAvatar owner, string Name, out Sprite? Value)
+            {
+                if (UseReplace(owner))
+                {
+                    if (Sprites.TryGetValue(Name, out var TrueSprite))
+                    {
+                        Value = TrueSprite;
+                        return true;
+                    }
+                }
+                Value = null;
+                return false;
+            }
+        }
+
         public class Counter
         {
             public int Count = 0;
@@ -298,7 +336,7 @@ namespace SPMod.Tool
                 NewMiracle.id = ID;
                 NewMiracle.autoGenerateEffectString = true;
                 NewMiracle.aName = new LocalizedString($"Miracle_{ID}");
-                Sprite? Icon = Tools.LoadEmbeddedSprite($"Miracle_{ID}");
+                Sprite? Icon = Tools.LoadModSprite($"Miracle_{ID}");
                 if (Icon != null)
                     NewMiracle.miracleImage = Icon;
                 NewMiracle.statInfo = statList.ToArray();
@@ -351,9 +389,9 @@ namespace SPMod.Tool
                 ModCategory.id = ID;
                 ModCategory.categoryName = new LocalizedString($"ModItemCategory_{Name}");
                 ModCategory.categoryFruitName = new LocalizedString($"ModItemCategory_{Name}Fruit");
-                ModCategory.categoryIcon = Tools.LoadEmbeddedSprite($"Categories_{Name}");
-                ModCategory.categoryFruitIcon = Tools.LoadEmbeddedSprite($"Fruits_{FruitIco}0");
-                ModCategory.categoryIceFruitIcon = Tools.LoadEmbeddedSprite($"Fruits_{FruitIco}1");
+                ModCategory.categoryIcon = Tools.LoadModSprite($"Categories_{Name}");
+                ModCategory.categoryFruitIcon = Tools.LoadModSprite($"Fruits_{FruitIco}0");
+                ModCategory.categoryIceFruitIcon = Tools.LoadModSprite($"Fruits_{FruitIco}1");
                 ModCategory.comboEffectPrefab = Prefab;
                 return ModCategory;
             }
@@ -390,7 +428,7 @@ namespace SPMod.Tool
             }
             public ModKeyWord StringToSprite(string Name)
             {
-                Image = Tools.LoadEmbeddedSprite(Name);
+                Image = Tools.LoadModSprite(Name);
                 return this;
             }
             public ModKeyWord UseKeyWordSprite(string Name)
@@ -462,7 +500,7 @@ namespace SPMod.Tool
                 if (FlavorText) Flavor = "ModItemEntity_" + Name + "_Flavor";
                 ModItem.aFlavorText = new LocalizedString(Flavor);
                 ModItem.resourcePrefab = Prefab;
-                ModItem.icon = Tools.LoadEmbeddedSprite($"Item_{Name}");
+                ModItem.icon = Tools.LoadModSprite($"Item_{Name}");
                 ModItem.isDestroyedOnDiscard = IsDestroyedOnDiscard;
                 ModItem.sapphirePrice = SapphirePrice;
                 if (CustomCost >= 0) ModItem.cost = CustomCost;
@@ -509,7 +547,7 @@ namespace SPMod.Tool
                 if (prefab.transform is RectTransform rectTransform)
                 {
                     Image component2 = rectTransform.GetChild(1).GetComponent<Image>();
-                    component2.sprite = Tools.LoadEmbeddedSprite($"ModEffectHUD_{Name}");
+                    component2.sprite = Tools.LoadModSprite($"ModEffectHUD_{Name}");
                 }
                 if (component is UI_EffectHUD_Stack Stack && !UseNumText)
                 {

@@ -495,8 +495,13 @@ namespace SPMod.Tool
             return false;
         }
 
-        public static Sprite? LoadEmbeddedSprite(string Name)
+        public static Dictionary<string, Sprite> ModSpriteList = new Dictionary<string, Sprite>();
+        public static Sprite? LoadModSprite(string Name)
         {
+            if (ModSpriteList.TryGetValue(Name, out var Value))
+            {
+                return Value;
+            }
             try
             {
                 Assembly assembly = Assembly.GetExecutingAssembly();
@@ -514,6 +519,39 @@ namespace SPMod.Tool
                 Sprite a = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 16f);
                 a.name = Name;
                 a.texture.filterMode = FilterMode.Point;
+                ModSpriteList[Name] = a;
+                return a;
+            }
+            catch (Exception ex)
+            {
+                StarSephiriaMod.LogError($"加载嵌入图标失败：{ex.Message}");
+                return null;
+            }
+        }
+        public static Sprite? LoadModSpriteForPath(string Path, string Name)
+        {
+            if (ModSpriteList.TryGetValue(Name, out var Value))
+            {
+                return Value;
+            }
+            try
+            {
+                Assembly assembly = Assembly.GetExecutingAssembly();
+                using Stream stream = assembly.GetManifestResourceStream($"SPMod.Sprites.{Path}.{Name}.png");
+                if (stream == null)
+                {
+                    StarSephiriaMod.LogError($"找不到嵌入资源：{Name}，请检查命名和生成操作");
+                    return null;
+                }
+
+                byte[] imageData = new byte[stream.Length];
+                stream.Read(imageData, 0, imageData.Length);
+                Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                texture.LoadImage(imageData);
+                Sprite a = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 16f);
+                a.name = Name;
+                a.texture.filterMode = FilterMode.Point;
+                ModSpriteList[Name] = a;
                 return a;
             }
             catch (Exception ex)
@@ -559,6 +597,22 @@ namespace SPMod.Tool
                     result.Add(kvp, false);
             }
             return result;
+        }
+
+        public static bool TryGetComponentInParent<T>(this Component Source, out T? Result, bool IncludeInactive = false) where T : Component
+        {
+            Result = null;
+            if (!Source) return false;
+            Result = Source.GetComponentInParent<T>(IncludeInactive);
+            return Result != null;
+        }
+
+        public static bool TryGetComponentInParent<T>(this GameObject Source, out T? Result, bool IncludeInactive = false) where T : Component
+        {
+            Result = null;
+            if (!Source) return false;
+            Result = Source.GetComponentInParent<T>(IncludeInactive);
+            return Result != null;
         }
     }
 }
