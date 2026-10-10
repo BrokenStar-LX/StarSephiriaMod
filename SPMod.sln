@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36414.22 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SPMod", "SPMod.csproj", "{6161F060-6D30-9C26-6A56-1D251B118F3C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6161F060-6D30-9C26-6A56-1D251B118F3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6161F060-6D30-9C26-6A56-1D251B118F3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6161F060-6D30-9C26-6A56-1D251B118F3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6161F060-6D30-9C26-6A56-1D251B118F3C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7068B055-9D12-4AD2-B3F6-4C052964052C}
+	EndGlobalSection
+EndGlobal
