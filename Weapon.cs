@@ -113,6 +113,34 @@ namespace SPMod
                 if (__instance.unitAvatar)
                     WeaponType[__instance.unitAvatar.Name] = weaponID;
             }
+
+            [HarmonyPatch("BeginSpecialAttackAnimation")]
+            [HarmonyPostfix]
+            static void BeginSpecialAttackAnimation_Postfix(WeaponControllerSimple __instance, int fireId)
+            {
+                if (__instance.unitAvatar)
+                {
+                    UnitAvatar Player = __instance.unitAvatar;
+                    if (Player.IsWeapon(WeaponIDs.Negligence))
+                    {
+                        Player.blockMoveByInput = 0;
+                    }
+                }
+            }
+
+            [HarmonyPatch("EndAttckAnimation")]
+            [HarmonyPostfix]
+            static void EndAttckAnimation_Postfix(WeaponControllerSimple __instance)
+            {
+                if (__instance.unitAvatar)
+                {
+                    UnitAvatar Player = __instance.unitAvatar;
+                    if (Player.IsWeapon(WeaponIDs.Negligence))
+                    {
+                        Player.blockMoveByInput = 0;
+                    }
+                }
+            }
         }
 
         [HarmonyPatch(typeof(WeaponSimple))]
@@ -355,14 +383,7 @@ namespace SPMod
                 {
                     if (idx == __instance.finalComboIdx)
                     {
-                        if (Player.GetCustomStatUnsafe(TextFile.InvincinleSpiceialAttack) > 0)
-                        {
-                            if (!InvincibleSpecialAttackCD.ContainsKey(Player))
-                            {
-                                __instance.Networkowner.StartParryInvincible(0.6f);
-                                InvincibleSpecialAttackCD.Add(Player, new Timer(1.2f));
-                            }
-                        }
+                        SweepInvincinle(__instance, Player);
                     }
                 }//顺从的姿态
                 if (Player.IsWeapon(WeaponIDs.Malaspina) && __instance.entityId == WeaponIDs.Malaspina)
@@ -684,7 +705,7 @@ namespace SPMod
                     {
                         if (LightningsWrathEffect.TryGetValue(Player, out int Value) && Value >= 40)
                         {
-                            float UseTime = (1f + Player.GetCustomStatUnsafe(TextFile.DebuffDuration) * 0.01f);
+                            float UseTime = (2f + Player.GetCustomStatUnsafe(TextFile.DebuffDuration) * 0.01f * 0.4f);
                             LightningsWrathEffect2[Player] = new Timer(UseTime);
                             __instance.Networkowner.StartParryInvincible(UseTime);
                             Player.CreateEffectHUD("ThunderBeast", "LightningsWrath_ThunderBeast");
@@ -1673,6 +1694,18 @@ namespace SPMod
             }
          }
 
+        private static void SweepInvincinle(WeaponSimple Weapon, UnitAvatar Player)
+        {
+            if (Player.GetCustomStatUnsafe(TextFile.InvincinleSpiceialAttack) > 0)
+            {
+                if (!InvincibleSpecialAttackCD.ContainsKey(Player))
+                {
+                    Weapon.Networkowner.StartParryInvincible(0.6f);
+                    InvincibleSpecialAttackCD.Add(Player, new Timer(1.2f));
+                }
+            }
+        }
+
         [HarmonyPatch(typeof(WeaponSimple_GreatSword))]
         public static class WeaponSimple_GreatSword_Patches
         {
@@ -1717,12 +1750,12 @@ namespace SPMod
                     }
                     if (__instance.superQuickSweep)
                     {
-                        SpAtSpeed *= 2f;
+                        SpAtSpeed *= 2.25f;
                     }
                     if (!sweepRequest && __instance.entityId == WeaponIDs.Negligence)
                     {
                         __instance.Networkowner.animator.speed = 1f + Player.GetCustomStatUnsafe(TextFile.AttackSpeed) * 0.01f;
-                        __instance.Networkowner.animator.speed *= 2f;
+                        __instance.Networkowner.animator.speed *= 2.25f;
                         __instance.Networkowner.SetAnimationBool(AnimHashContainer.Instance.IsChargingHash, true);
                     }
                     if (!sweepRequest && sweepTimer.Update(SpAtSpeed) && Player.MP >= __instance.SweepCost)
@@ -1757,10 +1790,6 @@ namespace SPMod
                         __instance.NetworkisTransformed = false;
                         Player.DestroyEffectHUD("GreatswordTransformed");
                     }
-                }
-                if (__instance.entityId == WeaponIDs.Negligence)
-                {
-                    Player.blockMoveByInput = -1;
                 }
                 if (Player.IsWeapon(WeaponIDs.Minimalism, WeaponIDs.TheSecond, WeaponIDs.BlackIronHalberd))
                 {
@@ -1804,6 +1833,7 @@ namespace SPMod
                         __instance.Networkowner.SetMpConsumedAttackTriggerFromAnimationValue(__instance.SweepCost);
                         __instance.Networkowner.SetAnimationInt(AnimHashContainer.Instance.SweepNumHash, 200);
                         AutoSweepSwing[Player] = true;
+                        SweepInvincinle(__instance, Player);
                     }
                 }
             }
@@ -1852,16 +1882,9 @@ namespace SPMod
                 {
                     AutoSweepSwing[Player] = false;
                 }
-                if (Player.GetCustomStatUnsafe(TextFile.InvincinleSpiceialAttack) > 0)
+                if ((bool)sweepRequestField.GetValue(__instance))
                 {
-                    if ((bool)sweepRequestField.GetValue(__instance))
-                    {
-                        if (!InvincibleSpecialAttackCD.ContainsKey(Player))
-                        {
-                            __instance.Networkowner.StartParryInvincible(0.6f);
-                            InvincibleSpecialAttackCD.Add(Player, new Timer(1.2f));
-                        }
-                    }
+                    SweepInvincinle(__instance, Player);
                 }
             }
 
@@ -3954,12 +3977,16 @@ namespace SPMod
                                 damage *= Mult;
                             }
                         }//电光一闪
-                        if (Type == WeaponIDs.StaffOfGreatMight && TName.Contains("AttackRolling"))
+                        if (Type == WeaponIDs.StaffOfGreatMight)
                         {
-                            damage *= 1.3f;
-                            float DamageA = owner.GetCustomStatUnsafe(TextFile.DamageReduction) * 0.4f / __instance.damageMultiplier;
-                            DamageA *= 1f + owner.GetCustomStatUnsafe(TextFile.BasicAttackDamageBonus) * 0.01f;
-                            damage += DamageA;
+                            if (Data.AttackType != "Special")
+                            {
+                                float DamageA = owner.GetCustomStatUnsafe(TextFile.DamageReduction) * 0.5f / __instance.damageMultiplier;
+                                DamageA *= damage / owner.GetCustomStatUnsafe(TextFile.PhysicalDamage);
+                                damage += DamageA;
+                                damage *= 1.3f;
+                            }
+                            damage *= 1f + owner.GetCustomStatUnsafe(TextFile.WeaponRange) * 0.01f;
                         }//大力棍
                         if (Type == WeaponIDs.RuadhsleaSpear && Data.AttackType == "Basic")
                         {
@@ -4099,12 +4126,6 @@ namespace SPMod
                         }//食火獬豸
                         if (Type == WeaponIDs.SafeStart || Type == WeaponIDs.LightlessBlade || Type == WeaponIDs.PaleSmile)
                         {
-                            if (Type == WeaponIDs.LightlessBlade)
-                            {
-                                float Add = owner.GetCustomStatUnsafe(TextFile.DamageReduction) * owner.GetCustomStatUnsafe(TextFile.Thorns) * 0.01f;
-                                Add *= 1f + owner.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                                damage += Add * 0.1f;
-                            }
                             if (Data.AttackType == "Special")
                             {
                                 if (__instance.damageMultiplier == 2.6f || __instance.damageMultiplier == 4.68f)
@@ -4120,7 +4141,7 @@ namespace SPMod
                                 }
                                 damage *= 1f + owner.GetCustomStatUnsafe(TextFile.DamageReduction) * 0.01f / 2f;
                             }
-                        }
+                        }//安全的开始
                         if (Type == WeaponIDs.Compliance && Data.AttackType == "Basic")
                         {
                             if (__instance.forceFinalCombo)

@@ -415,14 +415,21 @@ namespace SPMod
         [HarmonyPatch(typeof(Charm_FlameGround_Meteor))]
         public static class Charm_FlameGround_Meteor_Patch
         {
-            [HarmonyPatch("OnUpdate")]
-            [HarmonyPrefix]
-            static void OnUpdate_Prefix(Charm_FlameGround_Meteor __instance)
+            [HarmonyPatch("GetDamage")]
+            [HarmonyPostfix]
+            static void GetDamage_Prefix(Charm_FlameGround_Meteor __instance, UnitAvatar avatar, ref float __result)
             {
-                if (__instance.NetworkAvatar.IsWeapon(WeaponIDs.RedSnakeCrush))
+                UnitAvatar Player = __instance.NetworkAvatar;
+                if (Player.IsWeapon(WeaponIDs.RedSnakeCrush))
                 {
-                    if (__instance.searchTimer.Ratio < 0.99f)
-                        __instance.searchTimer.Ratio = 0.99f;
+                    if (Player.GetCustomStatUnsafe(TextFile.BurnEvo) > 0)
+                    {
+                        __result *= 28f / 18f;
+                    }
+                    __result *= 1f + Player.GetCustomStatUnsafe(TextFile.BurnStack) * 0.2f;
+                    __result *= 1f + Player.GetCustomStatUnsafe(TextFile.BurnDamage) * 0.01f;
+                    __result *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
+                    __result *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
                 }
             }
         }

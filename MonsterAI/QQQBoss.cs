@@ -1613,6 +1613,9 @@ namespace SPMod.MonsterAI
                 if (!NetworkServer.active) return;
 
                 int Max = Hard >= 4 ? 5 : 4;
+                if (PlayerSpawner.MultiplayerList.Count > 0)
+                    Max = 2;
+
                 float Rot = 360f / Max;
                 for (float i = 0f; i < 360f; i += Rot)
                 {

@@ -155,7 +155,6 @@ namespace SPMod.Tool
         public const string DeflectingIce = "DEFLECTINGICE";                                                // 启用冰上滑行
         public const string KatanaElectricCharge = "KATANAELECTRICCHARGE";                                  // 启用电光一闪效果
         public const string FixedAttackSpeed = "FIXEDATTACKSPEED";                                          // 最终攻击速度
-        public const string ExFixedAttackSpeed = "EXFIXEDATTACKSPEED";                                      // 模组海蒂额外攻击速度
         public const string DashEvasion = "DASHEVASION";                                                    // 冲刺无敌判定为闪避
         public const string AbsoluteEvasion = "ABSOLUTEEVASION";                                            // 必定闪避值
         public const string BlueBurnChange = "BLUEBURNCHANGE";                                              // 启用封印的特加斯效果

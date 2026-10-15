@@ -36,14 +36,10 @@ namespace SPMod
 
         public static Dictionary<string, string> _displayNames = new Dictionary<string, string>();
         public static List<string> StarTwinkle_AddDamage = new List<string>();
-        public static Dictionary<string, int> ColdAnger_AddDamage = new Dictionary<string, int>();
         public static CharacterBuff? GuardBuff = null;
-        public static readonly Timer? DarkBrownRabbit3 = new Timer(1f);
         public static Dictionary<UnitAvatar, Timer> Otter3_AddCrit = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<string, int> Seren3_PlanetLevel = new Dictionary<string, int>();
         public static Dictionary<string, Timer> BrownRabbit2Hit = new Dictionary<string, Timer>();
         public static Dictionary<string, float> PlayerLife = new Dictionary<string, float>();
-        public static Dictionary<string, float> Fox3_Add = new Dictionary<string, float>();
         public static List<string> Deer_Buff = new List<string>();
         public static Dictionary<string, AllPlayerStatus> PartyEffect = new Dictionary<string, AllPlayerStatus>();
         public static (bool Update, AllPlayerStatus Value) PartyStats = (false, new AllPlayerStatus(0, 0, 0, 0));
@@ -94,7 +90,6 @@ namespace SPMod
             Projectile.Clear();
             DPSData.Clear();
             Otter3_AddCrit.Clear();
-            ColdAnger_AddDamage.Clear();
             BrownRabbit2Hit.Clear();
             StarTwinkle_AddDamage.Clear();
             Deer_Buff.Clear();
@@ -457,7 +452,6 @@ namespace SPMod
                 {"DEFLECTINGICE","启用冰上滑行"},
                 {"KATANAELECTRICCHARGE","启用电光一闪效果"},
                 {"FIXEDATTACKSPEED","最终攻击速度"},
-                {"EXFIXEDATTACKSPEED","模组海蒂额外攻击速度"},
                 {"DASHEVASION","冲刺无敌判定为闪避"},
                 {"ABSOLUTEEVASION","必定闪避值"},
                 {"BLUEBURNCHANGE","启用封印的加斯特效果"},
@@ -748,9 +742,10 @@ namespace SPMod
                     Target.sweepCost = 3;
                     NewWeaponFireData_MeleeAttack Special = (NewWeaponFireData_MeleeAttack)Object.Instantiate(Target.specialAttacks[0]);
                     Special.attackDashCurveType = EAttackDashCurveType.Deceleration;
+                    Special.attackDashDirectionType = EAttackDashDirectionType.InputDirection;
                     Special.attackDashSpeed = 0f;
                     Special.attackDashTime = 0f;
-                    Special.damageMultiplier = 2f;
+                    Special.damageMultiplier = 3f;
                     Target.specialAttacks[0] = Special;
                 });// 无视
                 WeaponDatabase.Modify(WeaponIDs.Minimalism, Weapon =>
@@ -928,6 +923,11 @@ namespace SPMod
                     Charm_Reddew Effect = item.resourcePrefab.GetComponent<Charm_Reddew>();
                     Effect.damagePercentByLevel = new float[4] { 25f, 50f, 75f, 100f };
                 }); // 红色露水
+                ItemDatabase.Modify(1016, item =>
+                {
+                    Charm_FlameGround_Meteor Effect = item.resourcePrefab.GetComponent<Charm_FlameGround_Meteor>();
+                    Effect.searchTimer.time = 0.1f;
+                }); // 红蛇之眼
                 ItemDatabase.Modify(1071, item =>
                 {
                     Charm_MiniBallista Effect = item.resourcePrefab.GetComponent<Charm_MiniBallista>();
@@ -947,6 +947,11 @@ namespace SPMod
                     Effect.maxLevel = 2;
                     Effect.goldDropBonusByLevel = new int[] { 20, 30, 40 };
                 }); // 克里顿的印章
+                ItemDatabase.Modify(1117, item =>
+                {
+                    Charm_TuningForks Effect = item.resourcePrefab.GetComponent<Charm_TuningForks>();
+                    Effect.damagePercentByLevel = new int[] { 400, 500, 600, 700, 800 };
+                }); // 音叉
                 ItemDatabase.Modify(1137, item =>
                 {
                     Charm_IceSpear Effect = item.resourcePrefab.GetComponent<Charm_IceSpear>();
@@ -1009,6 +1014,17 @@ namespace SPMod
                     Effect.bonusHealAmountByLevel = new float[] { 1, 2, 3 };
                     Effect.stats = new StatusGroup[0] { };
                 }); // 生命之触
+                ItemDatabase.Modify(1243, item =>
+                {
+                    Charm_StatusInstance Effect = item.resourcePrefab.GetComponent<Charm_StatusInstance>();
+                    Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_IceBurn") };
+                }); // 封印的特加斯
+                ItemDatabase.Modify(1268, item =>
+                {
+                    Charm_FreezeNormalSlash Effect = item.resourcePrefab.GetComponent<Charm_FreezeNormalSlash>();
+                    Effect.phSlashDamageMultiplierByLevel = new float[] { 60, 120, 180 };
+                    Effect.slashDamageMultiplierByLevel = new float[] { 90, 180, 270 };
+                }); // 永恒的冬日
                 ItemDatabase.Modify(1277, item =>
                 {
                     Charm_FireBulletInRange Effect = item.resourcePrefab.GetComponent<Charm_FireBulletInRange>();
@@ -1299,7 +1315,6 @@ namespace SPMod
 
         public static void InitializeModStat(string Name)
         {
-            ColdAnger_AddDamage.SafeRemove(Name);
             BrownRabbit2Hit.SafeRemove(Name);
             Deer_Buff.Remove(Name);
             ColdAngerTime.SafeRemove(Name);
@@ -1415,12 +1430,15 @@ namespace SPMod
 
             if (Player.IsWeaponUseNet(WeaponIDs.RedSnakeCrush))
             {
+                if (ID.EqualsAny(TextFile.FixedAttackSpeed))
+                {
+                    Result += Player.GetCustomStatUnsafe(TextFile.BurnSpeed).IntMult(0.5f);
+                }
                 if (ID.EqualsAny(TextFile.RedSnakeEyeDamageBonus))
                 {
                     Result -= 33;
-                    Result += Player.GetCustomStatUnsafe(TextFile.AttackSpeed) / 2;
                 }
-            }//红蛇碎击 攻击速度增加红蛇之眼伤害
+            }//红蛇碎击
 
             if (Player.IsWeaponUseNet(WeaponIDs.SolisCineris))
             {
@@ -1455,12 +1473,12 @@ namespace SPMod
                 if (ID.EqualsAny(TextFile.ElectricDamage))
                 {
                     if (WeaponPatch.LightningsWrathEffect2.ContainsKey(Player))
-                        Result += 20;
+                        Result += 30;
                 }
                 if (ID.EqualsAny(TextFile.AttackSpeed))
                 {
                     if (WeaponPatch.LightningsWrathEffect2.ContainsKey(Player))
-                      Result += 100;
+                      Result += 125;
                 }
                 if (ID.EqualsAny(TextFile.ElectricStack))
                 {
@@ -1528,9 +1546,13 @@ namespace SPMod
 
             if (Player.IsWeaponUseNet(WeaponIDs.Negligence))
             {
+                if (ID.EqualsAny(TextFile.SpecialAttackDamageBonus))
+                {
+                    Result -= 15;
+                }
                 if (ID.EqualsAny(TextFile.SpecialAttackSpeed))
                 {
-                    Result += 15;// + Player.GetCustomStatUnsafe(TextFile.AttackSpeed);
+                    Result += 15;
                 }
                 if (ID.EqualsAny(TextFile.SpecialAttackChargeSpeed))
                 {
@@ -2297,14 +2319,9 @@ namespace SPMod
             {
                 if (Result > 0)
                 {
-                    if (BaseStatsName.Contains(ID))
-                    {
-                        if (Result > 20)
-                            Result = (int)MathF.Floor((Result - 20) * 1.15f) + 20;
-                    }
-                    else Result = (int)MathF.Floor(Result * 1.15f);
+                    Result = (int)MathF.Floor(Result * 1.12f);
                 }
-            }//橙兔3 全属性增加15%
+            }//橙兔3 全属性增加
 
             if (Tools.CostumeSkinUse(Player.Name, "Skeleton", "_3", false))
             {
@@ -2313,14 +2330,6 @@ namespace SPMod
                     Result = Result.IntMult(0.8f);
                 }
             }//骷髅3 攻击速度获取减少
-
-            if (Tools.CostumeSkinUse(Player.Name, "DarkBrownRabbit", "_3", false))
-            {
-                if (ID.EqualsAny(TextFile.AttackSpeed))
-                {
-                    Result = Result.IntMult(0.5f);
-                }
-            }//编发3 攻击速度减少
         }
 
         public static void ModifiedCustomStatFinally(UnitAvatar Player, string ID, ref int Result)
@@ -2459,6 +2468,13 @@ namespace SPMod
                 }
             }//白兔3 普攻加成、特攻加成、冲刺攻击不会低于武器伤害
 
+            if (Tools.CostumeSkinUse(Player.Name, "DarkBrownRabbit", "_3", false))
+            {
+                if (ID.EqualsAny(TextFile.AttackSpeed))
+                {
+                    Result = (int)MathF.Min(Result, 50);
+                }
+            }//编发3 攻击速度上限50点
         }
 
         public static void ModifiedCostume(string PlayerName, ref string[] Stats, ref ItemEntity[] Item, ref bool UseEffect)
@@ -2756,10 +2772,7 @@ namespace SPMod
             }
             if (Tools.CostumeSkinUse(SkinName, "Crocodile_2"))
             {
-                Stats = new string[]
-                {
-                    "ELITE_DAMAGE/20"
-                };
+                Stats = Array.Empty<string>();
                 if (ModConfig.Instance.AddItem)
                 {
                     if (GetModItem.TryGetValue("AlchemistsFlask", out ItemEntity ModItem))

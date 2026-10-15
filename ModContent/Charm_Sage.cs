@@ -10,7 +10,7 @@ namespace SPMod.ModContent
         private StatusInstance? EffectInstance = null;
         private StatusInstance? EffectInstance2 = null;
         [SyncVar]
-        private int Add = 1;
+        private int Add = 0;
         [SyncVar]
         private int Required = 0;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
@@ -49,7 +49,7 @@ namespace SPMod.ModContent
                 EffectInstance2.ClearTarget();
                 EffectInstance2 = null;
             }
-            Add = 1;
+            Add = 0;
         }
         private void LoadInstance()
         {
@@ -57,15 +57,14 @@ namespace SPMod.ModContent
             {
                 Add = 1;
                 int Value = NetworkAvatar.GetCustomStatUnsafe(TextFile.DrinkPotionStack);
-                while (Value > Add)
+                while (Value >= Add)
                 {
-                    Add += 1;
                     Value -= Add;
+                    Add += 1;
                     if (Add > 100) break;
                 }
-                int NextCost = Add + 1;
+                int NextCost = Add;
                 if (Add >= 100) Required = 0;
-                else if (Value >= NextCost) Required = 0;
                 else Required = NextCost - Value;
                 if (Add > 0)
                 {
@@ -89,12 +88,12 @@ namespace SPMod.ModContent
         {
             if (NetworkAvatar && CheckTime.Update(Time.deltaTime))
             {
-                int Value = NetworkAvatar.GetCustomStatUnsafe(TextFile.DrinkPotionStack);
                 int Count = 1;
-                while (Value > 0)
+                int Value = NetworkAvatar.GetCustomStatUnsafe(TextFile.DrinkPotionStack);
+                while (Value >= Count)
                 {
-                    Count += 1;
                     Value -= Count;
+                    Count += 1;
                     if (Count > 100) break;
                 }
                 if (Add != Count)

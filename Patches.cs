@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using FMOD.Studio;
+using HarmonyLib;
 using HeathenEngineering.SteamworksIntegration.API;
 using Mirror;
 using SPMod.ModContent;
@@ -331,12 +332,23 @@ namespace SPMod
                     }
                     if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit", "_3"))
                     {
-                        Damage.damage *= 0.8f;
+                        Damage.damage *= 0.82f;
                     }
                     if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit", "_2"))
                     {
                         float Mult = (Player.MaxMp - Player.MP) / 20f;
                         Damage.damage *= 1f + Mult * 0.01f;
+                    }
+                    if (ModConfig.Instance.ModifyCharm)
+                    {
+                        if (Damage.id == "Debuff_Burn")
+                        {
+                            if (Player.GetCustomStatUnsafe(TextFile.BlueBurnChange) > 0)
+                            {
+                                if (UnityEngine.Random.Range(0, 100) <= 20)
+                                    Target.ApplyDebuff(CombatManager.Instance.frostbiteDebuffPrefab, Player);
+                            }
+                        }
                     }
                 }
                 else if (Damage.origin is UnitAvatar Orig)
@@ -1353,7 +1365,7 @@ namespace SPMod
             }
             private static void CheckCollision(DamageDummy Dummy)
             {
-                Collider2D[] hits = Physics2D.OverlapCircleAll((Vector2)Dummy.transform.position, 2.25f);
+                Collider2D[] hits = Physics2D.OverlapCircleAll((Vector2)Dummy.transform.position, 2f);
 
                 foreach (Collider2D col in hits)
                 {
@@ -1512,25 +1524,6 @@ namespace SPMod
                         StarSephiriaMod.LogInfo("——————生成结束——————");
                         MonsterMessage = false;
                     }
-                }
-
-                if (__instance.IsWeaponUseNet(WeaponIDs.ColdAnger))
-                {
-                    if (!__instance.IsInBattle)
-                        StarSephiriaMod.ColdAnger_AddDamage[__instance.Name] = 0;
-                    if (ColdAngerTime.ContainsKey(__instance.Name))
-                    {
-                        ColdAngerTime[__instance.Name] += Time.deltaTime;
-                        if (ColdAngerTime[__instance.Name] > 5f)
-                        {
-                            ColdAngerTime[__instance.Name] = 0f;
-                            if (StarSephiriaMod.ColdAnger_AddDamage.ContainsKey(__instance.Name))
-                                StarSephiriaMod.ColdAnger_AddDamage[__instance.Name] += 1;
-                            else
-                                StarSephiriaMod.ColdAnger_AddDamage.Add(__instance.Name, 1);
-                        }
-                    }
-                    else ColdAngerTime.Add(__instance.Name, 0);
                 }
 
                 UpdatePartyEffect(__instance);
@@ -3119,16 +3112,51 @@ namespace SPMod
 
                 if (actor.TryGetComponent<UnitAvatar>(out UnitAvatar Player))
                 {
-                    if (__instance.type != Sephirite.Type.TABLET && __instance.type != Sephirite.Type.TABLET_BOSS)
+                    if (__instance.rewards.Count > 0)
                     {
-                        if (__instance.rewards.Count > 0 && ModConfig.Instance.AddItem)
+                        if (__instance.type != Sephirite.Type.TABLET && __instance.type != Sephirite.Type.TABLET_BOSS)
                         {
-                            if (Tools.CostumeSkinUse(Player.Name, "Squirrel", "_3"))
+                            if (ModConfig.Instance.AddItem)
                             {
-                                if (GetModItem.TryGetValue("MysteryBox_Random", out ItemEntity ModItem))
+                                if (Tools.CostumeSkinUse(Player.Name, "Squirrel", "_3", false))
                                 {
-                                    Random random = new System.Random(__instance.CurrentSeed + 1000);
-                                    __instance.rewards.Add(new SephiriteRewardMetadata(ItemDatabase.GenerateInstanceID(random), ModItem.id));
+                                    if (GetModItem.TryGetValue("MysteryBox_Random", out ItemEntity ModItem))
+                                    {
+                                        Random random = new System.Random(__instance.CurrentSeed + 1000);
+                                        __instance.rewards.Add(new SephiriteRewardMetadata(ItemDatabase.GenerateInstanceID(random), ModItem.id));
+                                    }
+                                }
+                            }
+                        }
+
+                        if (actor.TryGetComponent<PlayerSpawner>(out PlayerSpawner Spawner))
+                        {
+                            if (__instance.type == Sephirite.Type.NORMAL)
+                            {
+                                if (Tools.CostumeSkinUse(Player.Name, "Crocodile", "_2", false))
+                                {
+                                    Dictionary<EItemRarity, WeightedItemSelector> StoneList = new Dictionary<EItemRarity, WeightedItemSelector>();
+                                    foreach (int All in Spawner.unlockedStoneTablets)
+                                    {
+                                        ItemEntity Item = ItemDatabase.FindItemById(All);
+                                        if (!Item) continue;
+                                        if (__instance.appearedItems.Contains(Item.id)) continue;
+
+                                        if (!StoneList.ContainsKey(Item.rarity))
+                                        {
+                                            StoneList.Add(Item.rarity, new WeightedItemSelector());
+                                        }
+
+                                        StoneList[Item.rarity].AddItem(new WeightedItem(Item, KeywordDatabase.GetConstValue("defaultItemDropWeight")));
+                                    }
+                                    if (StoneList.Count > 0)
+                                    {
+                                        Random random = new Random(__instance.CurrentSeed + 1999);
+                                        EItemRarity key = Sephirite.RarityDice(__instance.type, random, Player.GetCustomStatUnsafe(TextFile.Luck) * 0.01f);
+                                        WeightedItem TargetItem = StoneList[key].GetRandom(random);
+                                        __instance.rewards.Add(new SephiriteRewardMetadata(ItemDatabase.GenerateInstanceID(random), TargetItem.item.id));
+                                        __instance.appearedItems.Enqueue(TargetItem.item.id);
+                                    }
                                 }
                             }
                         }

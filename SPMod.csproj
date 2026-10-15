@@ -34,6 +34,7 @@
     <None Remove="Sprites\Item_BottledLightning.png" />
     <None Remove="Sprites\Item_BumpyFate.png" />
     <None Remove="Sprites\Item_Caliburn.png" />
+    <None Remove="Sprites\Item_Caltrop.png" />
     <None Remove="Sprites\Item_ChaosGlyph.png" />
     <None Remove="Sprites\Item_CometaryHydrogenCorona.png" />
     <None Remove="Sprites\Item_CommemorativeCoin.png" />
@@ -102,6 +103,7 @@
     <EmbeddedResource Include="Sprites\HardIcon.png" />
     <EmbeddedResource Include="Sprites\Item_ArcaneBookMark.png" />
     <EmbeddedResource Include="Sprites\Item_BondVessel.png" />
+    <EmbeddedResource Include="Sprites\Item_Caltrop.png" />
     <EmbeddedResource Include="Sprites\Item_ChaosGlyph.png" />
     <EmbeddedResource Include="Sprites\Item_CometaryHydrogenCorona.png" />
     <EmbeddedResource Include="Sprites\Item_CommemorativeCoin.png" />

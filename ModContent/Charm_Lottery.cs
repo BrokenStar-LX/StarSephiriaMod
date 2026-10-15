@@ -13,6 +13,7 @@ namespace SPMod.ModContent
         public List<StatusGroup> AddStatus = new List<StatusGroup>();
         public bool RandomLottery = false;
         public float LuckMult = 0.5f;
+        public float LuckValue = 0;
         [SyncVar]
         public int Level = 0;
         public Timer CooldownTimer = new Timer(3f);
@@ -47,6 +48,7 @@ namespace SPMod.ModContent
                 new Loc.KeywordValue("Probability", UseCoin.ToString("#0.0") + "%", GetPositiveColor(virtualLevelOffset)),
                 new Loc.KeywordValue("Level", $"<{KeywordDatabase.GetEntity(LevelText).Convert()}>", Color.yellow),
                 new Loc.KeywordValue("Status", StatusText, GetPositiveColor(virtualLevelOffset)),
+                new Loc.KeywordValue("Luck", LuckValue.ToString("#0"), Color.greenYellow),
             };
         }
 
@@ -127,7 +129,8 @@ namespace SPMod.ModContent
                 }
                 Player.savableParameters.Add("Lottery_MoveFloor/" + $"{Item.InstanceID}/" + f);
                 float Value = GetLevelUpValue(Player.GetCustomStatUnsafe(TextFile.Luck));
-                if (Value * 100f > Random.Range(0, 100))
+                LuckValue = Random.Range(0, 100);
+                if (Value * 100f > LuckValue)
                 {
                     Level += 1;
                 }
@@ -170,72 +173,10 @@ namespace SPMod.ModContent
             UseShootBack = false;
             CooldownTimer.Ratio = 0f;
 
-            List<string> TargetCategories = new List<string>();
-            int Count = 0;
-            foreach (var Combo in Inventory.lastAppliedComboEffects)
-            {
-                if (RandomLottery)
-                {
-                    if (!TargetCategories.Contains(Combo.Key))
-                        TargetCategories.Add(Combo.Key);
-                    Count = 1;
-                }
-                else if (Combo.Value.comboCount > Count)
-                {
-                    TargetCategories.Clear();
-                    TargetCategories.Add(Combo.Key);
-                    Count = Combo.Value.comboCount;
-                }
-            }
-            bool UseNoCategories = false;
-            if (RandomLottery)
-            {
-                float Value = 100 / (TargetCategories.Count + 1);
-                if (Random.Range(0, 100) < Value) UseNoCategories = true;
-            }
-            if (UseNoCategories)
-            {
-                //什么都没有哦
-            }
-            else if (TargetCategories.Count <= 0 || Count <= 0) return;
-            string UseCategories = "";
-            if (TargetCategories.Count > 0)
-            {
-                TargetCategories.Shuffle();
-                UseCategories = TargetCategories[0];
-            }
+            var MySpawner = PlayerSpawner.MultiplayerList.FirstOrDefault(s => s.PlayerAvatar == NetworkAvatar);
+            if (MySpawner == null) return;
 
-            var mySpawner = PlayerSpawner.MultiplayerList.FirstOrDefault(s => s.PlayerAvatar == NetworkAvatar);
-            if (mySpawner == null) return;
-            List<int> AllCharmList = mySpawner.unlockedCharms.ToList();
-            List<int> AddItemList = new List<int>();
-
-            EItemRarity Rarity = EItemRarity.Common;
-            switch (Level)
-            {
-                case 1:
-                    Rarity = EItemRarity.Uncommon;
-                    break;
-                case 2:
-                    Rarity = EItemRarity.Rare;
-                    break;
-                case 3:
-                    Rarity = EItemRarity.Legend;
-                    break;
-            }
-            foreach (int NewItemList in AllCharmList)
-            {
-                ItemEntity TargetItem = ItemDatabase.FindItemById(NewItemList);
-                if (TargetItem.id == Item.EntityID) continue;
-                if (TargetItem.rarity != Rarity) continue;
-                if (TargetItem.activeType == EItemActiveType.Hidden) continue;
-                if (!UseNoCategories && !TargetItem.categories.Contains(UseCategories)) continue;
-                if (TargetItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Charm) && Charm.isUniqueEffect)
-                {
-                    if (Inventory.HasItem(TargetItem, out var _, out var _, out var _)) continue;
-                }
-                AddItemList.Add(TargetItem.id);
-            }
+            List<int> AddItemList = RandomLottery ? RandomSelectItem(MySpawner) : SelectItem(MySpawner);
             if (AddItemList.Count <= 0) return;
 
             if (NetworkAvatar is PlayerAvatar Player)
@@ -261,6 +202,85 @@ namespace SPMod.ModContent
                 inventory.ForceRemoveItem(itemPosition);
             }
             inventory.AddItemAtPosition(new ItemMetadata(instanceID, AddItemList.SafeRandomAccess(Random.Range(0, AddItemList.Count)), 1), itemPosition, 0, true, false);
+        }
+        private EItemRarity GetLotteryRarity()
+        {
+            return Level switch
+            {
+                1 => EItemRarity.Uncommon,
+                2 => EItemRarity.Rare,
+                3 => EItemRarity.Legend,
+                _ => EItemRarity.Common,
+            };
+        }
+        public List<int> RandomSelectItem(PlayerSpawner Spawner)
+        {
+            List<string> TargetCategories = new List<string>();
+            foreach (var Combo in Inventory.lastAppliedComboEffects)
+            {
+                if (!TargetCategories.Contains(Combo.Key))
+                    TargetCategories.Add(Combo.Key);
+            }
+            bool UseNoCategories = TargetCategories.Count <= 0;
+            if (TargetCategories.Count > 0)
+            {
+                float Value = 100f / (TargetCategories.Count + 1);
+                if (Random.Range(0f, 100f) < Value) UseNoCategories = true;
+            }
+
+            List<int> AllCharmList = Spawner.unlockedCharms.ToList();
+            List<int> AddItemList = new List<int>();
+            EItemRarity Rarity = GetLotteryRarity();
+            foreach (int NewItemList in AllCharmList)
+            {
+                ItemEntity TargetItem = ItemDatabase.FindItemById(NewItemList);
+                if (TargetItem == null) continue;
+                if (TargetItem.id == Item.EntityID) continue;
+                if (TargetItem.rarity != Rarity) continue;
+                if (TargetItem.activeType == EItemActiveType.Hidden) continue;
+                if (!UseNoCategories && !TargetCategories.Any(Category => TargetItem.categories.Contains(Category))) continue;
+                if (TargetItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Charm) && Charm.isUniqueEffect)
+                {
+                    if (Inventory.HasItem(TargetItem, out var _, out var _, out var _)) continue;
+                }
+                if (AddItemList.Contains(TargetItem.id)) continue;
+                AddItemList.Add(TargetItem.id);
+            }
+            return AddItemList;
+        }
+        public List<int> SelectItem(PlayerSpawner Spawner)
+        {
+            int Count = 0;
+            string TargetCategories = "";
+            foreach (var Combo in Inventory.lastAppliedComboEffects)
+            {
+                if (Combo.Value.comboCount > Count)
+                {
+                    TargetCategories = Combo.Key;
+                    Count = Combo.Value.comboCount;
+                }
+            }
+            if (TargetCategories == "") return new List<int>();
+
+            List<int> AllCharmList = Spawner.unlockedCharms.ToList();
+            List<int> AddItemList = new List<int>();
+            EItemRarity Rarity = GetLotteryRarity();
+            foreach (int NewItemList in AllCharmList)
+            {
+                ItemEntity TargetItem = ItemDatabase.FindItemById(NewItemList);
+                if (TargetItem == null) continue;
+                if (TargetItem.id == Item.EntityID) continue;
+                if (TargetItem.rarity != Rarity) continue;
+                if (TargetItem.activeType == EItemActiveType.Hidden) continue;
+                if (!TargetItem.categories.Contains(TargetCategories)) continue;
+                if (TargetItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Charm) && Charm.isUniqueEffect)
+                {
+                    if (Inventory.HasItem(TargetItem, out var _, out var _, out var _)) continue;
+                }
+                if (AddItemList.Contains(TargetItem.id)) continue;
+                AddItemList.Add(TargetItem.id);
+            }
+            return AddItemList;
         }
 
         public override bool Weaved()

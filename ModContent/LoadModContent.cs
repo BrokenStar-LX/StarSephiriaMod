@@ -52,7 +52,7 @@ namespace SPMod.ModContent
             { "Guard", Tools.SetStatInfo("FINAL_DAMAGE/12=Positive", "DEFENSE/12=Positive") },//警卫
             { "Elementalist", Tools.SetStatInfo("HIGHEST_ELEMENTAL_DAMAGE/8=Positive") },//元素师
             { "Assassin", Tools.SetStatInfo("PHYSICAL_DAMAGE/6=Positive", "CRITICAL_DAMAGE_RATE/24=Positive") },//刺客
-            { "Duelist", Tools.SetStatInfo("ATTACK_SPEED/30=Positive", "WEAPON_RANGE/10=Positive") },//决斗家
+            { "Duelist", Tools.SetStatInfo("ATTACK_SPEED/30=Positive", "WEAPON_RANGE/20=Positive") },//决斗家
             { "Rogue", Tools.SetStatInfo("PHYSICAL_DAMAGE/10=Positive", "EVASION/1000=Positive") },//盗贼
             { "Scholar", Tools.SetStatInfo("MAGIC_DAMAGE_BONUS/10=Positive", "MAGIC_CRITICAL_DAMAGE_RATE/30=Positive") },//学者
             { "IntelligenceAgent", Tools.SetStatInfo("DASH_COUNT/2=Positive", "DASH_ATTACK_DAMAGE/40=Positive") },//情报员
@@ -1249,6 +1249,7 @@ namespace SPMod.ModContent
                 Effect.RandomLottery = true;
                 Effect.AddStatus = new List<StatusGroup>()
                 {
+                    Tools.SetStatusGroup("FINAL_DAMAGE", 1, 2, 3, 4),
                     Tools.SetStatusGroup("LUCK", 0, 1, 2, 3),
                     Tools.SetStatusGroup("EXP_DROP", 6, 12, 18, 24),
                 };
@@ -1256,6 +1257,21 @@ namespace SPMod.ModContent
                 Effect.isUniqueEffect = false;
                 Effect.enabled = false;
             }),//神秘盒子(金)
+
+            new ModItem("Caltrop", EItemRarity.Rare).CreateItem()
+            .CustomCreateCharm(Tools.SetCategories("GUARDIAN"), Action =>
+            {
+                Charm_WeaponThorns Effect = Action.resourcePrefab.AddComponent<Charm_WeaponThorns>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_WeaponThorns") };
+                Effect.stats = new List<StatusGroup>()
+                {
+                    Tools.SetStatusGroup("THORNS", 50, 100, 150, 200),
+                }.ToArray();
+                Effect.maxLevel = 3;
+                Effect.isUniqueEffect = false;
+                Effect.enabled = false;
+            }),//铁蒺藜
         };
     }
 }

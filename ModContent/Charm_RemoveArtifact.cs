@@ -176,6 +176,7 @@ namespace SPMod.ModContent
                 AssignedCategory.Add(ItemCategories);
             }
             RemoveArtifactList.Add(TargetNewItem.Entity.id);
+            SaveItemOnServer(SaveManager.CurrentRun);
 
             GridInventory inventory = Inventory;
             using (new GridInventory.Permission(inventory))
