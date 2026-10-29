@@ -24,14 +24,17 @@ namespace SPMod.ModContent
         {
             string Base = BaseByLevel.SafeRandomAccess(LevelToIdx(level)).ToString();
             string Mult = MultByLevel.SafeRandomAccess(LevelToIdx(level)).ToString();
-            string Status = avatar.GetCustomStatUnsafe("FROSTRELICFLAME") > 0 ? "<tag=FireDamage>" : "<tag=IceDamage>";
+            string Status = avatar != null && avatar.GetCustomStatUnsafe("FROSTRELICFLAME") > 0 ? "<tag=FireDamage>" : "<tag=IceDamage>";
             string Time = BaseCooldown + "s";
             string Down = DownValue + "%";
-            float Value = avatar.GetCustomStatUnsafe(TextFile.ChargingCharmBonus);
+            float Value = avatar != null ? avatar.GetCustomStatUnsafe(TextFile.ChargingCharmBonus) : 0f;
             if (Value > 0)
             {
                 Time = BaseCooldown + "s" + " -> " + (BaseCooldown / (1f + Value * 0.01f)).ToString("#0.0") + "s";
             }
+            string Damage = "0";
+            if (IsEffectEnabled)
+                Damage = CalculateDamage(this).ToString("#0");
             return new Loc.KeywordValue[]
             {
                 new Loc.KeywordValue("Time", Time, EffectConstant.CooldownColor),
@@ -39,7 +42,7 @@ namespace SPMod.ModContent
                 new Loc.KeywordValue("Stat", Status, Color.white),
                 new Loc.KeywordValue("Mult", Mult + "%", GetPositiveColor(virtualLevelOffset)),
                 new Loc.KeywordValue("Base", Base, GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Damage", CalculateDamage(this).ToString("#0"), EffectConstant.WeaponColor),
+                new Loc.KeywordValue("Damage", Damage, EffectConstant.WeaponColor),
             };
         }
 

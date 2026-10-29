@@ -10,18 +10,15 @@ namespace SPMod.ModContent
         private StatusInstance? EffectInstance2 = null;
         private StatusInstance? EffectInstance3 = null;
         private StatusInstance? EffectInstance4 = null;
-        public int[] AddByLevel = new int[] { 1, 1, 2 };
-        public int[] AddByLevel2 = new int[] { 2, 4, 4 };
+        public int[] AddByLevel = new int[] { 1, 1, 2, 3 };
         private readonly Timer CheckTime = new Timer(0.5f);
         private int Add = 0;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string Add = "+" + AddByLevel.SafeRandomAccess(LevelToIdx(level));
-            string Level = "+" + AddByLevel2.SafeRandomAccess(LevelToIdx(level)) + "%";
             return new Loc.KeywordValue[]
             {
                 new Loc.KeywordValue("Add", Add, GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Add2", Level, GetPositiveColor(virtualLevelOffset)),
             };
         }
 
@@ -90,8 +87,7 @@ namespace SPMod.ModContent
                     EffectInstance3 = StatusDatabase.CreateStatusEntity("ICE_DAMAGE", Count * Add);
                     EffectInstance3.SetTarget(NetworkAvatar);
                     EffectInstance3.ApplyStatus(true);
-                    Count = AddByLevel2.SafeRandomAccess(CurrentLevelToIdx());
-                    EffectInstance4 = StatusDatabase.CreateStatusEntity("MAGIC_DAMAGE_BONUS", Count * Add);
+                    EffectInstance4 = StatusDatabase.CreateStatusEntity("WIND_DAMAGE", Count * Add);
                     EffectInstance4.SetTarget(NetworkAvatar);
                     EffectInstance4.ApplyStatus(true);
                 }

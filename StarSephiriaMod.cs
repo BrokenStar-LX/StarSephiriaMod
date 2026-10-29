@@ -31,7 +31,9 @@ namespace SPMod
 
         public static Dictionary<string, string> CostumeType = new Dictionary<string, string>();
         public static Dictionary<string, string> CostumeSkinType = new Dictionary<string, string>();
+        public static Dictionary<string, string> CostumeSkinKey = new Dictionary<string, string>();
         public static Dictionary<string, string> CostumeSkinDate = new Dictionary<string, string>();
+        public static Dictionary<string, string> CostumeSkinIdToName = new Dictionary<string, string>();
         public static Dictionary<string, Dictionary<string, string>> _modTranslations = new Dictionary<string, Dictionary<string, string>>();
 
         public static Dictionary<string, string> _displayNames = new Dictionary<string, string>();
@@ -41,8 +43,7 @@ namespace SPMod
         public static Dictionary<string, Timer> BrownRabbit2Hit = new Dictionary<string, Timer>();
         public static Dictionary<string, float> PlayerLife = new Dictionary<string, float>();
         public static List<string> Deer_Buff = new List<string>();
-        public static Dictionary<string, AllPlayerStatus> PartyEffect = new Dictionary<string, AllPlayerStatus>();
-        public static (bool Update, AllPlayerStatus Value) PartyStats = (false, new AllPlayerStatus(0, 0, 0, 0));
+        public static AllPlayerStatus PartyStats = new AllPlayerStatus(0, 0, 0, 0);
         public static Dictionary<uint, Object> registered = new Dictionary<uint, Object>();
         // 经验表
         public static List<int> CustomExpTable = new List<int>
@@ -86,7 +87,9 @@ namespace SPMod
             WeaponType.Clear();
             CostumeType.Clear();
             CostumeSkinType.Clear();
+            CostumeSkinKey.Clear();
             CostumeSkinDate.Clear();
+            CostumeSkinIdToName.Clear();
             Projectile.Clear();
             DPSData.Clear();
             Otter3_AddCrit.Clear();
@@ -161,6 +164,8 @@ namespace SPMod
             LoadModTranslations(ctx);
             LocalizationManager.Instance.OnLanguageChanged += OnLanguageChanged;
             TextFile.InitTooltipLocalization();
+            ModBullet.RegisterAllToPool();
+            ModFireData.RegisterAllFxToPool();
             LogInfo("模组本地化系统初始化完成");
         }
 
@@ -352,6 +357,10 @@ namespace SPMod
             CostumeSkinDate.Add("ForestCat_1", "11ec244e-b4b9-483f-9abb-296c18c7f4da");
             CostumeSkinDate.Add("ForestCat_2", "b766e49e-98c3-41a1-82a8-e8ed3e1d5432");
             CostumeSkinDate.Add("ForestCat_3", "fa867788-8c11-448e-978c-1dcba8f1a80c");
+
+            CostumeSkinIdToName.Clear();
+            foreach (KeyValuePair<string, string> Pair in CostumeSkinDate)
+                CostumeSkinIdToName[Pair.Value] = Pair.Key;
         }
 
         private void PatchPlayerInputController(Harmony harmony)
@@ -623,7 +632,44 @@ namespace SPMod
                 {"STAT_CURRENTROSION", "侵蚀保存"},
                 {"RIPOSTELASER", "强化还击剑碎片"},
                 {"ICICLEVINEORBIT", "启用霜针花园效果"},
-                {"CHARMDAMAGEBONUS", "神器伤害"}
+                {"CHARMDAMAGEBONUS", "神器伤害"},
+                {"WINDDAMAGE", "风属性伤害"},
+                {"STAT_WINDEROSIONDAMAGE", "风蚀伤害"},
+                {"STAT_WINDEROSIONMULT", "风蚀基础倍率"},
+                {"STAT_WINDEROSIONCOUNT", "风蚀可触发次数"},
+                {"STAT_WINDEROSIONLUCK", "风蚀额外触发概率"},
+                {"STAT_WINDEROSIONOVERFLOW", "风帆倍率"},
+                {"STAT_WINDEROSIONOVERFLOWADD", "风帆额外倍率"},
+                {"STAT_GOLDOBTAINED", "总获取叶子数量"},
+                {"WOUNDDAMAGE", "伤口恶化伤害"},
+                {"ATKSPDCHAKRAM", "查克拉姆受攻速影响"},
+                {"ICEHAMMERSCYTHE", "冰锤变成冰镰刀"},
+                {"DASHCOUNTDAMAGE", "冲刺计数伤害"},
+                {"RECEIVEDDAMAGEINCREASE", "通用易伤"},
+                {"RECEIVEDDAMAGEREDUCTION", "通用免伤"},
+                {"PHYSICALDEFENSE", "物理抗性"},
+                {"FIREDEFENSE", "火焰抗性"},
+                {"ICEDEFENSE", "冰抗性"},
+                {"LIGHTNINGDEFENSE", "闪电抗性"},
+                {"ELECTRICEARRINGDAMAGE", "桑德耳环伤害"},
+                {"ELECTRICEARRINGCOUNT", "桑德耳环攻击次数"},
+                {"ELECTRICEARRINGSWEEP", "耀目的寂静效果"},
+                {"STAT_MAXDIMENSIONPOCKET", "许愿池额外容量计算"},
+                {"STAT_BRINVENTORYSLOT", "背包额外槽位"},
+                {"STAT_MAGICCOOLDOWNREDUCTION", "魔法书冷却减少"},
+                {"STAT_DEFENSETOALLDAMAGE", "防御力转所有伤害"},
+                {"STAT_ALLPLAYERCRIT", "全体玩家暴击几率"},
+                {"STAT_INVINCIBLESPECIALATTACK", "绝对戒指效果"},
+                {"STAT_DRINKPOTIONSTACK", "喝下高级药水数量"},
+                {"STAT_TELESCOPECOUNT", "望远镜数量"},
+                {"STAT_SCALEOFTHEASTRALSEAEFFECT", "圣海碎片效果计数器"},
+                {"STAT_ECOLOGICALSPHEREEFFECT", "生态球效果"},
+                {"STAT_STRIKEBACK", "反击"},
+                {"STAT_ELECTRICICE", "电冰体效果"},
+                {"STAT_COMPANIONSTRIKEBACK", "同伴继承反击"},
+                {"STAT_WINDEROSIONCRITDAMAGE", "风蚀暴击伤害"},
+                {"STAT_WINDEROSIONDOT", "空气钟倍率"},
+                {"STAT_CYANORBUP", "强化青绿色宝珠"}
             };
             _displayNames.AddRange(stats);
         }
@@ -693,18 +739,47 @@ namespace SPMod
         public static Dictionary<int, float> CrossBowRoldTime = new Dictionary<int, float>();
         public static Dictionary<int, int> CrossBowMagazineCount = new Dictionary<int, int>();
         public static Dictionary<int, int> CrossBowMagazineCapacity = new Dictionary<int, int>();
+        private void AddBaseStats(WeaponEntity Weapon, int Delta)
+        {
+            foreach (string Stat in BaseStatsName)
+            {
+                if (Stat == TextFile.WindDamage) continue;
+                Weapon.SetAddonStat(Stat, Delta);
+            }
+        }
         private void OnLoadWeaponDatabase()
         {
-            if (ModConfig.Instance.AddWeaponEnhancements)
-            {
-                WeaponDatabase.Modify(WeaponIDs.Minimalism, Weapon => Weapon.enhanceFromId = WeaponIDs.SteelGreatsword);
-                WeaponDatabase.Modify(WeaponIDs.BlackIronHalberd, Weapon => Weapon.enhanceFromId = -1);
-                WeaponDatabase.Modify(WeaponIDs.SafeStart, Weapon => Weapon.enhanceFromId = WeaponIDs.Dagger);
-            }
-
             if (ModConfig.Instance.EnableWeaponModifier)
             {
-                WeaponDatabase.Modify(19, Weapon =>
+                //—— 剑盾 ——
+                WeaponDatabase.Modify(WeaponIDs.WanderingAshes, Weapon => Weapon.ChangeAddon<WeaponAddon_DashAttack>(Addon => Addon.dashAttackDamageBonus = 0));//灰烬飘扬
+                WeaponDatabase.Modify(WeaponIDs.TheIndomitable, Weapon => Weapon.ChangeAddon<WeaponAddon_BasicAttack>(Addon => Addon.basicAttackDamageBonus = 25));//无垠原野
+                WeaponDatabase.Modify(WeaponIDs.CarrotSword, Weapon => AddBaseStats(Weapon, 5));//胡萝卜剑
+                WeaponDatabase.Modify(WeaponIDs.CarrotSword2, Weapon => AddBaseStats(Weapon, 5));//胡萝卜剑2
+                WeaponDatabase.Modify(WeaponIDs.Rapier2, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.AttackSpeed, 0);
+                    Weapon.SetAddonStat(TextFile.BasicAttackDamageBonus, 20);
+                });//闪光的细剑
+                WeaponDatabase.Modify(WeaponIDs.GlacialBlade, Weapon => Weapon.SetAddonStat(TextFile.AirSlashHaste, 0));//冰川之刃
+                WeaponDatabase.Modify(WeaponIDs.Superconductor, Weapon => Weapon.SetAddonStat("SWEEPCOSTREDUCTION", 50));//超导体
+                WeaponDatabase.Modify(WeaponIDs.Excallion, Weapon => Weapon.SetAddonStat(TextFile.MagicDamageBonus, 0));//大葱剑
+                WeaponDatabase.Modify(WeaponIDs.BlindingSilence, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.ElectricEarringDamage, 0);
+                    Weapon.SetAddonStat(TextFile.ElectricEarringCount, 0);
+                    Weapon.SetAddonStat(TextFile.ElectricEarringSweep, 0);
+                    Weapon.SetSimple(Action =>
+                    {
+                        NewWeaponFireData Attack = Action.specialAttacks[1];
+                        Attack.attackDashSpeed *= 0.5f;
+                        Attack.attackDashTime *= 0.5f;
+                        Attack.swingFxPrefab = null;
+                    });
+                });//耀目的寂静
+
+                //—— 大剑 ——
+                WeaponDatabase.Modify(WeaponIDs.Compliance, Weapon =>
                 {
                     Weapon.enhanceFromId = WeaponIDs.SwarmingShadow;
                     WeaponAddon Addon = WeaponDatabase.FindWeaponById(12).mainWeaponPrefab.GetComponent<WeaponSimple>().addons[0];
@@ -720,14 +795,6 @@ namespace SPMod
                     Attack.attackDashTime = component.basicComboAttacks[0].attackDashTime;
                     component.basicComboAttacks[2] = Attack;
                 });// 顺从的姿态
-                WeaponDatabase.Modify(WeaponIDs.BlindingSilence, Weapon =>
-                {
-                    WeaponSimple component = Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>();
-                    NewWeaponFireData Attack = component.specialAttacks[1];
-                    Attack.attackDashSpeed *= 0.5f;
-                    Attack.attackDashTime *= 0.5f;
-                    Attack.swingFxPrefab = null;
-                });//耀目的寂静
                 WeaponDatabase.Modify(WeaponIDs.LightningGreatSwordE3G, Weapon =>
                 {
                     Weapon.mainWeaponPrefab.GetComponent<WeaponSimple_GreatSword>().sweepCost = 0;
@@ -769,27 +836,129 @@ namespace SPMod
                     Dash.attackDashSpeed = 32f;
                     Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>().dashAttacks[0] = Dash;
                 });// 黑铁戟
-                WeaponDatabase.Modify(WeaponIDs.MarkStabilization, Weapon =>
+                WeaponDatabase.Modify(WeaponIDs.SwarmingShadow, Weapon =>
                 {
-                    WeaponSimple component = Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>();
-                    WeaponSimple_Katana Target = WeaponDatabase.FindWeaponById(WeaponIDs.LightningFlash).mainWeaponPrefab.GetComponent<WeaponSimple_Katana>();
-                    NewWeaponFireData FireData = Object.Instantiate(Target.electricChargeIssenFireData);
-                    FireData.attackDashSpeed = 32f;
-                    FireData.damageMultiplier = 7.2f;
-                    FireData.attackDashAngle = component.specialAttacks[0].attackDashAngle;
-                    FireData.attackDashCurveType = component.specialAttacks[0].attackDashCurveType;
-                    FireData.attackDashDirectionType = component.specialAttacks[0].attackDashDirectionType;
-                    FireData.attackDashSpeed = component.specialAttacks[0].attackDashSpeed;
-                    FireData.attackDashTime = component.specialAttacks[0].attackDashTime;
-                    Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>().specialAttacks[0] = FireData;
-                });// 标记稳定化
+                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.basicAttackDamage = 0);
+                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.specialAttackDamage = 25);
+                });//聚集的阴影
+                WeaponDatabase.Modify(WeaponIDs.Negligence, Weapon => Weapon.ChangeAddon<WeaponAddonGreatsword_SuperQuick>(Addon =>
+                {
+                    Addon.specialAttackDamage = 0;
+                    Addon.specialAttackSpeed = 15;
+                }));//无视
+                WeaponDatabase.Modify(WeaponIDs.SwiftRegret, Weapon =>
+                {
+                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.basicAttackDamage = 0);
+                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.specialAttackDamage = 25);
+                });//短暂自责
+                WeaponDatabase.Modify(WeaponIDs.FrostboundGreatsword, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.FreezeDamage, -40);
+                    Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 10);
+                });//寒气缠绕的大剑
+                WeaponDatabase.Modify(WeaponIDs.EternalFrostGreatsword, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.FreezeDamage, 0);
+                    Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 0);
+                });//万年寒霜巨剑
+                WeaponDatabase.Modify(WeaponIDs.IcicleSword, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.FreezeDamage, 20);
+                    Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 0);
+                    Weapon.ChangeAddon<WeaponAddonCommon_DebuffAttack>(Addon => Addon.debuffPercent = 100);
+                });//冰柱剑
+                WeaponDatabase.Modify(WeaponIDs.CrimsonVortex, Weapon => Weapon.SetAddonStat(TextFile.WoundStack, 0));//深红漩涡
+                WeaponDatabase.Modify(WeaponIDs.LightningGreatSwordS3G, Weapon => Weapon.SetAddonStat(TextFile.ElectricDamage, 0));//电击大剑S3G
+                WeaponDatabase.Modify(WeaponIDs.GreatswordOfExorcism, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.FreezeDamage, 0);
+                    Weapon.SetAddonStat(TextFile.AirSlashHaste, 9949);
+                    Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 0);
+                });//驱魔的重剑
+                WeaponDatabase.Modify(WeaponIDs.LegacyofTheIllusionist, Weapon => Weapon.SetAddonStat(TextFile.CooldownRecoverySpeed, 0));//幻术师的遗产
+                WeaponDatabase.Modify(WeaponIDs.RedSnakeCrush, Weapon => Weapon.SetAddonStat(TextFile.RedSnakeEyeDamageBonus, 0));//红蛇碎击
+                WeaponDatabase.Modify(WeaponIDs.SolisCineris, Weapon => Weapon.SetAddonStat(TextFile.FlameSwordAdditionalAttackFromWeapon, 0));//索利斯·西涅里斯
+
+                //—— 匕首 ——
+                WeaponDatabase.Modify(WeaponIDs.LightningDagger, Weapon => Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 40));//闪电匕首
                 WeaponDatabase.Modify(WeaponIDs.OverhangingStormCloud, Weapon =>
                 {
-                    WeaponSimple_Dagger component = Weapon.mainWeaponPrefab.GetComponent<WeaponSimple_Dagger>();
-                    WeaponSimple_Dagger Target = WeaponDatabase.FindWeaponById(WeaponIDs.UnboundImmersion).mainWeaponPrefab.GetComponent<WeaponSimple_Dagger>();
-                    component.daggerBarPrefab = Target.daggerBarPrefab;
-                });// 笼罩的阴云
+                    Weapon.SetAddonStat(TextFile.LightningDamage, 0);
+                    Weapon.SetAddonStat(TextFile.DarkCloudDamage, 0);
+                    Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 40);
+                    Weapon.SetSimple(Action =>
+                    {
+                        WeaponSimple_Dagger Target = WeaponDatabase.FindWeaponById(WeaponIDs.UnboundImmersion).mainWeaponPrefab.GetComponent<WeaponSimple_Dagger>();
+                        if (Action is WeaponSimple_Dagger Dagger)
+                        {
+                            Dagger.daggerBarPrefab = Target.daggerBarPrefab;
+                            Dagger.furyDisableTimer.time = 999999f;
+                        }
+                    });
+                });//笼罩的阴云
+                WeaponDatabase.Modify(WeaponIDs.LightningsWrath, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.ElectricStack, 0);
+                    Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 40);
+                    Weapon.ChangeAddon<WeaponAddonCommon_DebuffAttack>(Addon => Addon.debuffPercent = 100);
+                });//雷电之怒
+                WeaponDatabase.Modify(WeaponIDs.Adonis, Weapon => Weapon.SetAddonStat(TextFile.WeaponCriticalDamageAmplify, 0));//福寿草
+                WeaponDatabase.Modify(WeaponIDs.FrozenSmelt, Weapon => Weapon.SetAddonStat(TextFile.IceDamage, 0));//冰冻公鱼
+                WeaponDatabase.Modify(WeaponIDs.SafeStart, Weapon =>
+                {
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Dagger Dagger)
+                        {
+                            Dagger.wideParry = true;
+                            Dagger.easyParry = true;
+                        }
+                    });
+                });//安全的开始
+                WeaponDatabase.Modify(WeaponIDs.LightlessBlade, Weapon =>
+                {
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Dagger Dagger)
+                        {
+                            Dagger.wideParry = true;
+                            Dagger.easyParry = true;
+                        }
+                    });
+                });//希望的影子
+                WeaponDatabase.Modify(WeaponIDs.PaleSmile, Weapon =>
+                {
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Dagger Dagger)
+                        {
+                            Dagger.wideParry = true;
+                            Dagger.easyParry = true;
+                        }
+                    });
+                });//白色微笑
+                WeaponDatabase.Modify(WeaponIDs.TomeOfMimicry, Weapon =>
+                {
+                    Weapon.SetSimple(Action =>
+                    {
+                        WeaponSimple_Dagger Target = WeaponDatabase.FindWeaponById(WeaponIDs.UnboundImmersion).mainWeaponPrefab.GetComponent<WeaponSimple_Dagger>();
+                        if (Action is WeaponSimple_Dagger Dagger)
+                        {
+                            Dagger.daggerBarPrefab = Target.daggerBarPrefab;
+                            Dagger.furyDisableTimer.time = 999999f;
+                        }
+                    });
+                });//模仿之书
+                WeaponDatabase.Modify(WeaponIDs.SolisImber, Weapon =>
+                {
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Dagger Dagger)
+                            Dagger.furyDisableTimer.time = 999999f;
+                    });
+                });//索利斯·因贝尔
 
+                //—— 弩 ——
                 foreach (WeaponEntity Weapon in WeaponDatabase.GetAll().ToList())
                 {
                     if (Weapon.mainWeaponPrefab == null) continue;
@@ -801,24 +970,175 @@ namespace SPMod
                         if (!CrossBowMagazineCapacity.ContainsKey(Weapon.id)) CrossBowMagazineCapacity.Add(Weapon.id, Target.defaultMagazineCapacity);//弹匣容量
                     }
                 }
-                WeaponDatabase.Modify(WeaponIDs.ExplosiveDevice, Weapon => Weapon = Weapon.SetCrossBowValue(true, 0.75f));//爆炸装置
-                WeaponDatabase.Modify(WeaponIDs.MiniCannon, Weapon => Weapon = Weapon.SetCrossBowValue(true, 0.75f, 1.5f));//榴弹炮
-                WeaponDatabase.Modify(WeaponIDs.M9199, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1f, 1f));//M9199
-                WeaponDatabase.Modify(WeaponIDs.XRA9, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1f, 1f));//XRA-9
-                WeaponDatabase.Modify(WeaponIDs.M9200, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1f, 1.5f));//M9200
-                WeaponDatabase.Modify(WeaponIDs.Twin, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1.2f, 2f));//双子
-                WeaponDatabase.Modify(WeaponIDs.RapidFireDevice, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1f, 4f, 1, 8));//连发装置
-                WeaponDatabase.Modify(WeaponIDs.SolisIubar, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1.15f));//索利斯·尤巴尔
-                WeaponDatabase.Modify(WeaponIDs.ReloadDevice, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1f, -1, 2));//填装装置
-                WeaponDatabase.Modify(WeaponIDs.ScattershotShooter, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1f, 1, 2, 2));//散弹发射器
-                WeaponDatabase.Modify(WeaponIDs.GunpowderSynthesis, Weapon => Weapon = Weapon.SetCrossBowValue(true, 1f, -1, 2, 2));//火药合成
-            }
+                WeaponDatabase.Modify(WeaponIDs.ExplosiveDevice, Weapon => Weapon.SetCrossBowValue(true, 0.75f));//爆炸装置
+                WeaponDatabase.Modify(WeaponIDs.MiniCannon, Weapon => Weapon.SetCrossBowValue(true, 0.75f, 1.5f));//榴弹炮
+                WeaponDatabase.Modify(WeaponIDs.M9199, Weapon =>
+                {
+                    Weapon.SetCrossBowValue(true, 1f, 1f);
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Crossbow Cross)
+                            Cross.specialAttackCost = 3;
+                    });
+                });//M9199
+                WeaponDatabase.Modify(WeaponIDs.XRA9, Weapon =>
+                {
+                    Weapon.SetCrossBowValue(true, 1f, 1f);
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Crossbow Cross)
+                            Cross.specialAttackCost = 3;
+                    });
+                });//XRA-9
+                WeaponDatabase.Modify(WeaponIDs.M9200, Weapon =>
+                {
+                    Weapon.SetCrossBowValue(true, 1f, 1.5f);
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Crossbow Cross)
+                            Cross.specialAttackCost = 3;
+                    });
+                });//M9200
+                WeaponDatabase.Modify(WeaponIDs.Twin, Weapon => Weapon.SetCrossBowValue(true, 1.2f, 2f));//双子
+                WeaponDatabase.Modify(WeaponIDs.RapidFireDevice, Weapon => Weapon.SetCrossBowValue(true, 1f, 4f, 1, 8));//连发装置
+                WeaponDatabase.Modify(WeaponIDs.ReloadDevice, Weapon => Weapon.SetCrossBowValue(true, 1f, -1, 2));//填装装置
+                WeaponDatabase.Modify(WeaponIDs.ScattershotShooter, Weapon => Weapon.SetCrossBowValue(true, 1f, 1, 2, 2));//散弹发射器
+                WeaponDatabase.Modify(WeaponIDs.GunpowderSynthesis, Weapon => Weapon.SetCrossBowValue(true, 1f, -1, 2, 2));//火药合成
+                WeaponDatabase.Modify(WeaponIDs.GunpowderSynthesis, Weapon => Weapon.SetAddonStat(TextFile.WeaponCritical, 0));//火药合成
+                WeaponDatabase.Modify(WeaponIDs.MarkStabilization, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.ElectricDamage, 0);
+                    Weapon.SetSimple(Action =>
+                    {
+                        WeaponSimple_Katana Target = WeaponDatabase.FindWeaponById(WeaponIDs.LightningFlash).mainWeaponPrefab.GetComponent<WeaponSimple_Katana>();
+                        NewWeaponFireData FireData = Object.Instantiate(Target.electricChargeIssenFireData);
+                        FireData.attackDashSpeed = 32f;
+                        FireData.damageMultiplier = 7.2f;
+                        FireData.attackDashAngle = Action.specialAttacks[0].attackDashAngle;
+                        FireData.attackDashCurveType = Action.specialAttacks[0].attackDashCurveType;
+                        FireData.attackDashDirectionType = Action.specialAttacks[0].attackDashDirectionType;
+                        FireData.attackDashSpeed = Action.specialAttacks[0].attackDashSpeed;
+                        FireData.attackDashTime = Action.specialAttacks[0].attackDashTime;
+                        Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>().specialAttacks[0] = FireData;
+                    });
+                });//标记稳定化
+                WeaponDatabase.Modify(WeaponIDs.KalimsForm, Weapon => Weapon.SetAddonStat(TextFile.JellyfishBasicDamage, 0));//卡里姆的形象
+                WeaponDatabase.Modify(WeaponIDs.SolisIubar, Weapon =>
+                {
+                    Weapon.SetCrossBowValue(true, 1.15f);
+                    Weapon.SetAddonStat(TextFile.FlameSwordDamage, 0);
+                    Weapon.SetAddonStat(TextFile.FinalWeaponDamage, 0);
+                });//索利斯·尤巴尔
 
+                //—— 太刀 ——
+                WeaponDatabase.Modify(WeaponIDs.LongBladeOnohara, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.AttackSpeed, 0);
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Katana Katana)
+                        {
+                            Katana.sheathAttackTime = 0.75f / 1.1f;
+                        }
+                    });
+                });//太刀小野原
+                WeaponDatabase.Modify(WeaponIDs.FamedSwordMuramasa, Weapon => Weapon.SetAddonStat(TextFile.AttackSpeed, 0));//名刀村正
+                WeaponDatabase.Modify(WeaponIDs.BeastMarksSwordHou, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.SpecialAttackRange, -33);
+                    Weapon.SetAddonStat(TextFile.AttackSpeed, 0);
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Katana Katana)
+                        {
+                            Katana.sheathAttackTime = 0.75f / 1.1f;
+                            Katana.specialAttackCost = 0;
+                        }
+                    });
+                });//怪刀毫羽
+                WeaponDatabase.Modify(WeaponIDs.BlazingHelbanus, Weapon => Weapon.SetAddonStat(TextFile.FireDamage, 0));//炽焰赫尔巴努斯
+                WeaponDatabase.Modify(WeaponIDs.RendbladeDriftingWillow, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.Critical, 0);
+                    Weapon.SetAddonStat(TextFile.LastBasicAttackDamage, 30);
+                    Weapon.SetAddonStat(TextFile.WeaponRange, 30);
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Katana Katana)
+                        {
+                            Katana.attackToFillGaugeValue = 0.17f;
+                        }
+                    });
+                });//飞柳
+                WeaponDatabase.Modify(WeaponIDs.YuisShortDagger, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.MagicCritical, 0);
+                });//优衣的短匕首
+                WeaponDatabase.Modify(WeaponIDs.LibrarySpectralSealingSociety, Weapon => Weapon.SetAddonStat(TextFile.DashAttackDamageBonus, 0));//图书馆幽灵封印会
+                WeaponDatabase.Modify(WeaponIDs.LibrarySpectralSealingSociety2, Weapon => Weapon.SetAddonStat(TextFile.DashAttackDamageBonus, 0));//图书馆幽灵封印会2
+                WeaponDatabase.Modify(WeaponIDs.WinterSmithsDraftblade, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.IceDamage, 0);
+                    Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 20);
+                });//草图刀
+                WeaponDatabase.Modify(WeaponIDs.SilenceofEverfrost, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.IceDamage, 0);
+                    Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 20);
+                });//永霜的沉默
+                WeaponDatabase.Modify(WeaponIDs.FragmentofNastrond, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.IceDamage, 0);
+                    Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 20);
+                });//纳斯特朗的碎片
+                WeaponDatabase.Modify(WeaponIDs.CeruleanCloudSwordArges, Weapon =>
+                {
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Katana Katana)
+                        {
+                            Katana.residualLightningStackMax = 50;
+                        }
+                    });
+                });//苍云刀
+                WeaponDatabase.Modify(WeaponIDs.Heidi, Weapon =>
+                {
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_Katana Katana)
+                        {
+                            Katana.dashStackFixedAttackSpeed = 100;
+                        }
+                    });
+                });//海蒂
+
+                //—— 棍 ——
+                WeaponDatabase.Modify(WeaponIDs.StaffOfGreatMight, Weapon => Weapon.SetAddonStat(TextFile.BasicAttackDamageBonus, 30));//大力棍
+                WeaponDatabase.Modify(WeaponIDs.RuadhsleaSpear, Weapon => Weapon.SetAddonStat(TextFile.AttackSpeed, 0));//突击枪卢阿施蕾娅
+                WeaponDatabase.Modify(WeaponIDs.SolisBraca, Weapon => Weapon.SetAddonStat(TextFile.WeaponRange, 33));//索利斯·布拉卡
+                WeaponDatabase.Modify(WeaponIDs.OraclesStaff, Weapon => Weapon.SetAddonStat(TextFile.WeaponRange, 30));//巫女的预言
+                WeaponDatabase.Modify(WeaponIDs.Malaspina, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.IceDamage, 0);
+                    Weapon.ChangeAddon<WeaponAddonCommon_DebuffAttack>(Addon => Addon.debuffPercent = 60);
+                });//马拉斯皮纳
+                WeaponDatabase.Modify(WeaponIDs.Viduka, Weapon => Weapon.SetAddonStat(TextFile.EnhancedChakram, 0));//比杜卡
+            }
+            if (ModConfig.Instance.AddWeaponEnhancements)
+            {
+                WeaponDatabase.Modify(WeaponIDs.Minimalism, Weapon => Weapon.enhanceFromId = WeaponIDs.SteelGreatsword);
+                WeaponDatabase.Modify(WeaponIDs.BlackIronHalberd, Weapon => Weapon.enhanceFromId = -1);
+                WeaponDatabase.Modify(WeaponIDs.SafeStart, Weapon => Weapon.enhanceFromId = WeaponIDs.Dagger);
+
+                foreach (ModWeapon Data in ModWeaponData)
+                    Data.CreateWeapon();
+            }
             Skin.GetAddAllModSkin();
         }
 
         public static void OnLoadItemDatabase()
         {
+            CreateModItems();
             if (ModConfig.Instance.ModifyMerchant)
             {
                 ItemDatabase.Modify(51, item => item.cost = CommonCost);
@@ -880,6 +1200,17 @@ namespace SPMod
                     //派对
                     ItemDatabase.Modify(1140, item => item.categories = Tools.SetCategories("PARTY")); // 鼓励旗帜
                     ItemDatabase.Modify(3031, item => item.categories = Tools.SetCategories("PARTY")); // 祝福
+                    //飓风
+                    ItemDatabase.Modify(1030, item =>
+                    {
+                        Charm_WoodenBox Effect = item.resourcePrefab.GetComponent<Charm_WoodenBox>();
+                        Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_WoodenBox") };
+                    }); // 多用途腰带
+                    ItemDatabase.Modify(1053, item =>
+                    {
+                        Charm_AddStatByDefense Effect = item.resourcePrefab.GetComponent<Charm_AddStatByDefense>();
+                        Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_AddStatByDefense") };
+                    }); // 盾牌包
                 }
                 //连击更改
                 ItemDatabase.Modify(1030, item => item.categories = Tools.SetCategories("ACADEMY")); // 多用途腰带
@@ -911,19 +1242,12 @@ namespace SPMod
                     item.activeType = EItemActiveType.Default;
                 }); // 红蘑菇
                 //效果更改
-                ItemDatabase.Modify(1101, item =>
-                {
-                    Charm_FrostiumRing Effect = item.resourcePrefab.GetComponent<Charm_FrostiumRing>();
-                    Effect.maxLevel = 1;
-                    Effect.damageByLevel = new int[2] { 15, 30 };
-                    Effect.cooldownTimer.time = 0.2f;
-                }); // 欧希阿蕾胡阿
                 ItemDatabase.Modify(1016, item =>
                 {
                     Charm_Reddew Effect = item.resourcePrefab.GetComponent<Charm_Reddew>();
                     Effect.damagePercentByLevel = new float[4] { 25f, 50f, 75f, 100f };
                 }); // 红色露水
-                ItemDatabase.Modify(1016, item =>
+                ItemDatabase.Modify(1032, item =>
                 {
                     Charm_FlameGround_Meteor Effect = item.resourcePrefab.GetComponent<Charm_FlameGround_Meteor>();
                     Effect.searchTimer.time = 0.1f;
@@ -947,6 +1271,13 @@ namespace SPMod
                     Effect.maxLevel = 2;
                     Effect.goldDropBonusByLevel = new int[] { 20, 30, 40 };
                 }); // 克里顿的印章
+                ItemDatabase.Modify(1101, item =>
+                {
+                    Charm_FrostiumRing Effect = item.resourcePrefab.GetComponent<Charm_FrostiumRing>();
+                    Effect.maxLevel = 1;
+                    Effect.damageByLevel = new int[2] { 15, 30 };
+                    Effect.cooldownTimer.time = 0.2f;
+                }); // 欧希阿蕾胡阿
                 ItemDatabase.Modify(1117, item =>
                 {
                     Charm_TuningForks Effect = item.resourcePrefab.GetComponent<Charm_TuningForks>();
@@ -1029,6 +1360,7 @@ namespace SPMod
                 {
                     Charm_FireBulletInRange Effect = item.resourcePrefab.GetComponent<Charm_FireBulletInRange>();
                     Effect.coolDownTimer = new Timer(3f);
+                    CharmPatch.Charm_FireBulletInRange_Patch.EnsureWindBullet(Effect);
                 }); // 五色糖果玻璃罐
                 ItemDatabase.Modify(1285, item =>
                 {
@@ -1048,9 +1380,28 @@ namespace SPMod
                 {
                     Charm_IceBat Effect = item.resourcePrefab.GetComponent<Charm_IceBat>();
                     Effect.iceDamage = 100;
-                    Effect.attackSpeedBonusByLevel = new int[] { 80, 160, 240, 320, 400 };
+                    Effect.attackSpeedBonusByLevel = new int[] { 60, 120, 180, 240, 300 };
                 }); // 雪山大耳蝙蝠
                 //法术更改
+                ItemDatabase.Modify(3000, item =>
+                {
+                    item.activeType = EItemActiveType.Default;
+                    item.categories = Tools.SetCategories("HURRICANE");
+                    item.rarity = EItemRarity.Common;
+                    item.cost = CommonCost;
+                    Charm_Magic Effect = item.resourcePrefab.GetComponent<Charm_Magic>();
+                    Effect.maxLevel = 1;
+                    Effect.skill.rarity = EItemRarity.Common;
+                    Effect.skill.cooldownTime = 0.8f;
+                    ActiveSkill_Bolt Magic = Effect.skill.magicPrefab.GetComponent<ActiveSkill_Bolt>();
+                    Magic.fireCount = 2;
+                    Magic.damageId = "Air Bolt";
+                    Magic.relatedDamage = "WindDamage";
+                    Magic.elementalType = Wind;
+                    Magic.defaultDamageByLevel = new float[] { 8, 12 };
+                    Magic.damagePercentByLevel = new float[] { 16, 24 };
+                    BondingItems.Add(3000);
+                }); // 空气魔弹
                 ItemDatabase.Modify(3012, item =>
                 {
                     Charm_Magic Effect = item.resourcePrefab.GetComponent<Charm_Magic>();
@@ -1069,25 +1420,6 @@ namespace SPMod
                     Magic.defaultDamageByLevel = new float[] { 16, 20, 24, 28, 32 };
                     Magic.damagePercentByLevel = new float[] { 60, 75, 90, 105, 120 };
                 }); // 火焰马戏团
-                ItemDatabase.Modify(3017, item =>
-                {
-                    item.activeType = EItemActiveType.Default;
-                    item.categories = Tools.SetCategories("GLACIER");
-                    item.rarity = EItemRarity.Legend;
-                    item.cost = LegendCost;
-                    Charm_Magic Effect = item.resourcePrefab.GetComponent<Charm_Magic>();
-                    Effect.maxLevel = 3;
-                    Effect.skill.magicClasses = new EMagicClass[]{ EMagicClass.Ice };
-                    Effect.skill.rarity = EItemRarity.Legend;
-                    Effect.skill.cooldownTime = 0.6f;
-                    ActiveSkill_Bolt Magic = Effect.skill.magicPrefab.GetComponent<ActiveSkill_Bolt>();
-                    Magic.fireCount = 3;
-                    Magic.damageId = "Water Bolt";
-                    Magic.relatedDamage = "IceDamage";
-                    Magic.elementalType = EDamageElementalType.Ice;
-                    Magic.defaultDamageByLevel = new float[] { 9, 12, 15, 18 };
-                    Magic.damagePercentByLevel = new float[] { 24, 32, 40, 48 };
-                }); // 水魔弹
                 ItemDatabase.Modify(3020, item =>
                 {
                     Charm_Magic Effect = item.resourcePrefab.GetComponent<Charm_Magic>();
@@ -1265,6 +1597,7 @@ namespace SPMod
                 }
                 KeywordDatabase.Register(Entity);
             }
+            Tools.InjectKeywordSpriteAssets();
         }
 
         private static readonly Dictionary<ulong, GameObject> Lv5 = new Dictionary<ulong, GameObject>();
@@ -1311,6 +1644,17 @@ namespace SPMod
                 if (!KeyWordToStatusName.ContainsKey(KeyWord))
                     KeyWordToStatusName.Add(KeyWord, statusEntity.id);
             }
+            foreach (ModKeyWord Data in ModKeywordEntityData)
+            {
+                if (Data.Status == null) continue;
+                string KeyWord = Data.Status.statKeyword.ToUpper();
+                if (!KeyWordToStatusName.ContainsKey(KeyWord))
+                    KeyWordToStatusName.Add(KeyWord, Data.Status.id);
+            }
+            ModFxPool.Register("CyanOrb", prewarm: 4, max: 16, fps: 30, loop: false, "CyanOrb_1", "CyanOrb_2", "CyanOrb_3", "CyanOrb_4", "CyanOrb_5", "CyanOrb_6", "CyanOrb_7", "CyanOrb_8");
+            ModFxPool.Register("AirValveGround", prewarm: 2, max: 8, fps: 18, loop: false,
+                "AirArrow_FX_Ground00", "AirArrow_FX_Ground01", "AirArrow_FX_Ground02", "AirArrow_FX_Ground03", "AirArrow_FX_Ground04", "AirArrow_FX_Ground05", "AirArrow_FX_Ground06");
+            ModFxPool.Register("WindSail_Explosion", 4, 7, 10, false, "FX", 0, "WindSail_Explosion00", "WindSail_Explosion01", "WindSail_Explosion02", "WindSail_Explosion03", "WindSail_Explosion04", "WindSail_Explosion05");
         }
 
         public static void InitializeModStat(string Name)
@@ -1351,9 +1695,9 @@ namespace SPMod
                 }
             }
 
-            if (PartyStatsName.Contains(ID))
+            if (PartyStatsGetter.TryGetValue(ID, out Func<AllPlayerStatus, int> GetPartyStats))
             {
-                Result += Tools.GetMaxPlayerStatusForName(ID);
+                Result += GetPartyStats(PartyStats);
             }
 
             if (ID.EqualsAny(TextFile.AllDamageBonus))
@@ -1380,53 +1724,36 @@ namespace SPMod
                 }
             }//消耗MP伤害
 
-            if (Player.IsWeaponUseNet(WeaponIDs.CarrotSword, WeaponIDs.CarrotSword2))
+            if (Player.IsWeaponUseNet(WeaponIDs.CarrotSword, WeaponIDs.CarrotSword2, WeaponIDs.Excallion))
             {
-                if (ID.EqualsAny("PHYSICALDAMAGE", "FIREDAMAGE", "ICEDAMAGE", "LIGHTNINGDAMAGE"))
+                if (ID.EqualsAny(TextFile.WindDamage))
                 {
-                    Result += 2;
+                    Result += 5;
                 }
-            }//胡萝卜剑系列 四属性增加2点
+            }//胡萝卜剑系列 风属性
 
             if (Player.IsWeaponUseNet(WeaponIDs.Excallion))
             {
-                if (ID.EqualsAny("MAGICDAMAGEBONUS"))
+                if (ID.EqualsAny(TextFile.MagicDamageBonus))
                 {
                     int max = Tools.BaseStatToMax(Player);
-                    Result -= 15;
                     Result += (int)(max * 0.8f);
                 }
-            }//大葱剑 增加80%最高属性值的魔法伤害
-
-            if (Player.IsWeaponUseNet(WeaponIDs.FrostboundGreatsword, WeaponIDs.IcicleSword, WeaponIDs.EternalFrostGreatsword, WeaponIDs.GreatswordOfExorcism))
-            {
-                if (ID.EqualsAny(TextFile.FreezeDamage))
-                {
-                    Result -= 40;
-                }
-                if (ID.EqualsAny(TextFile.AdditionalElementalDamageBonus) && !Player.GetWeaponType(WeaponIDs.EternalFrostGreatsword))
-                {
-                    Result -= 20;
-                }
-            }//冻结伤害减少 非万年冰 武器附加伤害增加
+            }//大葱剑 增加魔法伤害
 
             if (Player.IsWeaponUseNet(WeaponIDs.EternalFrostGreatsword))
             {
                 if (ID.EqualsAny(TextFile.AdditionalElementalDamageBonus))
-                    Result += -45 + Player.GetCustomStatUnsafe(TextFile.PhysicalDamage) * 2;
+                    Result += Player.GetCustomStatUnsafe(TextFile.PhysicalDamage) * 2;
             }//万年冰 武器附加伤害增加
 
             if (Player.IsWeaponUseNet(WeaponIDs.GreatswordOfExorcism))
             {
-                if (ID.EqualsAny(TextFile.AirSlashHaste))
-                {
-                    Result += 9949;
-                }
                 if (ID.EqualsAny(TextFile.FixedAttackSpeed))
                 {
                     Result += Player.GetCustomStatUnsafe(TextFile.ChargingCharmBonus);
                 }
-            }//驱魔的重剑 剑鞘加速 冰霜武具冷却速度加攻击速度
+            }//驱魔的重剑 冰霜武具冷却速度加攻击速度
 
             if (Player.IsWeaponUseNet(WeaponIDs.RedSnakeCrush))
             {
@@ -1434,39 +1761,7 @@ namespace SPMod
                 {
                     Result += Player.GetCustomStatUnsafe(TextFile.BurnSpeed).IntMult(0.5f);
                 }
-                if (ID.EqualsAny(TextFile.RedSnakeEyeDamageBonus))
-                {
-                    Result -= 33;
-                }
             }//红蛇碎击
-
-            if (Player.IsWeaponUseNet(WeaponIDs.SolisCineris))
-            {
-                if (ID.EqualsAny(TextFile.FlameSwordAdditionalAttackFromWeapon))
-                {
-                    Result -= 2;
-                }
-            }//索利斯·西涅里斯 魔法攻击额外触发太阳剑
-
-            if (Player.IsWeaponUseNet(WeaponIDs.LegacyofTheIllusionist))
-            {
-                if (ID.EqualsAny("SPECIALATTACKCHARGESPEED"))
-                {
-                    Result += 33;
-                }
-                if (ID.EqualsAny("COOLDOWNRECOVERYSPEED"))
-                {
-                    Result -= 50;
-                }
-            }//幻术师的遗产
-
-            if (Player.IsWeaponUseNet(WeaponIDs.LightningDagger, WeaponIDs.OverhangingStormCloud, WeaponIDs.LightningsWrath))
-            {
-                if (ID.EqualsAny(TextFile.AdditionalElementalDamageBonus))
-                {
-                    Result += 10;
-                }
-            }//雷电匕首系列 附加伤害增加
 
             if (Player.IsWeaponUseNet(WeaponIDs.LightningsWrath))
             {
@@ -1480,118 +1775,49 @@ namespace SPMod
                     if (WeaponPatch.LightningsWrathEffect2.ContainsKey(Player))
                       Result += 125;
                 }
-                if (ID.EqualsAny(TextFile.ElectricStack))
-                {
-                    Result -= 1;
-                }
             }//雷电之怒
-
-            if (Player.IsWeaponUseNet(WeaponIDs.OverhangingStormCloud))
-            {
-                if (ID.EqualsAny(TextFile.LightningDamage))
-                {
-                    Result -= 5;
-                }
-                if (ID.EqualsAny(TextFile.DarkCloudDamage))
-                {
-                    Result -= 15;
-                }
-            }//笼罩的阴云
 
             if (Player.IsWeaponUseNet(WeaponIDs.CrimsonVortex))
             {
-                if (ID.EqualsAny("WOUNDSTACK"))
+                if (ID.EqualsAny(TextFile.CrimsonVortex))
                 {
-                    Result -= 6;
-                    Result += (int)(Player.GetCustomStatUnsafe("DEBUFFDAMAGE") / 10f);
+                    Result += (int)(Player.GetCustomStatUnsafe(TextFile.DebuffDamage) / 10f);
                     if (Result > 96) Result = 96;
                 }
             }//深红漩涡 伤口恶化伤害 伤口恶化上限
 
-            if (Player.IsWeaponUseNet(WeaponIDs.LibrarySpectralSealingSociety, WeaponIDs.LibrarySpectralSealingSociety2))
-            {
-                if (ID.EqualsAny("DASHATTACKDAMAGEBONUS"))
-                {
-                    Result -= 40;
-                }
-            }//图书馆幽灵封印社 冲刺伤害
-
             if (Player.IsWeaponUseNet(WeaponIDs.TheIndomitable))
             {
-                if (ID.EqualsAny("BASICATTACKDAMAGEBONUS"))
-                {
-                    Result -= 33;
-                }
-                if (ID.EqualsAny("WEAPONRANGE"))
+                if (ID.EqualsAny(TextFile.WeaponRange))
                 {
                     Result += 25;
                 }
-            }//无垠原野 普通攻击伤害减少 攻击范围增加
-
-            if (Player.IsWeaponUseNet(WeaponIDs.Adonis))
-            {
-                if (ID.EqualsAny(TextFile.WeaponCriticalDamageAmplify))
-                {
-                    Result -= 30;
-                }
-            }//福寿草 武器暴击伤害减少
-
-            if (Player.IsWeaponUseNet(WeaponIDs.GunpowderSynthesis))
-            {
-                if (ID.EqualsAny("WEAPONCRITICAL"))
-                {
-                    Result -= 3500;
-                }
-            }//火药合成 弹闸容量
+            }//无垠原野 攻击范围增加
 
             if (Player.IsWeaponUseNet(WeaponIDs.Negligence))
             {
-                if (ID.EqualsAny(TextFile.SpecialAttackDamageBonus))
-                {
-                    Result -= 15;
-                }
-                if (ID.EqualsAny(TextFile.SpecialAttackSpeed))
-                {
-                    Result += 15;
-                }
                 if (ID.EqualsAny(TextFile.SpecialAttackChargeSpeed))
                 {
                     Result += Player.GetCustomStatUnsafe(TextFile.AttackSpeed);
                 }
             }//默杀 特殊攻击速度/特殊攻击蓄力速度
 
-            if (Player.IsWeaponUseNet(WeaponIDs.Superconductor))
-            {
-                if (ID.EqualsAny("SWEEPCOSTREDUCTION"))
-                {
-                    Result += 50;
-                }
-            }//超导体 消耗减少
-
             if (Player.IsWeaponUseNet(WeaponIDs.Heidi))
             {
                 if (ID.EqualsAny(TextFile.DashAttackDamageBonus))
                 {
-                    if (WeaponPatch.HeidiDashAttack.TryGetValue(Player.Name, out int Stack))
+                    if (WeaponPatch.HeidiDashAttack.TryGetValue(Player, out int Stack))
                     {
                         Result += Stack * 10;
                     }
                 }
             }//海蒂 最终攻击速度 冲刺攻击伤害
 
-            if (Player.IsWeaponUseNet(WeaponIDs.MarkStabilization))
-            {
-                if (ID.EqualsAny(TextFile.ElectricDamage))
-                {
-                    Result -= 25;
-                }
-            }//标记稳定化 闪电箭概率增加 触电伤害减少
-
             if (Player.IsWeaponUseNet(WeaponIDs.CloudGatherer))
             {
                 if (ID.EqualsAny(TextFile.LightningCrossbow))
                 {
-                    if (WeaponPatch.CloudGathererEffect.TryGetValue(Player.Name, out bool Falg) && Falg)
+                    if (WeaponPatch.CloudGathererEffect.TryGetValue(Player, out bool Falg) && Falg)
                         Result = 100;
                 }
             }//聚云者
@@ -1615,24 +1841,6 @@ namespace SPMod
                 }
             }//雷剑E3G
 
-            if (Player.IsWeaponUseNet(WeaponIDs.LightningGreatSwordS3G))
-            {
-                if (ID.EqualsAny(TextFile.ElectricLuck))
-                {
-                    Result += 40;
-                }
-                if (ID.EqualsAny(TextFile.ElectricDamage))
-                {
-                    Result -= 33;
-                }
-            }//雷剑S3G 额外触电概率增加 触电伤害减少
-
-            if (Player.IsWeaponUseNet(WeaponIDs.GlacialBlade))
-            {
-                if (ID.EqualsAny(TextFile.AirSlashHaste))
-                    Result -= 50;
-            }//冰川之刃
-
             if (Player.IsWeaponUseNet(WeaponIDs.BlizzardsEve))
             {
                 if (ID.EqualsAny(TextFile.DashRecovery))
@@ -1641,17 +1849,17 @@ namespace SPMod
                 }
             }//暴风雪之锤 冰霜武具充能效率增加冲刺恢复速度
 
-            if (Player.IsWeaponUseNet(WeaponIDs.BeastMarksSwordHou))
+            if (Player.IsWeaponUseNet(WeaponIDs.LightningGreatSwordS3G))
             {
-                if (ID.EqualsAny("SPECIALATTACKRANGE"))
+                if (ID.EqualsAny(TextFile.ElectricLuck))
                 {
-                    Result -= 33;
+                    Result += 40;
                 }
-            }//怪刀毫羽
+            }//雷剑S3G 额外触电概率增加
 
             if (Player.IsWeaponUseNet(WeaponIDs.SpikeClub))
             {
-                if (ID.EqualsAny("WEAPONCRITICAL"))
+                if (ID.EqualsAny(TextFile.WeaponCritical))
                 {
                     Result += 5000;
                 }
@@ -1659,14 +1867,6 @@ namespace SPMod
 
             if (Player.IsWeaponUseNet(WeaponIDs.SwarmingShadow, WeaponIDs.SwiftRegret, WeaponIDs.Compliance))
             {
-                if (ID.EqualsAny(TextFile.BasicAttackDamageBonus) && !Player.IsWeaponUseNet(WeaponIDs.Compliance))
-                {
-                    Result -= 20;
-                }
-                if (ID.EqualsAny(TextFile.SpecialAttackDamageBonus))
-                {
-                    Result += 25;
-                }
                 if (ID.EqualsAny(TextFile.SpecialAttackChargeSpeed))
                 {
                     Result += 66;
@@ -1677,33 +1877,17 @@ namespace SPMod
                 }
             }//聚集的阴影
 
-            if (Player.IsWeaponUseNet(WeaponIDs.SwiftRegret))
-            {
-                if (ID.EqualsAny("BASICATTACKDAMAGEBONUS"))
-                {
-                    Result -= 10;
-                }
-            }//短暂自责
-
             if (Player.IsWeaponUseNet(WeaponIDs.Compliance))
             {
+                if (ID.EqualsAny(TextFile.SpecialAttackDamageBonus))
+                {
+                    Result += 25;
+                }
                 if (ID.EqualsAny(TextFile.WeaponRange))
                 {
                     Result += Player.GetCustomStatUnsafe(TextFile.SpecialAttackRange) / 2;
                 }
             }//顺从的姿态
-
-            if (Player.IsWeaponUseNet(WeaponIDs.WinterSmithsDraftblade, WeaponIDs.SilenceofEverfrost, WeaponIDs.FragmentofNastrond))
-            {
-                if (ID.EqualsAny("ADDITIONALELEMENTALDAMAGEBONUS"))
-                {
-                    Result += 5;
-                }
-                if (ID.EqualsAny("ICEDAMAGE"))
-                {
-                    Result -= 3;
-                }
-            }//草图刀 附加伤害20%
 
             if (Player.IsWeaponUseNet(WeaponIDs.Minimalism, WeaponIDs.TheSecond, WeaponIDs.BlackIronHalberd))
             {
@@ -1741,27 +1925,10 @@ namespace SPMod
                 }
                 if (ID.EqualsAny(TextFile.JellyfishBasicDamage))
                 {
-                    Result -= 25;
                     Result += Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 2;
                     Result += Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 2;
                 }
             }//卡里姆的形象 减益伤害增加 基础水母伤害减少 受到减益伤害和毒减益伤害加成
-
-            if (Player.IsWeaponUseNet(WeaponIDs.StaffOfGreatMight))
-            {
-                if (ID.EqualsAny("BASICATTACKDAMAGEBONUS"))
-                {
-                    Result -= 30;
-                }
-            }//大力棍
-
-            if (Player.IsWeaponUseNet(WeaponIDs.SolisBraca))
-            {
-                if (ID.EqualsAny(TextFile.WeaponRange))
-                {
-                    Result += 33;
-                }
-            }//阳棍 增加特殊攻击伤害
 
             if (Player.IsWeaponUseNet(WeaponIDs.SolisEkli))
             {
@@ -1775,10 +1942,9 @@ namespace SPMod
             {
                 if (ID.EqualsAny(TextFile.EnhancedChakram))
                 {
-                    Result -= 20;
                     Result += Player.GetCustomStatUnsafe(TextFile.AttackSpeed);
                 }
-            }//比杜卡 飞轮受攻击速度加成 飞轮伤害减少
+            }//比杜卡 飞轮受攻击速度加成
 
             if (Player.IsWeaponUseNet(WeaponIDs.CreepingDespair))
             {
@@ -1790,15 +1956,11 @@ namespace SPMod
 
             if (Player.IsWeaponUseNet(WeaponIDs.RuadhsleaSpear))
             {
-                if (ID.EqualsAny(TextFile.AttackSpeed))
-                {
-                    Result -= 10;
-                }
                 if (ID.EqualsAny(TextFile.DashAttackDamageBonus))
                 {
-                    if (WeaponPatch.RuadhsleaSpearBuff.ContainsKey(Player.Name))
+                    if (WeaponPatch.RuadhsleaSpearBuff.ContainsKey(Player))
                     {
-                        Result += WeaponPatch.RuadhsleaSpearBuff[Player.Name] * 10;
+                        Result += WeaponPatch.RuadhsleaSpearBuff[Player] * 10;
                     }
                 }
             }//突击枪普阿尔斯卡 层数增加冲刺攻击伤害
@@ -1811,42 +1973,6 @@ namespace SPMod
                 }
             }//冰冷愤怒 增加同伴伤害和攻击速度
 
-            if (Player.IsWeaponUseNet(WeaponIDs.LongBladeOnohara, WeaponIDs.BeastMarksSwordHou, WeaponIDs.FamedSwordMuramasa))
-            {
-                if (ID.EqualsAny(TextFile.AttackSpeed))
-                {
-                    Result -= 15;
-                }
-            }//小野原系列
-
-            if (Player.IsWeaponUseNet(WeaponIDs.RendbladeDriftingWillow))
-            {
-                if (ID.EqualsAny(TextFile.Critical))
-                {
-                    Result -= 3000;
-                }
-                if (ID.EqualsAny(TextFile.LastBasicAttackDamage, TextFile.WeaponRange))
-                {
-                    Result += 30;
-                }
-            }//飞柳 攻击范围 最后一击伤害增加
-
-            if (Player.IsWeaponUseNet(WeaponIDs.WanderingAshes))
-            {
-                if (ID.EqualsAny(TextFile.DashAttackDamageBonus))
-                {
-                    Result -= 60;
-                }
-            }//灰烬飘扬 冲刺攻击伤害减少
-
-            if (Player.IsWeaponUseNet(WeaponIDs.Malaspina))
-            {
-                if (ID.EqualsAny(TextFile.IceDamage))
-                {
-                    Result -= 5;
-                }
-            }//马拉斯皮纳
-
             if (Player.IsWeaponUseNet(WeaponIDs.ExpansionDevice))
             {
                 if (ID.EqualsAny(TextFile.CrossbowAmmo))
@@ -1856,14 +1982,6 @@ namespace SPMod
                 }
             }//扩展装置 弹药数量
 
-            if (Player.IsWeaponUseNet(WeaponIDs.BlazingHelbanus))
-            {
-                if (ID.EqualsAny(TextFile.FireDamage))
-                {
-                    Result -= 4;
-                }
-            }//炽焰赫尔巴努斯
-
             if (Player.IsWeaponUseNet(WeaponIDs.YuisShortDagger))
             {
                 if (ID.EqualsAny(TextFile.CooldownRecoverySpeed))
@@ -1872,28 +1990,15 @@ namespace SPMod
                     {
                         Result += 100;
                     }
-                    Result += 30;
-                }
-                if (ID.EqualsAny(TextFile.MagicCritical))
-                {
-                    Result -= 3000;
                 }
                 if (ID.EqualsAny(TextFile.MPSkillDamage))
                 {
-                    if (WeaponPatch.YuisShortDaggerMagic.TryGetValue(Player.Name, out int Value))
+                    if (WeaponPatch.YuisShortDaggerMagic.TryGetValue(Player, out int Value))
                     {
                         Result += Value;
                     }
                 }
             }//优衣的短匕首
-
-            if (Player.IsWeaponUseNet(WeaponIDs.Rapier2))
-            {
-                if (ID.EqualsAny(TextFile.BasicAttackDamageBonus))
-                    Result += 10;
-                if (ID.EqualsAny(TextFile.AttackSpeed))
-                    Result -= 10;
-            }//闪光的细剑
 
             if (Player.IsWeaponUseNet(WeaponIDs.WeightOfTheSea))
             {
@@ -1905,10 +2010,6 @@ namespace SPMod
 
             if (Player.IsWeaponUseNet(WeaponIDs.OraclesStaff))
             {
-                if (ID.EqualsAny(TextFile.WeaponRange))
-                {
-                    Result += 30;
-                }
                 if (ID.EqualsAny(TextFile.FrostRelicDamage))
                 {
                     Result += Player.GetCustomStatUnsafe(TextFile.AttackSpeed).IntMult(0.25f);
@@ -1931,50 +2032,6 @@ namespace SPMod
                 }
             }//希望的影子
 
-            if (Player.IsWeaponUseNet(WeaponIDs.SolisIubar))
-            {
-                if (ID.EqualsAny(TextFile.FlameSwordDamage))
-                {
-                    Result -= 35;
-                }
-                if (ID.EqualsAny(TextFile.FinalWeaponDamage))
-                {
-                    Result += 15;
-                }
-            }//索利斯·尤巴尔
-
-            if (Player.IsWeaponUseNet(WeaponIDs.FrozenSmelt))
-            {
-                if (ID.EqualsAny(TextFile.IceDamage))
-                {
-                    Result -= 5;
-                }
-            }//冰冻公鱼
-
-            if (Player.IsWeaponUseNet(WeaponIDs.Successor))
-            {
-                if (ID.EqualsAny(TextFile.MagicDamageBonus))
-                {
-                    Result -= 30;
-                }
-            }//继承者
-
-            if (Player.IsWeaponUseNet(WeaponIDs.BlindingSilence))
-            {
-                if (ID.EqualsAny(TextFile.ElectricEarringDamage))
-                {
-                    Result -= 100;
-                }
-                if (ID.EqualsAny(TextFile.ElectricEarringCount))
-                {
-                    Result -= 1;
-                }
-                if (ID.EqualsAny(TextFile.ElectricEarringSweep))
-                {
-                    Result -= 1;
-                }
-            }//耀目的寂静
-
             if (StarTwinkle_AddDamage.Count > 0)
             {
                 if (ID.EqualsAny("PLANETDAMAGE", "PLANETATTACKSPEED"))
@@ -1983,7 +2040,7 @@ namespace SPMod
                 }
             }//星光闪烁 所有玩家的行星伤害和攻速增加10%
 
-            if (Tools.CostumeSkinUse(Player.Name, "Skeleton", "_1", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Skeleton_1", false))
             {
                 if (ID.EqualsAny(TextFile.DamageReduction))
                 {
@@ -1997,7 +2054,7 @@ namespace SPMod
                 }
             }//骷髅1 防御力增加基于生命值
 
-            if (Tools.CostumeSkinUse(Player.Name, "BrownRabbit", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "BrownRabbit_3", false))
             {
                 if (ID.EqualsAny("PHYSICALDAMAGE"))
                 {
@@ -2006,7 +2063,7 @@ namespace SPMod
                 }
             }//棕兔3 物理伤害增加基于闪避率
 
-            if (Tools.CostumeSkinUse(Player.Name, "FireCat", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "FireCat_2", false))
             {
                 if (ID.EqualsAny("FLAMESWORDADDITIONALATTACK"))
                 {
@@ -2014,7 +2071,7 @@ namespace SPMod
                 }
             }//火猫2 太阳剑额外触发次数增加1
 
-            if (Tools.CostumeSkinUse(Player.Name, "Luck", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Luck_2", false))
             {
                 if (ID.EqualsAny(TextFile.TrueDamage))
                 {
@@ -2023,7 +2080,7 @@ namespace SPMod
                 }
             }//幸运2 真实伤害减少 真实伤害增加基于平均攻击力
 
-            if (Tools.CostumeSkinUse(Player.Name, "Mole", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Mole_2", false))
             {
                 if (Player.followers.Count == 1)
                 {
@@ -2038,7 +2095,7 @@ namespace SPMod
                 }
             }//鼹鼠2 同伴防御+100（仅当同伴数小于等于1时）
 
-            if (Tools.CostumeSkinUse(Player.Name, "Mole", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Mole_3", false))
             {
                 if (ID.EqualsAny(TextFile.FollowerDefense))
                 {
@@ -2050,7 +2107,7 @@ namespace SPMod
                 }
             }//鼹鼠3 根据同伴数量增加无视防御伤害 同伴防御增加基于防御力
 
-            if (Tools.CostumeSkinUse(Player.Name, "HolyRabbit", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "HolyRabbit_3", false))
             {
                 if (ID.EqualsAny(TextFile.AllDamageBonus))
                 {
@@ -2058,7 +2115,7 @@ namespace SPMod
                 }
             }//圣兔3 每有1个玩家增加所有伤害
 
-            if (Tools.CostumeSkinUse(Player.Name, "ArmoredRabbit", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "ArmoredRabbit_2", false))
             {
                 if (ID.EqualsAny(TextFile.DashRecovery))
                 {
@@ -2070,7 +2127,7 @@ namespace SPMod
                 }
             }//盔甲兔2
 
-            if (Tools.CostumeSkinUse(Player.Name, "ArmoredRabbit", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "ArmoredRabbit_3", false))
             {
                 if (ID.EqualsAny(TextFile.PhysicalDamage))
                 {
@@ -2078,7 +2135,7 @@ namespace SPMod
                 }
             }//盔甲兔3 防御力增加物理属性
 
-            if (Tools.CostumeSkinUse(Player.Name, "Otter", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Otter_3", false))
             {
                 if (ID.EqualsAny("CRITICAL"))
                 {
@@ -2089,7 +2146,7 @@ namespace SPMod
                 }
             }//水獭3 有被动时增加20%暴击率
 
-            if (Tools.CostumeSkinUse(Player.Name, "Bat", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Bat_2", false))
             {
                 if (ID.EqualsAny(TextFile.AllDamageBonus))
                 {
@@ -2098,7 +2155,7 @@ namespace SPMod
                 }
             }//蝙蝠2 增加所有伤害加成
 
-            if (Tools.CostumeSkinUse(Player.Name, "Seren", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Seren_2", false))
             {
                 if (ID.EqualsAny(TextFile.MagicDamageBonus))
                 {
@@ -2106,7 +2163,7 @@ namespace SPMod
                 }
             }//蜥蜴2 根据护盾量增加魔法书伤害
 
-            if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit_2", false))
             {
                 if (ID.EqualsAny("MPREGENMULTIPLE") && Player.IsInBattle)
                 {
@@ -2114,7 +2171,7 @@ namespace SPMod
                 }
             }//红圣兔2 战斗中MP恢复减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "Luck", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Luck_3", false))
             {
                 if (ID.EqualsAny(TextFile.Luck))
                 {
@@ -2152,18 +2209,6 @@ namespace SPMod
                     Result += Result.CustomStatMult(Mult, 100);
                 }
             }//E3G 根据箭头概率特殊攻击范围乘算增加%
-
-            if (Player.IsWeaponUseNet(WeaponIDs.OverhangingStormCloud))
-            {
-                if (ID.EqualsAny(TextFile.AdditionalElementalDamageBonus))
-                {
-                    float Mult = 1f + Math.Min(Player.GetCustomStatUnsafe(TextFile.DarkCloudLuck), 100) * 0.01f;
-                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.DarkCloudDamage) * 0.01f;
-                    Mult *= Math.Max(1, Player.GetCustomStatUnsafe(TextFile.DarkCloudMultishot));
-                    Mult -= 1f;
-                    if (Mult > 0f) Result += Result.CustomStatMult(Mult, 25);
-                }
-            }//笼罩的阴云 附加伤害受到乌云额外射击影响
             
             if (Player.IsWeaponUseNet(WeaponIDs.FiaolasJudgmentStaff))
             {
@@ -2176,7 +2221,7 @@ namespace SPMod
                 }
             }//烧火棍
 
-            if (Tools.CostumeSkinUse(Player.Name, "Frog", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Frog_2", false))
             {
                 if (ID.EqualsAny(TextFile.DarkCloudAtkSpeedBonus, TextFile.DarkCloudSpeed))
                 {
@@ -2184,7 +2229,7 @@ namespace SPMod
                 }
             }//青蛙2 乌云消耗速度增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "FireCat", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "FireCat_3", false))
             {
                 if (ID.EqualsAny(TextFile.BurnDamage))
                 {
@@ -2192,7 +2237,7 @@ namespace SPMod
                 }
             }//火猫3 灼烧伤害乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "WizardRabbit", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "WizardRabbit_3", false))
             {
                 if (ID.EqualsAny(TextFile.FreezeDamage))
                 {
@@ -2200,7 +2245,7 @@ namespace SPMod
                 }
             }//冰兔3 冰冻伤害乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "Luck", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Luck_2", false))
             {
                 if (ID.EqualsAny(TextFile.AllDamageBonus))
                 {
@@ -2208,7 +2253,7 @@ namespace SPMod
                 }
             }//幸运草2 减少所有伤害
 
-            if (Tools.CostumeSkinUse(Player.Name, "Skeleton", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Skeleton_3", false))
             {
                 if (ID.EqualsAny(TextFile.MeleeDamage))
                 {
@@ -2216,7 +2261,7 @@ namespace SPMod
                 }
             }//骷髅3 近战伤害乘算减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "Seren", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Seren_3", false))
             {
                 if (ID.EqualsAny(TextFile.CrossbowReloadSpeed))
                 {
@@ -2224,7 +2269,7 @@ namespace SPMod
                 }
             }//蜥蜴3 填装速度乘算减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit_2", false))
             {
                 if (ID.EqualsAny("DEBUFFDAMAGE"))
                 {
@@ -2232,7 +2277,7 @@ namespace SPMod
                 }
             }//橙兔2 减益伤害乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit_3", false))
             {
                 if (ID.EqualsAny(TextFile.BuffDuration))
                 {
@@ -2244,7 +2289,7 @@ namespace SPMod
                 }
             }//红圣兔3 持续时间大幅增加 最终MP乘算减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "DarkBrownRabbit", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "DarkBrownRabbit_2", false))
             {
                 if (ID.EqualsAny("BASICATTACKDAMAGEBONUS"))
                 {
@@ -2256,7 +2301,7 @@ namespace SPMod
                 }
             }//深棕兔2 普通攻击伤害乘算减少 攻击速度乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "Otter", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Otter_3", false))
             {
                 if (ID.EqualsAny("ALLDAMAGEBONUS"))
                 {
@@ -2268,34 +2313,18 @@ namespace SPMod
                 }
             }//水獭3 所有伤害乘算减少 暴击伤害乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "WhiteWolf", "_2", false))
-            {
-                if (ID.EqualsAny("CROSSBOWRELOADSPEED"))
-                {
-                    Result -= Result.CustomStatMult(0.4f, 100);
-                }
-            }//白狼2 乘算减少填装速度
-
-            if (Tools.CostumeSkinUse(Player.Name, "BrownRabbit", "_2", false))
+            if (Tools.CostumeSkinUse(Player.Name, "BrownRabbit_2", false))
             {
                 if (ID.EqualsAny(TextFile.BuffDuration))
                 {
                     Result -= Result.CustomStatMult(0.7f, 100);
                 }
             }//棕兔2 乘算减少增益持续时间
-
-            if (Tools.CostumeSkinUse(Player.Name, "ForestCat", "_2", false))
-            {
-                if (ID.EqualsAny(TextFile.AllDamageBonus))
-                {
-                    Result -= Result.CustomStatMult(0.1f, 100);
-                }
-            }//森林猫2 乘算减少所有伤害放大
         }
 
         public static void ModifiedCustomStatMultAdd(UnitAvatar Player, string ID, ref int Result)
         {
-            if (Tools.CostumeSkinUse(Player.Name, "ArmoredRabbit", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "ArmoredRabbit_3", false))
             {
                 if (ID.EqualsAny(TextFile.PhysicalDamage))
                 {
@@ -2303,7 +2332,7 @@ namespace SPMod
                 }
             }//盔甲3 物理属性获取减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "Luck", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Luck_3", false))
             {
                 if (ID.EqualsAny(TextFile.Critical))
                 {
@@ -2315,15 +2344,15 @@ namespace SPMod
                 }
             }//幸运草3 暴击几率, 暴击伤害获取减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit_3", false))
             {
                 if (Result > 0)
                 {
-                    Result = (int)MathF.Floor(Result * 1.12f);
+                    Result = (int)MathF.Floor(Result * 1.1f);
                 }
             }//橙兔3 全属性增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "Skeleton", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "Skeleton_3", false))
             {
                 if (ID.EqualsAny(TextFile.AttackSpeed))
                 {
@@ -2458,7 +2487,7 @@ namespace SPMod
                 }
             }//霜针花园 不再启用原本的效果
 
-            if (Tools.CostumeSkinUse(Player.Name, "WhiteRabbit", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "WhiteRabbit_3", false))
             {
                 if (ID.EqualsAny(TextFile.BasicAttackDamageBonus, TextFile.SpecialAttackDamageBonus, TextFile.DashAttackDamageBonus))
                 {
@@ -2468,7 +2497,7 @@ namespace SPMod
                 }
             }//白兔3 普攻加成、特攻加成、冲刺攻击不会低于武器伤害
 
-            if (Tools.CostumeSkinUse(Player.Name, "DarkBrownRabbit", "_3", false))
+            if (Tools.CostumeSkinUse(Player.Name, "DarkBrownRabbit_3", false))
             {
                 if (ID.EqualsAny(TextFile.AttackSpeed))
                 {
@@ -2479,492 +2508,321 @@ namespace SPMod
 
         public static void ModifiedCostume(string PlayerName, ref string[] Stats, ref ItemEntity[] Item, ref bool UseEffect)
         {
-            CostumeSkinType.TryGetValue(PlayerName, out string skin);
-            string Name = "";
-            foreach (var skinID in CostumeSkinDate)
-            {
-                if (skinID.Value == skin)
-                {
-                    Name = skinID.Key;
-                    break;
-                }
-            }
-            if (Name != "")
-            {
-                LoadModCostumeEffect(Name, ref Stats, ref Item, ref UseEffect);
-            }
+            if (!ModConfig.Instance.EnableCostumeModifier) return;
+            if (!CostumeSkinType.TryGetValue(PlayerName, out string skin)) return;
+            if (!CostumeSkinIdToName.TryGetValue(skin, out string Name)) return;
+            LoadModCostumeEffect(Name, ref Stats, ref Item, ref UseEffect);
         }
 
         public static void LoadModCostumeEffect(string SkinName, ref string[] Stats, ref ItemEntity[] Item, ref bool UseEffect)
         {
-            if (Tools.CostumeSkinUse(SkinName, "PinkRabbit_2"))
+            switch (SkinName)
             {
-                Stats = new string[]
+                case "PinkRabbit_2":
                 {
-                    "EXTRA_ITEM_CHOICES/1",
-                    "EXP_DROP/-30"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "PinkRabbit_3"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "BrownRabbit_2"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "BrownRabbit_3"))
-            {
-                Stats = Array.Empty<string>();
-                Item = new ItemEntity[]
-                {
-                    ItemDatabase.FindItemById(1160),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "MandarinRabbit_2"))
-            {
-                Stats = new string[]
-                {
-                    "CRITICAL/-2000"
-                };
-                Item = new ItemEntity[]
-                {
-                    ItemDatabase.FindItemById(1183),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "MandarinRabbit_3"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "WhiteWolf_2"))
-            {
-                Stats = new string[]
-                {
-                    "MOVE_SPEED/100",
-                    "DASH_RECOVERY_SPEED/-40"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "WhiteWolf_3"))
-            {
-                Stats = new string[]
-                {
-                    "FIXED_DASH/1",
-                    "DASH_RECOVERY_SPEED/200"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Skeleton_1"))
-            {
-                Stats = new string[]
-                {
-                    "HP_CURSE/50"
-                };
-                Item = Array.Empty<ItemEntity>();
-                UseEffect = false;
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Skeleton_3"))
-            {
-                Stats = Array.Empty<string>();
-                Item = Array.Empty<ItemEntity>();
-                UseEffect = false;
-            }
-            if (Tools.CostumeSkinUse(SkinName, "FireCat_2"))
-            {
-                Stats = new string[]
-                {
-                    "FLAME_SWORD_DAMAGE/-50",
-                    "FLAME_SWORD_FAST_FALL/25"
-                };
-                Item = Array.Empty<ItemEntity>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "FireCat_3"))
-            {
-                Stats = new string[]
-                {
-                    "FINAL_WEAPONDAMAGE/15"
-                };
-                Item = Array.Empty<ItemEntity>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Frog_2"))
-            {
-                Stats = Array.Empty<string>();
-                Item = new ItemEntity[]
-                {
-                    ItemDatabase.FindItemById(1104),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Frog_3"))
-            {
-                Stats = new string[]
-                {
-                    "ELECTRIC_DAMAGE/12",
-                    "ELECTRIC_QUICKNESS/5"
-                };
-                Item = Array.Empty<ItemEntity>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "WizardRabbit_2"))
-            {
-                Stats = new string[]
-                {
-                    "CHARM_DAMAGE_BONUS/-35"
-                };
-                Item = new ItemEntity[]
-                {
-                    ItemDatabase.FindItemById(1179),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "WizardRabbit_3"))
-            {
-                Stats = new string[]
-                {
-                    "FINAL_WEAPONDAMAGE/15"
-                };
-                Item = Array.Empty<ItemEntity>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Bat_2"))
-            {
-                Stats = new string[]
-                {
-                    "HEALING_PENALTY/100"
-                };
-                Item = new ItemEntity[]
-                {
-                    ItemDatabase.FindItemById(1077),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Bat_3"))
-            {
-                Stats = new string[]
-                {
-                    "HP_STEAL/5"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Bird_2"))
-            {
-                Stats = new string[]
-                {
-                    "DASH_RECOVERY_SPEED/-20"
-                };
-                if (ModConfig.Instance.AddItem)
-                {
-                    if (GetModItem.TryGetValue("WindSpriteHairWax", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    Stats = new string[] { "EXTRA_ITEM_CHOICES/1", "EXP_DROP/-30" };
+                    break;
                 }
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Bird_3"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Fox_2"))
-            {
-                Stats = new string[]
+                case "PinkRabbit_3":
                 {
-                    "INVENTORY_SLOT/-23"
-                };
-                Item = new ItemEntity[]
-                {
-                    ItemDatabase.FindItemById(2099),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Fox_3"))
-            {
-                Stats = new string[]
-                {
-                    "TABLET_ENGRAVING/1"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Luck_2"))
-            {
-                Stats = new string[]
-                {
-                    "LUCK/10",
-                    "FINAL_WEAPONDAMAGE/-30"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Luck_3"))
-            {
-                Stats = Array.Empty<string>();
-                if (ModConfig.Instance.AddItem)
-                {
-                    if (GetModItem.TryGetValue("LuckyCoin", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    Stats = Array.Empty<string>();
+                    break;
                 }
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Mole_2"))
-            {
-                Stats = new string[]
+                case "BrownRabbit_2":
                 {
-                    "FINAL_WEAPONDAMAGE/-70"
-                };
-                Item = Array.Empty<ItemEntity>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Mole_3"))
-            {
-                Stats = new string[]
-                {
-                    "CHARM_DAMAGE_BONUS/-50"
-                };
-                Item = Array.Empty<ItemEntity>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "HolyRabbit_2"))
-            {
-                Stats = new string[]
-                {
-                    "FINAL_DAMAGE/-20",
-                    "REVIVE_PLAYER_HASTE/40"
-                };
-                Item = Array.Empty<ItemEntity>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "HolyRabbit_3"))
-            {
-                Stats = new string[]
-                {
-                    "HP_CURSE/50",
-                    "ALL_PLAYER_DEFENSE/20"
-                };
-                Item = Array.Empty<ItemEntity>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Ghost_2"))
-            {
-                Stats = new string[]
-                {
-                    "MAGIC_DAMAGE_BONUS/-50"
-                };
-                Item = Array.Empty<ItemEntity>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Ghost_3"))
-            {
-                Stats = new string[]
-                {
-                    "MAGIC_DAMAGE_BONUS/-50",
-                    "MAGIC_COOLDOWN_REDUCTION/40"
-                };
-                Item = new ItemEntity[]
-                {
-                     ItemDatabase.FindItemById(1040),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Seren_2"))
-            {
-                Stats = new string[]
-                {
-                    "MAX_HP/-40",
-                    "FINAL_HP/-40",
-                    "MP_STEAL/5"
-                };
-                Item = new ItemEntity[]
-                {
-                    ItemDatabase.FindItemById(3020),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Seren_3"))
-            {
-                Stats = new string[]
-                {
-                    "PLANET_ATTACK_SPEED/20",
-                    "ATTACK_SPEED/-30"
-                };
-                Item = Array.Empty<ItemEntity>();
-                if (ModConfig.Instance.AddItem)
-                {
-                    if (GetModItem.TryGetValue("DeepSpaceObserver", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    Stats = Array.Empty<string>();
+                    break;
                 }
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Crocodile_2"))
-            {
-                Stats = Array.Empty<string>();
-                if (ModConfig.Instance.AddItem)
+                case "BrownRabbit_3":
                 {
-                    if (GetModItem.TryGetValue("AlchemistsFlask", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    Stats = Array.Empty<string>();
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1160) };
+                    break;
                 }
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Crocodile_3"))
-            {
-                Stats = new string[]
+                case "MandarinRabbit_2":
                 {
-                    "MELEE_DAMAGE/8",
-                    "BASIC_ATTACK_DAMAGE/20",
-                    "ATTACK_SPEED/20",
-                    "WEAPON_RANGE/20",
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "WhiteRabbit_2"))
-            {
-                Stats = new string[]
-                {
-                   "HIGHEST_ELEMENTAL_DAMAGE/4"
-                };
-                if (ModConfig.Instance.AddItem)
-                {
-                    if (GetModItem.TryGetValue("HeartofElements", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    Stats = new string[] { "CRITICAL/-2000" };
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1183) };
+                    break;
                 }
-            }
-            if (Tools.CostumeSkinUse(SkinName, "WhiteRabbit_3"))
-            {
-                Stats = new string[]
+                case "MandarinRabbit_3":
                 {
-                    "FINAL_WEAPONDAMAGE/8"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "RedHolyRabbit_2"))
-            {
-                Stats = new string[]
-                {
-                    "HIGHEST_ELEMENTAL_DAMAGE/4",
-                    "MAX_MP/20",
-                    "FINAL_MP/20"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "RedHolyRabbit_3"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "DarkBrownRabbit_2"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "DarkBrownRabbit_3"))
-            {
-                Stats = new string[]
-                {
-                    "MELEE_DAMAGE/10",
-                    "LAST_BASIC_ATTACK_DAMAGE/20",
-                    "WEAPON_RANGE/30",
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Deer_1"))
-            {
-                Stats = new string[]
-                {
-                    "DIMENSION_POCKET/3",
-                    "CRITICAL/-10000"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Deer_2"))
-            {
-                Stats = new string[]
-                {
-                    "DEFENSE/-40",
-                    "EVASION/-4000"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Deer_3"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Squirrel_2"))
-            {
-                Stats = new string[]
-                {
-                    "LUCK/5",
-                    "FRUIT_COUNT/-5"
-                };
-                Item = new ItemEntity[]
-                {
-                    ItemDatabase.FindItemById(1195),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Squirrel_3"))
-            {
-                Stats = Array.Empty<string>();
-                if (ModConfig.Instance.AddItem)
-                {
-                    if (GetModItem.TryGetValue("MysteryBox", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    Stats = Array.Empty<string>();
+                    break;
                 }
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Otter_2"))
-            {
-                Stats = new string[]
+                case "WhiteWolf_2":
                 {
-                    "MP_STEAL/5",
-                    "MP_SKILL_DAMAGE/12",
-                    "FINAL_WEAPONDAMAGE/-18",
-                    "CRITICAL_DAMAGE_RATE/30"
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Otter_3"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "ArmoredRabbit_2"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "ArmoredRabbit_3"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Turtle_2"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "Turtle_3"))
-            {
-                Stats = Array.Empty<string>();
-            }
-            if (Tools.CostumeSkinUse(SkinName, "ForestCat_2"))
-            {
-                Stats = new string[]
+                    Stats = new string[] { "MOVE_SPEED/100", "DASH_RECOVERY_SPEED/-40" };
+                    break;
+                }
+                case "WhiteWolf_3":
                 {
-                    "LEAF_DROP/20"
-                };
-                Item = new ItemEntity[]
+                    Stats = new string[] { "FIXED_DASH/1", "DASH_RECOVERY_SPEED/200" };
+                    break;
+                }
+                case "Skeleton_1":
                 {
-                    ItemDatabase.FindItemById(1271),
-                };
-            }
-            if (Tools.CostumeSkinUse(SkinName, "ForestCat_3"))
-            {
-                Stats = new string[]
+                    Stats = new string[] { "HP_CURSE/50" };
+                    Item = Array.Empty<ItemEntity>();
+                    UseEffect = false;
+                    break;
+                }
+                case "Skeleton_3":
                 {
-                    "NEGOTIATION/-20"
-                };
+                    Stats = new string[] { "DEBUFF_DAMAGE/-20" };
+                    Item = Array.Empty<ItemEntity>();
+                    UseEffect = false;
+                    break;
+                }
+                case "FireCat_2":
+                {
+                    Stats = new string[] { "FLAME_SWORD_DAMAGE/-50", "FLAME_SWORD_FAST_FALL/25" };
+                    Item = Array.Empty<ItemEntity>();
+                    break;
+                }
+                case "FireCat_3":
+                {
+                    Stats = new string[] { "FINAL_WEAPONDAMAGE/15" };
+                    Item = Array.Empty<ItemEntity>();
+                    break;
+                }
+                case "Frog_2":
+                {
+                    Stats = Array.Empty<string>();
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1104) };
+                    break;
+                }
+                case "Frog_3":
+                {
+                    Stats = new string[] { "ELECTRIC_DAMAGE/12", "ELECTRIC_QUICKNESS/5" };
+                    Item = Array.Empty<ItemEntity>();
+                    break;
+                }
+                case "WizardRabbit_2":
+                {
+                    Stats = new string[] { "CHARM_DAMAGE_BONUS/-35" };
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1179) };
+                    break;
+                }
+                case "WizardRabbit_3":
+                {
+                    Stats = new string[] { "FINAL_WEAPONDAMAGE/15" };
+                    Item = Array.Empty<ItemEntity>();
+                    break;
+                }
+                case "Bat_2":
+                {
+                    Stats = new string[] { "HEALING_PENALTY/100" };
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1077) };
+                    break;
+                }
+                case "Bat_3":
+                {
+                    Stats = new string[] { "HP_STEAL/5" };
+                    break;
+                }
+                case "Bird_2":
+                {
+                    Stats = new string[] { "DASH_RECOVERY_SPEED/-20" };
+                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("WindSpriteHairWax", out ItemEntity ModItem))
+                        Item = new ItemEntity[] { ModItem };
+                    break;
+                }
+                case "Bird_3":
+                {
+                    Stats = Array.Empty<string>();
+                    break;
+                }
+                case "Fox_2":
+                {
+                    Stats = new string[] { "INVENTORY_SLOT/-23" };
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(2099) };
+                    break;
+                }
+                case "Fox_3":
+                {
+                    Stats = new string[] { "TABLET_ENGRAVING/1" };
+                    break;
+                }
+                case "Luck_2":
+                {
+                    Stats = new string[] { "LUCK/10", "FINAL_WEAPONDAMAGE/-30" };
+                    break;
+                }
+                case "Luck_3":
+                {
+                    Stats = Array.Empty<string>();
+                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("LuckyCoin", out ItemEntity ModItem))
+                        Item = new ItemEntity[] { ModItem };
+                    break;
+                }
+                case "Mole_2":
+                {
+                    Stats = new string[] { "FINAL_WEAPONDAMAGE/-70" };
+                    Item = Array.Empty<ItemEntity>();
+                    break;
+                }
+                case "Mole_3":
+                {
+                    Stats = new string[] { "CHARM_DAMAGE_BONUS/-50" };
+                    Item = Array.Empty<ItemEntity>();
+                    break;
+                }
+                case "HolyRabbit_2":
+                {
+                    Stats = new string[] { "FINAL_DAMAGE/-20", "REVIVE_PLAYER_HASTE/40" };
+                    Item = Array.Empty<ItemEntity>();
+                    break;
+                }
+                case "HolyRabbit_3":
+                {
+                    Stats = new string[] { "HP_CURSE/50", "ALL_PLAYER_DEFENSE/20" };
+                    Item = Array.Empty<ItemEntity>();
+                    break;
+                }
+                case "Ghost_2":
+                {
+                    Stats = new string[] { "MAGIC_DAMAGE_BONUS/-50" };
+                    Item = Array.Empty<ItemEntity>();
+                    break;
+                }
+                case "Ghost_3":
+                {
+                    Stats = new string[] { "MAGIC_DAMAGE_BONUS/-50", "MAGIC_COOLDOWN_REDUCTION/40" };
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1040) };
+                    break;
+                }
+                case "Seren_2":
+                {
+                    Stats = new string[] { "MAX_HP/-40", "FINAL_HP/-40", "MP_STEAL/5" };
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(3020) };
+                    break;
+                }
+                case "Seren_3":
+                {
+                    Stats = new string[] { "PLANET_ATTACK_SPEED/20", "ATTACK_SPEED/-30" };
+                    Item = Array.Empty<ItemEntity>();
+                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("DeepSpaceObserver", out ItemEntity ModItem))
+                        Item = new ItemEntity[] { ModItem };
+                    break;
+                }
+                case "Crocodile_2":
+                {
+                    Stats = Array.Empty<string>();
+                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("AlchemistsFlask", out ItemEntity ModItem))
+                        Item = new ItemEntity[] { ModItem };
+                    break;
+                }
+                case "Crocodile_3":
+                {
+                    Stats = new string[] { "MELEE_DAMAGE/8", "BASIC_ATTACK_DAMAGE/20", "ATTACK_SPEED/20", "WEAPON_RANGE/20" };
+                    break;
+                }
+                case "WhiteRabbit_2":
+                {
+                    Stats = new string[] { "HIGHEST_ELEMENTAL_DAMAGE/4" };
+                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("HeartofElements", out ItemEntity ModItem))
+                        Item = new ItemEntity[] { ModItem };
+                    break;
+                }
+                case "WhiteRabbit_3":
+                {
+                    Stats = new string[] { "FINAL_WEAPONDAMAGE/8" };
+                    break;
+                }
+                case "RedHolyRabbit_2":
+                {
+                    Stats = new string[] { "HIGHEST_ELEMENTAL_DAMAGE/4", "MAX_MP/20", "FINAL_MP/20" };
+                    break;
+                }
+                case "RedHolyRabbit_3":
+                {
+                    Stats = Array.Empty<string>();
+                    break;
+                }
+                case "DarkBrownRabbit_2":
+                {
+                    Stats = Array.Empty<string>();
+                    break;
+                }
+                case "DarkBrownRabbit_3":
+                {
+                    Stats = new string[] { "MELEE_DAMAGE/10", "LAST_BASIC_ATTACK_DAMAGE/20", "WEAPON_RANGE/30" };
+                    break;
+                }
+                case "Deer_1":
+                {
+                    Stats = new string[] { "DIMENSION_POCKET/3", "CRITICAL/-10000" };
+                    break;
+                }
+                case "Deer_2":
+                {
+                    Stats = new string[] { "DEFENSE/-40", "EVASION/-4000" };
+                    break;
+                }
+                case "Deer_3":
+                {
+                    Stats = Array.Empty<string>();
+                    break;
+                }
+                case "Squirrel_2":
+                {
+                    Stats = new string[] { "LUCK/5", "FRUIT_COUNT/-5" };
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1195) };
+                    break;
+                }
+                case "Squirrel_3":
+                {
+                    Stats = Array.Empty<string>();
+                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("MysteryBox", out ItemEntity ModItem))
+                        Item = new ItemEntity[] { ModItem };
+                    break;
+                }
+                case "Otter_2":
+                {
+                    Stats = new string[] { "MP_STEAL/5", "MP_SKILL_DAMAGE/12", "FINAL_WEAPONDAMAGE/-18", "CRITICAL_DAMAGE_RATE/30" };
+                    break;
+                }
+                case "Otter_3":
+                {
+                    Stats = Array.Empty<string>();
+                    break;
+                }
+                case "ArmoredRabbit_2":
+                {
+                    Stats = Array.Empty<string>();
+                    break;
+                }
+                case "ArmoredRabbit_3":
+                {
+                    Stats = Array.Empty<string>();
+                    break;
+                }
+                case "Turtle_2":
+                {
+                    Stats = Array.Empty<string>();
+                    break;
+                }
+                case "Turtle_3":
+                {
+                    Stats = Array.Empty<string>();
+                    break;
+                }
+                case "ForestCat_2":
+                {
+                    Stats = new string[] { "LEAF_DROP/20", "FINAL_DAMAGE/-10" };
+                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1271) };
+                    break;
+                }
+                case "ForestCat_3":
+                {
+                    Stats = new string[] { "NEGOTIATION/-20" };
+                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("MidasRing", out ItemEntity ModItem))
+                        Item = new ItemEntity[] { ModItem };
+                    break;
+                }
             }
         }
 
-        public static void ModifiedWeaponCommon(WeaponAddon Common, WeaponSimple Weapon, int Id)
-        {
-            switch (Id)
-            {
-                case WeaponIDs.FrostboundGreatsword:
-                case WeaponIDs.IcicleSword:
-                case WeaponIDs.EternalFrostGreatsword:
-                case WeaponIDs.GreatswordOfExorcism:
-                    {
-                        if (Id == WeaponIDs.IcicleSword && Common is WeaponAddonCommon_DebuffAttack DebuffAttack_1106)
-                        {
-                            DebuffAttack_1106.debuffPercent = 100;
-                            if (Weapon.isServer)
-                            {
-                                Common.EnableAddon();
-                            }
-                        }//冰柱剑概率改为100%
-                    }
-                    break;
-                case WeaponIDs.LightningsWrath:
-                    if (Common is WeaponAddonCommon_DebuffAttack DebuffAttack_1205)
-                    {
-                        DebuffAttack_1205.debuffPercent = 100;
-                        if (Weapon.isServer)
-                        {
-                            Common.EnableAddon();
-                        }
-                    }//雷电之怒概率改为100%
-                    break;
-                case WeaponIDs.Malaspina:
-                    if (Common is WeaponAddonCommon_DebuffAttack DebuffAttack_523)
-                    {
-                        DebuffAttack_523.debuffPercent = 60;
-                        if (Weapon.isServer)
-                        {
-                            Common.EnableAddon();
-                        }
-                    }
-                    break;
-            }
-        }
     }
 }

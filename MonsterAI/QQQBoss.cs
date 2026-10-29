@@ -400,6 +400,7 @@ namespace SPMod.MonsterAI
             static bool SummonUnitPatternCoroutine_Prefix(UnitAI_QQQBoss __instance, ref IEnumerator __result)
             {
                 if (PlayerSpawner.MultiplayerList.Count > 1) return true;
+                if (NetworkServer.connections.Count > 1) return true;
                 if (!__instance.isServer) return true;
                 if (Hard <= 0) return true;
 
@@ -417,7 +418,7 @@ namespace SPMod.MonsterAI
             }
             private static IEnumerator SummonUnitPatternType2(UnitAI_QQQBoss Boss)
             {
-                if (qqqBossField == null || currentPatternCoroutineField == null) yield break;
+                if (qqqBossField == null || currentPatternCoroutineField == null || isLastPatternReadyField == null) yield break;
 
                 Unit_QQQBoss? qqqBoss = qqqBossField.GetValue(Boss) as Unit_QQQBoss;
                 if (qqqBoss == null) yield break;
@@ -434,6 +435,9 @@ namespace SPMod.MonsterAI
                 if (Hard >= 4) Max += 1;
                 for (int i = 0; i < Max; i++)
                 {
+                    if ((bool)isLastPatternReadyField.GetValue(qqqBoss))
+                        break;
+
                     Vector2 Pos = Cen + HorayUtility.GetVector2FromAngle(360f / Max * i + Rot) * Random.Range(4f, 8f);
                     if (qqqBoss.FastMove(Pos, null, true))
                     {
@@ -1132,7 +1136,7 @@ namespace SPMod.MonsterAI
                     float Speed = 0.75f + 0.25f * Boss.hp / Boss.MaxHp;
                     if (Hard >= 4) Speed *= 0.9f;
                     Vector2 Dir = (areaCenter - (Vector2)Boss.transform.position).normalized;
-                    while (Count < 72f / Speed)
+                    while (Count < 66f / Speed)
                     {
                         Boss.StartCoroutine(ShootLastPatternOneShotLaserForDarknessAttack(Boss, Dir, Count * 8f));
                         yield return new WaitForSeconds(0.1f * Speed);
@@ -1613,7 +1617,7 @@ namespace SPMod.MonsterAI
                 if (!NetworkServer.active) return;
 
                 int Max = Hard >= 4 ? 5 : 4;
-                if (PlayerSpawner.MultiplayerList.Count > 0)
+                if (PlayerSpawner.MultiplayerList.Count > 1)
                     Max = 2;
 
                 float Rot = 360f / Max;
@@ -1663,11 +1667,12 @@ namespace SPMod.MonsterAI
             }
             private static IEnumerator SummonUnitType2(Unit_QQQBoss Boss)
             {
-                if (summonUnitCoroutineField == null)
+                if (summonUnitCoroutineField == null || isLastPatternReadyField == null)
                 {
                     StarSephiriaMod.LogError("[UnitAI_QQQBoss][SummonUnitType2]获取反射失败");
                     yield break;
                 }
+
                 float Mult = 0.4f + 0.4f * Boss.hp / Boss.MaxHp;
                 if (Hard >= 4) Mult *= 0.9f;
                 yield return new WaitForSeconds(Mult * 0.3f);

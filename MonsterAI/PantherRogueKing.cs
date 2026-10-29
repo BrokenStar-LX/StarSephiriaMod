@@ -312,10 +312,11 @@ namespace SPMod.MonsterAI
                     PantherRogueKingShadow shadow2;
                     PantherRogueKingShadow shadow3;
                     PantherRogueKingShadow? shadow4 = null;
-                    PantherRogueKingShadow? shadow5 = null;
                     if (!isCutscene && Hard >= 2)
                     {
                         float Rand = 45f;
+                        if (Hard >= 4) Rand = Random.Range(0f, 360f);
+
                         float RotR = 90f;
                         if (Hard >= 4) RotR = 72f;
                         Vector2 Pos = (Vector2)pantherEnvironment.transform.position + pantherEnvironment.cloneShurikenCloneAreaOffset;
@@ -323,7 +324,6 @@ namespace SPMod.MonsterAI
                         shadow2 = king.CreateShadow(Pos + HorayUtility.GetVector2FromAngle(Rand + RotR) * pantherEnvironment.cloneShurikenCloneAreaRadius);
                         shadow3 = king.CreateShadow(Pos + HorayUtility.GetVector2FromAngle(Rand + RotR * 2f) * pantherEnvironment.cloneShurikenCloneAreaRadius);
                         if (Hard >= 3) shadow4 = king.CreateShadow(Pos + HorayUtility.GetVector2FromAngle(Rand + RotR * 3f) * pantherEnvironment.cloneShurikenCloneAreaRadius);
-                        if (Hard >= 4) shadow5 = king.CreateShadow(Pos + HorayUtility.GetVector2FromAngle(Rand + RotR * 4f) * pantherEnvironment.cloneShurikenCloneAreaRadius);
                     }
                     else
                     {
@@ -351,13 +351,11 @@ namespace SPMod.MonsterAI
                     shadow2.ThrowDagger(__instance.Avatar, __instance.CurrentTarget);
                     shadow3.ThrowDagger(__instance.Avatar, __instance.CurrentTarget);
                     shadow4?.ThrowDagger(__instance.Avatar, __instance.CurrentTarget);
-                    shadow5?.ThrowDagger(__instance.Avatar, __instance.CurrentTarget);
                     yield return new WaitForSeconds(2f);
                     king.DestroyShadow(shadow);
                     king.DestroyShadow(shadow2);
                     king.DestroyShadow(shadow3);
                     if (shadow4 != null) king.DestroyShadow(shadow4);
-                    if (shadow5 != null) king.DestroyShadow(shadow5);
                 }
                 if (Hard < 4)
                 {

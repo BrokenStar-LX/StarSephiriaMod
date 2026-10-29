@@ -4,15 +4,14 @@ using UnityEngine;
 
 namespace SPMod.ModContent
 {
-    public class Charm_Sage : Charm_Basic
+    public class Charm_Sage : Charm_Basic, IModValueReceiver
     {
         private readonly Timer CheckTime = new Timer(0.5f);
         private StatusInstance? EffectInstance = null;
         private StatusInstance? EffectInstance2 = null;
-        [SyncVar]
         private int Add = 0;
-        [SyncVar]
         private int Required = 0;
+        private float NextBroadcastTime = 0f;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             int Energy = 0;
@@ -75,13 +74,26 @@ namespace SPMod.ModContent
                     EffectInstance2.SetTarget(NetworkAvatar);
                     EffectInstance2.ApplyStatus(true);
                 }
+                BroadcastValues();
             }
+        }
+
+        public void OnClientValues(int A, int B)
+        {
+            Add = A;
+            Required = B;
+        }
+
+        private void BroadcastValues()
+        {
+            ModNetwork.SendValues(netId, Add, Required);
         }
 
         protected override void OnDisabledEffect()
         {
             base.OnDisabledEffect();
             ReInstance();
+            BroadcastValues();
         }
 
         protected override void OnUpdate()
@@ -101,6 +113,11 @@ namespace SPMod.ModContent
                     ReInstance();
                     LoadInstance();
                 }
+            }
+            if (NetworkTime.time >= NextBroadcastTime)
+            {
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastValues();
             }
             base.OnUpdate();
         }

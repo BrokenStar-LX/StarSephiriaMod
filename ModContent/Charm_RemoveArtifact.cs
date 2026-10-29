@@ -9,20 +9,25 @@ using static HeathenEngineering.SteamworksIntegration.ItemShoppingCartManager;
 
 namespace SPMod.ModContent
 {
-    public class Charm_RemoveArtifact : Charm_Active
+    public class Charm_RemoveArtifact : Charm_Active, IModCooldownReceiver, IModEventReceiver
     {
         public Timer CooldownTimer = new Timer(3f);
-        [SyncVar]
         public bool UseShootBack = false;
-        [SyncVar]
-        private float SyncPhaseEnd;
+        private float ClientPhaseEnd = 0f;
+        private float NextBroadcastTime = 0f;
         public SyncList<int> RemoveArtifactList = new SyncList<int>();
         public SyncList<string> AssignedCategory = new SyncList<string>();
+        private readonly List<int> ClientRemoveArtifactList = new List<int>();
+        private readonly List<string> ClientAssignedCategory = new List<string>();
+        private bool IsServerSafe => netIdentity != null && isServer;
+        private int RemoveArtifactCount => IsServerSafe ? RemoveArtifactList.Count : ClientRemoveArtifactList.Count;
+        private IEnumerable<int> DisplayArtifactList => IsServerSafe ? (IEnumerable<int>)RemoveArtifactList : ClientRemoveArtifactList;
+        private IEnumerable<string> DisplayCategoryList => IsServerSafe ? (IEnumerable<string>)AssignedCategory : ClientAssignedCategory;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string text = "";
             int Line = 1;
-            foreach (int Id in RemoveArtifactList)
+            foreach (int Id in DisplayArtifactList)
             {
                 ItemEntity Item = ItemDatabase.FindItemById(Id);
                 if (Item != null)
@@ -43,14 +48,10 @@ namespace SPMod.ModContent
         }
         public override float GetCooldownRatio()
         {
-            if (!isServer)
+            if (!IsServerSafe)
             {
-                float ReMain = SyncPhaseEnd - (float)NetworkTime.time;
-                if (ReMain > 0)
-                {
-                    return 1f - Mathf.Clamp01(ReMain / CooldownTimer.time);
-                }
-                return 0f;
+                if (RemoveArtifactCount >= 3) return 1f;
+                return ModNetwork.ClientCooldown(ClientPhaseEnd, CooldownTimer.time);
             }
             if (RemoveArtifactList.Count >= 3)
             {
@@ -61,6 +62,49 @@ namespace SPMod.ModContent
                 return 0f;
             }
             return 1f - CooldownTimer.Ratio;
+        }
+
+        public void OnClientCooldown(float PhaseEnd)
+        {
+            ClientPhaseEnd = PhaseEnd;
+        }
+
+        public void OnClientEvent(byte Event, Vector3 Pos, string S1, string S2)
+        {
+            if (IsServerSafe) return;
+            if (Event != 1) return;
+
+            ClientRemoveArtifactList.Clear();
+            if (!string.IsNullOrEmpty(S1))
+            {
+                foreach (string Id in S1.Split(','))
+                {
+                    if (int.TryParse(Id, out int Value))
+                        ClientRemoveArtifactList.Add(Value);
+                }
+            }
+            ClientAssignedCategory.Clear();
+            if (!string.IsNullOrEmpty(S2))
+            {
+                foreach (string Category in S2.Split('\n'))
+                    ClientAssignedCategory.Add(Category);
+            }
+        }
+
+        private void BroadcastCooldown()
+        {
+            float PhaseEnd;
+            if (RemoveArtifactList.Count >= 3) PhaseEnd = float.PositiveInfinity;
+            else if (UseShootBack) PhaseEnd = 0f;
+            else PhaseEnd = (float)NetworkTime.time + CooldownTimer.GetRemainingTime();
+            ModNetwork.SendCooldown(netId, PhaseEnd);
+        }
+
+        private void BroadcastList()
+        {
+            string Ids = string.Join(",", RemoveArtifactList);
+            string Categories = string.Join("\n", AssignedCategory);
+            ModNetwork.SendEvent(netId, 1, NetworkAvatar ? NetworkAvatar.transform.position : Vector3.zero, Ids, Categories);
         }
 
         public override void SaveItemOnServer(ISaveData saveData)
@@ -102,13 +146,13 @@ namespace SPMod.ModContent
             AssignedCategory.Clear();
             foreach (var cat in SaveList2)
                 AssignedCategory.Add(cat);
+            BroadcastList();
         }
 
         public override void CooldownDecrease(float ratio)
         {
-            float Delta = ratio * CooldownTimer.time;
             CooldownTimer.Ratio += ratio;
-            SyncPhaseEnd -= Delta;
+            BroadcastCooldown();
         }
 
         protected override void OnEnabledEffect()
@@ -117,7 +161,9 @@ namespace SPMod.ModContent
             StarSephiriaPatches.OnGenerateItemsList += OnGenerateItemsList;
             CooldownTimer.Ratio = 1f;
             UseShootBack = true;
-            SyncPhaseEnd = (float)NetworkTime.time;
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
+            BroadcastList();
         }
 
         private void OnGenerateItemsList(Sephirite GenerateItems, UnitAvatar Player)
@@ -135,7 +181,7 @@ namespace SPMod.ModContent
 
         public override IEnumerable<string> GetItemCategory()
         {
-            return AssignedCategory;
+            return DisplayCategoryList;
         }
 
         protected override void OnDisabledEffect()
@@ -143,27 +189,49 @@ namespace SPMod.ModContent
             base.OnDisabledEffect();
             StarSephiriaPatches.OnGenerateItemsList -= OnGenerateItemsList;
             CooldownTimer.Ratio = 1f;
+            UseShootBack = true;
+            BroadcastCooldown();
         }
 
         protected override void OnUpdate()
         {
             base.OnUpdate();
-            if (!isServer || RemoveArtifactList.Count >= 3)
+            if (!IsServerSafe) return;
+            if (RemoveArtifactList.Count >= 3)
             {
+                if (NetworkTime.time >= NextBroadcastTime)
+                {
+                    NextBroadcastTime = (float)NetworkTime.time + 2f;
+                    BroadcastCooldown();
+                    BroadcastList();
+                }
                 return;
             }
             if (!UseShootBack && CooldownTimer.Update(Time.deltaTime))
             {
                 UseShootBack = true;
+                BroadcastCooldown();
+            }
+            if (NetworkTime.time >= NextBroadcastTime)
+            {
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastCooldown();
+                BroadcastList();
             }
         }
 
         protected override void FireCastingServer(Vector3 aimedPosition, UnitAvatar aimedTarget)
         {
+            if (NetworkAvatar is PlayerAvatar player)
+            {
+                if (player.isInDungeon <= 0) return;
+            }
             if (!UseShootBack || RemoveArtifactList.Count >= 3) return;
 
             UseShootBack = false;
             CooldownTimer.Ratio = 0f;
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
 
             ItemPosition TargetPosition = new ItemPosition(Item.XIdx, Item.YIdx - 1);
             NewItemOwnInstance TargetNewItem = Inventory.FindItem(TargetPosition);
@@ -177,6 +245,9 @@ namespace SPMod.ModContent
             }
             RemoveArtifactList.Add(TargetNewItem.Entity.id);
             SaveItemOnServer(SaveManager.CurrentRun);
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
+            BroadcastList();
 
             GridInventory inventory = Inventory;
             using (new GridInventory.Permission(inventory))

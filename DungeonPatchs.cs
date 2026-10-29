@@ -92,17 +92,17 @@ namespace SPMod
             {
                 HardModAddLife = 0;
                 NumberofReincarnations = 0;
-                StarSephiriaPatches.DefeatBoss.Clear();
+                DefeatBoss.Clear();
                 foreach (PlayerSpawner PlayerSp in PlayerSpawner.MultiplayerList)
                 {
                     PlayerAvatar Player = PlayerSp.PlayerAvatar;
-                    DungeonManager.Instance.StartCoroutine(StarSephiriaPatches.DeleteUnintentionalItems(Player));
+                    DungeonManager.Instance.StartCoroutine(DeleteUnintentionalItems(Player));
                 }
             }
             else
             {
                 HardModAddLife = 0f;
-                StarSephiriaPatches.DefeatBoss.Clear();
+                DefeatBoss.Clear();
                 OnLoadNewNumberofReincarnations?.Invoke();
             }
             StarSephiriaMod.LogInfoDungeon($"—初始化模式数据—");
@@ -338,16 +338,16 @@ namespace SPMod
             [HarmonyPostfix]
             static void Update_Postfix(DungeonManager __instance)
             {
-                if (!__instance.isServer) return;
-                if (!StarSephiriaMod.PartyStats.Update) return;
+                AllPlayerStatus NewValue = Tools.GetMaxPlayerStatus();
+                if (StarSephiriaMod.PartyStats.SameAs(NewValue)) return;
 
-                StarSephiriaMod.PartyStats.Value = Tools.GetMaxPlayerStatus();
+                StarSephiriaMod.PartyStats = NewValue;
+                if (!__instance.isServer) return;
                 foreach (PlayerSpawner Spawner in PlayerSpawner.MultiplayerList.ToList())
                 {
                     if (Spawner.PlayerAvatar == null) continue;
-                    UnitAvatar_Patches.UpdateHighestElementalBonus_Prefix(Spawner.PlayerAvatar);
+                    UnitAvatar_Patches.RefreshElementalBonus(Spawner.PlayerAvatar);
                 }
-                StarSephiriaMod.PartyStats.Update = false;
             }
 
             [HarmonyPatch("LoadStageAndMove")]
@@ -659,9 +659,9 @@ namespace SPMod
                 StarSephiriaMod.WeaponType.SafeRemove(name);
                 StarSephiriaMod.CostumeType.SafeRemove(name);
                 StarSephiriaMod.CostumeSkinType.SafeRemove(name);
-                StarSephiriaMod.CostumeSkinDate.SafeRemove(name);
+                StarSephiriaMod.CostumeSkinKey.SafeRemove(name);
                 PlayerAvatar? RemovePlayer = null;
-                foreach(PlayerAvatar Player in StarSephiriaPatches.DPSData.Keys)
+                foreach(PlayerAvatar Player in DPSData.Keys)
                 {
                     if (Player.Name == name)
                     {
@@ -670,7 +670,7 @@ namespace SPMod
                     }
                 }
                 if(RemovePlayer != null)
-                    StarSephiriaPatches.DPSData.SafeRemove(RemovePlayer);
+                    DPSData.SafeRemove(RemovePlayer);
                 StarSephiriaMod.InitializeModStat(name);
                 StarSephiriaMod.LogInfo($"删除{name}的各项数据记录");
             }
@@ -1456,11 +1456,11 @@ namespace SPMod
                 try
                 {
                     StarSephiriaMod.LogInfoDungeon($"生成的BOSS实体: {__instance.bossSocialID.avatarPrefab.name}");
-                    StarSephiriaPatches.UseDPS = true;
+                    UseDPS = true;
                     if (PlayerSpawner.MultiplayerList.Count <= 1)
                     {
                         PlayerAvatar Player = PlayerSpawner.MultiplayerList[0].PlayerAvatar;
-                        StarSephiriaPatches.NoHitCount.Add(Player, new NoHitRecord(Player.GetCustomStatUnsafe(TextFile.CurrentRosion)));
+                        NoHitCount.Add(Player, new NoHitRecord(Player.GetCustomStatUnsafe(TextFile.CurrentRosion)));
                     }
                     if (ModConfig.HardMode > 0)
                     {

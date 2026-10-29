@@ -7,15 +7,15 @@ using UnityEngine;
 
 namespace SPMod.ModContent
 {
-    public class Charm_Telescope : Charm_PlanetModule
+    public class Charm_Telescope : Charm_PlanetModule, IModValueReceiver
     {
         private static readonly FieldInfo? planetsField;
         private StatusInstance? EffectInstance = null;
         private StatusInstance? EffectInstance2 = null;
         private StatusInstance? EffectInstance3 = null;
         private readonly Timer CheckTime = new Timer(0.5f);
-        [SyncVar]
         private int DamageAdd = 0;
+        private float NextBroadcastTime = 0f;
         private int AttackAdd = 0;
         private readonly int[] SpeedbyLevel = new int[] { 5, 10 };
         static Charm_Telescope()
@@ -97,6 +97,16 @@ namespace SPMod.ModContent
                 }
             }
         }
+
+        public void OnClientValues(int A, int B)
+        {
+            DamageAdd = A;
+        }
+
+        private void BroadcastValues()
+        {
+            ModNetwork.SendValues(netId, DamageAdd);
+        }
         protected override void OnUpdatedLevel(int oldLevel, int newLevel)
         {
             ReAttackSpeed();
@@ -111,6 +121,7 @@ namespace SPMod.ModContent
             ReAttackSpeed();
             LoadAttackSpeed();
             NetworkAvatar?.AddCustomStatUnsafe(TextFile.TelescopeCount, 1);
+            BroadcastValues();
         }
 
         protected override void OnDisabledEffect()
@@ -119,6 +130,7 @@ namespace SPMod.ModContent
             ReDamage();
             ReAttackSpeed();
             NetworkAvatar?.AddCustomStatUnsafe(TextFile.TelescopeCount, -1);
+            BroadcastValues();
         }
 
         protected override void OnUpdate()
@@ -134,6 +146,11 @@ namespace SPMod.ModContent
                     ReAttackSpeed();
                     LoadAttackSpeed();
                 }
+            }
+            if (NetworkTime.time >= NextBroadcastTime)
+            {
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastValues();
             }
         }
 

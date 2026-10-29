@@ -1,15 +1,18 @@
 ﻿using HarmonyLib;
 using Mirror;
 using SPMod.Tool;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Unity.VisualScripting;
 using UnityEngine;
+using static ComboEffect_Debuff;
 using static ComboEffectBase;
 using static Miracle_StatusInstance;
 using static SPMod.Tool.EffectConstant;
-using StatusGroup = Charm_StatusInstance.StatusGroup;
 using static SPMod.Tool.ModuleComponents;
-using System;
+using Object = UnityEngine.Object;
+using StatusGroup = Charm_StatusInstance.StatusGroup;
 
 namespace SPMod.ModContent
 {
@@ -28,6 +31,12 @@ namespace SPMod.ModContent
         {
             AssetIdProperty.SetValue(Target, AssetId);
         }
+
+        static LoadModContent()
+        {
+            ModNetwork.RegisterSwingFx(ModNetwork.SwingFxMoment, () => WindKatana_Moment.Data);
+        }
+
         //模组根之退
         public static List<HardModeShardEntity> ModHardModeShard = new List<HardModeShardEntity>()
         {
@@ -40,6 +49,7 @@ namespace SPMod.ModContent
         //模组奇迹
         public static List<ModMiracle> ModMiraclesData = new List<ModMiracle>()
         {
+            new ModMiracle("Bard", "HURRICANE").SetStat("WIND_DAMAGE/5=Positive", "WIND_EROSION_DAMAGE/25=Positive").EndCreate(),
             new ModMiracle("Shaman", "CURSE").SetStat("DEBUFF_DAMAGE/20=Positive", "DEBUFF_DURATION/40=Positive").EndCreate(),
             new ModMiracle("Negotiator", "SAVVY").SetStat("NEGOTIATION/10=Positive", "LEAF_DROP/40=Positive").EndCreate(),
             new ModMiracle("Knight", "WEAPON").SetStat("BASIC_ATTACK_DAMAGE/20=Positive", "SPECIAL_ATTACK_DAMAGE/20=Positive").EndCreate(),
@@ -63,17 +73,46 @@ namespace SPMod.ModContent
             { "Angler", Tools.SetStatInfo("HIGHEST_ELEMENTAL_DAMAGE/6=Positive", "FINAL_MP/22=Positive") },//钓鱼人
             { "FlameSword", Tools.SetStatInfo("FIRE_DAMAGE/8=Positive", "FLAME_SWORD_MAX/4=Positive", "FLAME_SWORD_FAST_FALL/20=Positive") },//陨铁铁匠
         };
+        //模组减益
+        public static ModCharacterDebuff WindErosion = new ModCharacterDebuff("WindErosion", "CharacterDebuff_WindErosion", "WindErosion", WindColor)
+        .SetCustomDebuff(Target => Target.AddComponent<CharacterDebuff_WindErosion>())
+        .SetVisual("BURN")
+        .EndCreate(7);
         //模组连击
         public static List<ItemCategoryEntity> ModItemCategoryData = new List<ItemCategoryEntity>()
         {
             new ModItemCategory("COMET", "Comet", "StarApple")
             .SetStat(new ComboStat() { comboCount = 2, status = new string[2] { "DASH_RECOVERY_SPEED/10", "DASH_ATTACK_DAMAGE/20" } })
             .SetStat(new ComboStat() { comboCount = 4, status = new string[2] { "DASH_COUNT/1", "DASH_ATTACK_DAMAGE/20" } })
-            .UseStat().EndCreate(),
+            .EndCreate(),
             new ModItemCategory("FORTUNE", "Fortune", "Pomegranate")
             .SetStat(new ComboStat() { comboCount = 2, status = new string[1] { "BOSS_REWARD_DICE/1" } })
             .SetStat(new ComboStat() { comboCount = 4, status = new string[1] { "EXTRA_ITEM_CHOICES/1" } })
-            .UseStat().EndCreate(),
+            .EndCreate(),
+            new ModItemCategory("HURRICANE", "Hurricane", "FlowerButterflyFruit")
+            .SetCustomComboEffect(Combo =>
+            {
+                ComboEffect_Debuff Effect = Combo.AddComponent<ComboEffect_Debuff>();
+                Effect.defaultEffect = new LocalizedString("ComboEffectDefault_Glacier_Description");
+                Effect.debuffActivateEffectNameString = new LocalizedString("ModKeyword_WindErosion_DebuffActivateName");
+                Effect.debuffActivateEffectString = new LocalizedString("ComboEffect_Glacier_DebuffActivate");
+                Effect.debuffHasteEffectString = new LocalizedString("ComboEffect_Glacier_DebuffHaste");
+                Effect.damageElementalTargetType = Wind;
+                Effect.cooldownInfos = new List<CooldownInfo>();
+                Effect.debuffPrefab = WindErosion.Prefab;
+                Effect.debuffName = "WindErosion";
+                Effect.debuffActivateComboCount = 2;
+                Effect.debuffHasteComboCount = 6;
+                Effect.debuffHastePercent = 150;
+                Effect.addStatByCombo = new ComboStat[]
+                {
+                    new ComboStat() { comboCount = 4, status = new string[] { "WIND_DAMAGE/6" } },
+                    new ComboStat() { comboCount = 8, status = new string[] { "WIND_DAMAGE/8" } },
+                    new ComboStat() { comboCount = 10, status = new string[] { "WIND_EROSION_MULT/24" }},
+                };
+                Effect.enabled = false;
+            })
+            .EndCreate(),
         };
         //模组关键词
         public static List<ModKeyWord> ModKeywordEntityData = new List<ModKeyWord>()
@@ -98,6 +137,13 @@ namespace SPMod.ModContent
             new ModKeyWord("Stat_AllPlayerCrit", true, CritColor).CreateStatus("ALL_PLAYER_CRIT", "%"),
             new ModKeyWord("Stat_DrinkPotionStack", false, Color.white).CreateStatus("DRINK_POTION_STACK"),
             new ModKeyWord("Stat_StrikeBack", true, DefenseColor).UseKeyWordSprite("Thorns").CreateStatus("STRIKE_BACK", "%"),
+            new ModKeyWord("Stat_WindErosionDamage", false, WindColor).CreateStatus("WIND_EROSION_DAMAGE", "%"),
+            new ModKeyWord("Stat_WindErosionMult", false, WindColor).CreateStatus("WIND_EROSION_MULT", "%"),
+            new ModKeyWord("Stat_WindErosionCount", false, WindColor).CreateStatus("WIND_EROSION_COUNT"),
+            new ModKeyWord("Stat_WindErosionLuck", false, WindColor).CreateStatus("WIND_EROSION_LUCK", "%"),
+            new ModKeyWord("Stat_WindErosionDot", false, WindColor).CreateStatus("WIND_EROSION_DOT"),
+            new ModKeyWord("Stat_WindErosionOverFlow", false, WindColor).CreateStatus("WIND_EROSION_OVER_FLOW"),
+
             new ModKeyWord("ModWeaponEffect_GreatswordOfExorcism", true, IceColor),
             new ModKeyWord("ModWeaponEffect_LegacyoftheIllusionist", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_EternalFrostGreatsword", true,  WeaponColor),
@@ -139,7 +185,15 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_Minigun", true, LightningColor),
             new ModKeyWord("ModWeaponEffect_MarkStabilization", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_Negligence", true, WeaponColor),
+            new ModKeyWord("ModWeaponEffect_Moment", true, WeaponColor),
+            new ModKeyWord("ModWeaponEffect_AirValve", true, WeaponColor),
+            new ModKeyWord("ModWeaponEffect_Vortex", true, WindColor),
+
             new ModKeyWord("Stealth", true, WeaponColor),
+            new ModKeyWord("WindDamage", false, WindColor).StringToSprite("Wind").CreateStatus("WIND_DAMAGE").SetDetailed("Status_EachElementalDamage_DetailedValue"),
+            new ModKeyWord("WindDamageAmp", false, WindColor).StringToSprite("Wind").CreateStatusAmp("WIND_DAMAGE_AMP", "WindDamage", "%"),
+            new ModKeyWord($"Elemental_{Wind}", false, WindColor).StringToSprite("Wind"),
+            new ModKeyWord("WindErosion", true, WindColor).StringToSprite("Wind"),
         };
         //模组HUD
         public static List<ModEffectHUD> ModEffectHUDData = new List<ModEffectHUD>()
@@ -148,6 +202,11 @@ namespace SPMod.ModContent
             new ModEffectHUD("Rosion", true, true),
             new ModEffectHUD("Charge", true, true),
             new ModEffectHUD("ThunderBeast", false, true),
+        };
+        //模组减益列表
+        public static List<ModCharacterDebuff> ModDeBuffData = new List<ModCharacterDebuff>()
+        {
+            WindErosion,
         };
         //模组物品
         public static List<int> DisableCharm = new List<int>
@@ -414,23 +473,22 @@ namespace SPMod.ModContent
             }, // 正午磨刀石
         };
         public static Dictionary<string, ItemEntity> GetModItem = new Dictionary<string, ItemEntity>();
-        public static Dictionary<string, Action<ItemEntity>> GetModAction = new Dictionary<string, Action<ItemEntity>>();
-        public static List<ItemEntity> ModItemEntityData = new List<ItemEntity>()
+        public static List<ModItem> ModItemEntityData = new List<ModItem>()
         {
-            new ModItem("BoxingGloves", EItemRarity.Common).CreateItem()
+            new ModItem("BoxingGloves", EItemRarity.Common)
             .CreateCharm(Tools.SetCategories("STURDY"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("PHYSICAL_DAMAGE", 2, 4),
                 Tools.SetStatusGroup("DEFENSE", 2, 4)
             }, false),//拳击手套
 
-            new ModItem("SwordOfKings", EItemRarity.Legend).CreateItem()
+            new ModItem("SwordOfKings", EItemRarity.Legend)
             .CreateCharm(Tools.SetCategories("STURDY"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("DIRECT_WEAPON_DAMAGE", 8, 16, 24, 32, 40)
             }),//王者之剑
 
-            new ModItem("MeteoricIronMedal", EItemRarity.Legend).CreateItem()
+            new ModItem("MeteoricIronMedal", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("FLAMESWORD"), Action =>
             {
                 Charm_FlameSwordAutoAttack Effect = Action.resourcePrefab.AddComponent<Charm_FlameSwordAutoAttack>();
@@ -442,7 +500,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//陨铁勋章
 
-            new ModItem("MidasRing", EItemRarity.Rare).CreateItem()
+            new ModItem("MidasRing", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("SAVVY"), Action =>
             {
                 Charm_GoldDamage Effect = Action.resourcePrefab.AddComponent<Charm_GoldDamage>();
@@ -454,7 +512,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//迈达斯的黄金手镯
 
-            new ModItem("TaxTreaty", EItemRarity.Legend).CreateItem()
+            new ModItem("TaxTreaty", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("SAVVY"), Action =>
             {
                 Charm_ReturnGold Effect = Action.resourcePrefab.AddComponent<Charm_ReturnGold>();
@@ -465,7 +523,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//税收协定
 
-            new ModItem("WindSpriteHairWax", EItemRarity.Legend).CreateItem()
+            new ModItem("WindSpriteHairWax", EItemRarity.Legend)
             .CreateCharm(Tools.SetCategories("COMET"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("DASH_COUNT", 1, 1, 2, 2, 2),
@@ -473,7 +531,7 @@ namespace SPMod.ModContent
                 Tools.SetStatusGroup("DASH_RECOVERY_SPEED", 6, 12, 18, 24, 30)
             }),//风精灵的发蜡
 
-            new ModItem("MasterBracelet", EItemRarity.Rare).CreateItem()
+            new ModItem("MasterBracelet", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("WEAPON"), Action =>
             {
                 Charm_InvincibleDefense Effect = Action.resourcePrefab.AddComponent<Charm_InvincibleDefense>();
@@ -490,7 +548,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//大师手镯
 
-            new ModItem("RedDogSymbolA", EItemRarity.Rare).SetCost(1000).CreateItem()
+            new ModItem("RedDogSymbolA", EItemRarity.Rare).SetCost(1000)
             .CustomCreateCharm(Tools.SetCategories("COMPANION"), Action =>
             {
                 Action.aName =  new LocalizedString("Item_WeaselKnight_Name");
@@ -507,7 +565,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//超级科林
 
-            new ModItem("RedDogSymbolB", EItemRarity.Rare).SetCost(1500).CreateItem()
+            new ModItem("RedDogSymbolB", EItemRarity.Rare).SetCost(1500)
             .CustomCreateCharm(Tools.SetCategories("COMPANION"), Action =>
             {
                 Action.aName =  new LocalizedString("Item_WeaselKnight_Name");
@@ -524,7 +582,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//超级科林2
 
-            new ModItem("RedDogSymbolC", EItemRarity.Rare).SetCost(2000).CreateItem()
+            new ModItem("RedDogSymbolC", EItemRarity.Rare).SetCost(2000)
             .CustomCreateCharm(Tools.SetCategories("COMPANION"), Action =>
             {
                 Action.aName =  new LocalizedString("Item_WeaselKnight_Name");
@@ -543,7 +601,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//超级科林3
 
-            new ModItem("CurseNail", EItemRarity.Legend).CreateItem()
+            new ModItem("CurseNail", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("CURSE"), Action =>
             {
                 Charm_SuperDebuffDamage Effect = Action.resourcePrefab.AddComponent<Charm_SuperDebuffDamage>();
@@ -554,7 +612,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//诅咒之钉
 
-            new ModItem("HeartofElements", EItemRarity.Rare).CreateItem()
+            new ModItem("HeartofElements", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("ELEMENTAL"), Action =>
             {
                 Charm_ElementAllocation Effect = Action.resourcePrefab.AddComponent<Charm_ElementAllocation>();
@@ -569,7 +627,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//元素之心
 
-            new ModItem("ShadowGuardian", EItemRarity.Legend).CreateItem()
+            new ModItem("ShadowGuardian", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("SHADOW"), Action =>
             {
                 Charm_DodgeShield Effect = Action.resourcePrefab.AddComponent<Charm_DodgeShield>();
@@ -580,7 +638,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//暗影守护者
 
-            new ModItem("ScoreSymphony", EItemRarity.Legend).CreateItem()
+            new ModItem("ScoreSymphony", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("WINDSONG"), Action =>
             {
                 Charm_ScoreCountAttackSpeed Effect = Action.resourcePrefab.AddComponent<Charm_ScoreCountAttackSpeed>();
@@ -591,7 +649,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//乐谱"交响曲"
 
-            new ModItem("PureWhiteCore", EItemRarity.Legend).CreateItem()
+            new ModItem("PureWhiteCore", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("LAKE"), Action =>
             {
                 Charm_CustomStatus Effect = Action.resourcePrefab.AddComponent<Charm_CustomStatus>();
@@ -608,7 +666,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//纯白核心
 
-            new ModItem("SolarProminence").CreateItem(true)
+            new ModItem("SolarProminence").SetDual()
             .CustomCreateCharm(Tools.SetCategories("EMBER", "FLAMESWORD"), Action =>
             {
                 Charm_BurnFlameSword Effect = Action.resourcePrefab.AddComponent<Charm_BurnFlameSword>();
@@ -624,7 +682,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//日珥
 
-            new ModItem("GrowthFund").CreateItem(true)
+            new ModItem("GrowthFund").SetDual()
             .CustomCreateCharm(Tools.SetCategories("FORTUNE", "SAVVY"), Action =>
             {
                 Charm_CustomStatus Effect = Action.resourcePrefab.AddComponent<Charm_CustomStatus>();
@@ -637,7 +695,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//成长基金
 
-            new ModItem("BumpyFate").CreateItem(true)
+            new ModItem("BumpyFate").SetDual()
             .CustomCreateCharm(Tools.SetCategories("GUARDIAN", "SHADOW"), Action =>
             {
                 Charm_DodgeThorns Effect = Action.resourcePrefab.AddComponent<Charm_DodgeThorns>();
@@ -653,7 +711,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//命运坎坷
 
-            new ModItem("FrostyAnvil").CreateItem(true)
+            new ModItem("FrostyAnvil").SetDual()
             .CustomCreateCharm(Tools.SetCategories("GLACIER", "FROST"), Action =>
             {
                 Charm_FrozenFrostRelic Effect = Action.resourcePrefab.AddComponent<Charm_FrozenFrostRelic>();
@@ -667,7 +725,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//寒霜铁砧
 
-            new ModItem("AmplifierComponent").CreateItem(true)
+            new ModItem("AmplifierComponent").SetDual()
             .CustomCreateCharm(Tools.SetCategories("PRECISION", "MYSTIC"), Action =>
             {
                 Charm_IgnoreDefensiveCrit Effect = Action.resourcePrefab.AddComponent<Charm_IgnoreDefensiveCrit>();
@@ -678,32 +736,32 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//增幅器组件
 
-            new ModItem("HolyGuardian", EItemRarity.Common).CreateItem()
+            new ModItem("HolyGuardian", EItemRarity.Common)
             .CreateCharm(Tools.SetCategories("PARTY"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("ALL_PLAYER_DEFENSE", 2, 4),
             }, false),//神圣守护
 
-            new ModItem("Support", EItemRarity.Uncommon).CreateItem()
+            new ModItem("Support", EItemRarity.Uncommon)
             .CreateCharm(Tools.SetCategories("PARTY"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("ALL_PLAYER_ELEMENTAL_DAMAGE", 1, 2, 3, 4),
             }, false),//支援
 
-            new ModItem("NaptimePillow", EItemRarity.Uncommon).CreateItem()
+            new ModItem("NaptimePillow", EItemRarity.Uncommon)
             .CreateCharm(Tools.SetCategories("PARTY"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("MAX_HP", 10, 20, 30, 40),
                 Tools.SetStatusGroup("REVIVE_PLAYER_HASTE", 20)
             }),//爱心睡眠抱枕
 
-            new ModItem("WeaknessIndicator", EItemRarity.Rare).CreateItem()
+            new ModItem("WeaknessIndicator", EItemRarity.Rare)
             .CreateCharm(Tools.SetCategories("PARTY"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("ALL_PLAYER_CRIT", 3, 6, 9, 12, 15),
             }),//弱点标记
 
-            new ModItem("UnityFlag", EItemRarity.Legend).CreateItem()
+            new ModItem("UnityFlag", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("PARTY"), Action =>
             {
                 Charm_MultiPlayerAddStatus Effect = Action.resourcePrefab.AddComponent<Charm_MultiPlayerAddStatus>();
@@ -714,7 +772,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//团结旗帜
 
-            new ModItem("ArtificialSpiritIfiel", EItemRarity.Rare).CreateItem()
+            new ModItem("ArtificialSpiritIfiel", EItemRarity.Rare)
             .CustomCreateCharm(new List<string>() { }, Action =>
             {
                 Charm_ShootBack Effect = Action.resourcePrefab.AddComponent<Charm_ShootBack>();
@@ -725,7 +783,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//人工精灵伊菲尔
 
-            new ModItem("UnhallowedRitePaper", EItemRarity.Uncommon).CreateItem()
+            new ModItem("UnhallowedRitePaper", EItemRarity.Uncommon)
             .CustomCreateCharm(Tools.SetCategories("COMPANION"), Action =>
             {
                 Charm_BodyBomb Effect = Action.resourcePrefab.AddComponent<Charm_BodyBomb>();
@@ -736,7 +794,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//邪祭咒纸
 
-            new ModItem("DevilPact", EItemRarity.Legend).CreateItem()
+            new ModItem("DevilPact", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("COMPANION"), Action =>
             {
                 Charm_SummonUnit Effect = Action.resourcePrefab.AddComponent<Charm_SummonUnit>();
@@ -758,7 +816,7 @@ namespace SPMod.ModContent
                 component.miniFaceChipSprite = Tools.LoadModSprite("Item_DevilPact_MiniIcon");
             }),//恶魔契约
 
-            new ModItem("BottledLightning").CreateItem(true)
+            new ModItem("BottledLightning").SetDual()
             .CustomCreateCharm(Tools.SetCategories("MAGITECH", "DARKCLOUD"), Action =>
             {
                 Charm_ElectricDarkCloud Effect = Action.resourcePrefab.AddComponent<Charm_ElectricDarkCloud>();
@@ -769,7 +827,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//瓶装闪电
 
-            new ModItem("BluePointer", EItemRarity.Legend).CreateItem()
+            new ModItem("BluePointer", EItemRarity.Legend)
             .CustomCreateCharm(new List<string>() { }, Action =>
             {
                 CharmStatusInheritance Effect = Action.resourcePrefab.AddComponent<CharmStatusInheritance>();
@@ -780,7 +838,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//指北的蓝色针
 
-            new ModItem("SolisThunder").CreateItem(true)
+            new ModItem("SolisThunder").SetDual()
             .CustomCreateCharm(Tools.SetCategories("FLAMESWORD", "DARKCLOUD"), Action =>
             {
                 Charm_ThunderFireSword Effect = Action.resourcePrefab.AddComponent<Charm_ThunderFireSword>();
@@ -796,7 +854,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//索利斯·桑德
 
-            new ModItem("SpearofZeus").CreateItem(true)
+            new ModItem("SpearofZeus").SetDual()
             .CustomCreateCharm(Tools.SetCategories("FROST", "DARKCLOUD"), Action =>
             {
                 Charm_SpearofZeus Effect = Action.resourcePrefab.AddComponent<Charm_SpearofZeus>();
@@ -821,7 +879,7 @@ namespace SPMod.ModContent
                 Effect.chargeCompleteFxPrefab = OrigEffect.chargeCompleteFxPrefab;
             }),//宙斯之矛
 
-            new ModItem("SecretCloak", EItemRarity.Legend).CreateItem()
+            new ModItem("SecretCloak", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("SHADOW"), Action =>
             {
                 Charm_SilentStrike Effect = Action.resourcePrefab.AddComponent<Charm_SilentStrike>();
@@ -836,7 +894,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//隐秘斗篷
 
-            new ModItem("Caliburn", EItemRarity.Legend).CreateItem()
+            new ModItem("Caliburn", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("LAKE"), Action =>
             {
                 Charm_Caliburn Effect = Action.resourcePrefab.AddComponent<Charm_Caliburn>();
@@ -847,7 +905,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//石中剑
 
-            new ModItem("Excalibur", EItemRarity.Legend).CreateItem()
+            new ModItem("Excalibur", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("LAKE"), Action =>
             {
                 Action.activeType = EItemActiveType.Hidden;
@@ -859,7 +917,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//湖中剑
 
-            new ModItem("LuckyCoin").CreateItem(true)
+            new ModItem("LuckyCoin").SetDual()
             .CustomCreateCharm(Tools.SetCategories("FORTUNE", "PRECISION"), Action =>
             {
                 Charm_LuckCrit Effect = Action.resourcePrefab.AddComponent<Charm_LuckCrit>();
@@ -870,7 +928,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//幸运硬币
 
-            new ModItem("AlchemistsFlask", EItemRarity.Rare).CreateItem()
+            new ModItem("AlchemistsFlask", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("ALCHEMY"), Action =>
             {
                 Charm_Alchemy Effect = Action.resourcePrefab.AddComponent<Charm_Alchemy>();
@@ -881,7 +939,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//炼金术士的烧瓶
 
-            new ModItem("PhilosopherStone", EItemRarity.Legend).CreateItem()
+            new ModItem("PhilosopherStone", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("ALCHEMY"), Action =>
             {
                 Charm_Sage Effect = Action.resourcePrefab.AddComponent<Charm_Sage>();
@@ -892,7 +950,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//贤者之石
 
-            new ModItem("DeepSpaceObserver", EItemRarity.Legend).CreateItem()
+            new ModItem("DeepSpaceObserver", EItemRarity.Legend)
             .CustomCreateCharm(Tools.SetCategories("PLANET"), Action =>
             {
                 Charm_Telescope Effect = Action.resourcePrefab.AddComponent<Charm_Telescope>();
@@ -903,21 +961,21 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//深空观测者
 
-            new ModItem("KeelFrgment", EItemRarity.Uncommon).CreateItem()
+            new ModItem("KeelFrgment", EItemRarity.Uncommon)
             .CreateCharm(Tools.SetCategories("MYSTIC"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("MAX_HP", 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30),
                 Tools.SetStatusGroup("FINAL_DAMAGE", 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45)
             }),//龙骨碎片
 
-            new ModItem("Amber", EItemRarity.Uncommon).CreateItem()
+            new ModItem("Amber", EItemRarity.Uncommon)
             .CreateCharm(Tools.SetCategories("MYSTIC"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("DEFENSE", 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30),
                 Tools.SetStatusGroup("TRUE_DAMAGE", 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8)
             }),//琥珀
 
-            new ModItem("WhiteEggShell", EItemRarity.Rare).CreateItem()
+            new ModItem("WhiteEggShell", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("MYSTIC"), Action =>
             {
                 Charm_IgnoreDefensiveDamage Effect = Action.resourcePrefab.AddComponent<Charm_IgnoreDefensiveDamage>();
@@ -928,7 +986,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//白蛋壳
 
-            new ModItem("LightningBottle", EItemRarity.Uncommon).CreateItem()
+            new ModItem("LightningBottle", EItemRarity.Uncommon)
             .CustomCreateCharm(Tools.SetCategories("DARKCLOUD"), Action =>
             {
                 Charm_EXLightningBottle Effect = Action.resourcePrefab.AddComponent<Charm_EXLightningBottle>();
@@ -943,7 +1001,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//云瓶
 
-            new ModItem("Valiya", EItemRarity.Rare).CreateItem()
+            new ModItem("Valiya", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("WEAPON"), Action =>
             {
                 Charm_InvincinleSpiceialAttack Effect = Action.resourcePrefab.AddComponent<Charm_InvincinleSpiceialAttack>();
@@ -971,7 +1029,7 @@ namespace SPMod.ModContent
                 Effect.weaponFxPrefab = OrigEffect.weaponFxPrefab;
             }),//绝对戒指
 
-            new ModItem("ShieldCrest", EItemRarity.Rare).CreateItem()
+            new ModItem("ShieldCrest", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("WEAPON"), Action =>
             {
                 Charm_AddPerfectGuardTime Effect = Action.resourcePrefab.AddComponent<Charm_AddPerfectGuardTime>();
@@ -1002,7 +1060,7 @@ namespace SPMod.ModContent
                 Effect.equipFxPrefab = OrigEffect.equipFxPrefab;
             }),//铁壁盾徽
 
-             new ModItem("Epaulette", EItemRarity.Uncommon).CreateItem()
+             new ModItem("Epaulette", EItemRarity.Uncommon)
             .CustomCreateCharm(Tools.SetCategories("STURDY"), Action =>
             {
                 Charm_GrowthParry Effect = Action.resourcePrefab.AddComponent<Charm_GrowthParry>();
@@ -1025,7 +1083,7 @@ namespace SPMod.ModContent
                 Effect.bulletPrefab = OrigEffect.bulletPrefab;
             }),//决斗家肩章
 
-            new ModItem("KatanaClash", EItemRarity.Rare).CreateItem()
+            new ModItem("KatanaClash", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("WEAPON"), Action =>
             {
                 Charm_GrowthKatana Effect = Action.resourcePrefab.AddComponent<Charm_GrowthKatana>();
@@ -1052,7 +1110,7 @@ namespace SPMod.ModContent
                 Effect.equipFxPrefab = OrigEffect.equipFxPrefab;
             }),//名匠的刀格
 
-            new ModItem("BoltHead", EItemRarity.Rare).CreateItem()
+            new ModItem("BoltHead", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("WEAPON"), Action =>
             {
                 Charm_InvincinleForReLoad Effect = Action.resourcePrefab.AddComponent<Charm_InvincinleForReLoad>();
@@ -1079,7 +1137,7 @@ namespace SPMod.ModContent
                 Effect.equipFxPrefab = OrigEffect.equipFxPrefab;
             }),//神射手的曲柄
 
-            new ModItem("EcologicalSphere").CreateItem(true)
+            new ModItem("EcologicalSphere").SetDual()
             .CustomCreateCharm(Tools.SetCategories("PLANET", "LAKE"), Action =>
             {
                 Charm_CustomStatus Effect = Action.resourcePrefab.AddComponent<Charm_CustomStatus>();
@@ -1092,7 +1150,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//生态球
 
-            new ModItem("CometaryHydrogenCorona").CreateItem(true)
+            new ModItem("CometaryHydrogenCorona").SetDual()
             .CustomCreateCharm(Tools.SetCategories("COMET", "GUARDIAN"), Action =>
             {
                 Charm_DashShield Effect = Action.resourcePrefab.AddComponent<Charm_DashShield>();
@@ -1103,7 +1161,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//氢冕
 
-            new ModItem("CounterAttackBlade", EItemRarity.Uncommon).CreateItem()
+            new ModItem("CounterAttackBlade", EItemRarity.Uncommon)
             .CreateCharm(Tools.SetCategories("SHADOW"), new List<StatusGroup>()
             {
                 Tools.SetStatusGroup("PHYSICAL_DAMAGE", 1, 2, 3, 4),
@@ -1111,7 +1169,7 @@ namespace SPMod.ModContent
                 Tools.SetStatusGroup("STRIKE_BACK", 50, 100, 150, 200)
             }, false),//反击之刃
 
-            new ModItem("ShadowWarrior").CreateItem(true)
+            new ModItem("ShadowWarrior").SetDual()
             .CustomCreateCharm(Tools.SetCategories("STURDY", "SHADOW"), Action =>
             {
                 Charm_ActivelyRetaliate Effect = Action.resourcePrefab.AddComponent<Charm_ActivelyRetaliate>();
@@ -1126,7 +1184,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//影武者
 
-            new ModItem("ChaosGlyph", EItemRarity.Uncommon).CreateItem()
+            new ModItem("ChaosGlyph", EItemRarity.Uncommon)
             .CustomCreateCharm(Tools.SetCategories("ACADEMY"), Action =>
             {
                 Charm_CharosMagic Effect = Action.resourcePrefab.AddComponent<Charm_CharosMagic>();
@@ -1141,18 +1199,19 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//混沌符文
 
-            new ModItem("ArcaneBookMark", EItemRarity.Rare).CreateItem()
+            new ModItem("ArcaneBookMark", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("ACADEMY"), Action =>
             {
                 Charm_MagicBookAddDamage Effect = Action.resourcePrefab.AddComponent<Charm_MagicBookAddDamage>();
                 Effect.isWeaponRelatedCharm = false;
                 Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_MagicBookAddDamage") };
-                Effect.maxLevel = 2;
+                Effect.maxLevel = 3;
                 Effect.isUniqueEffect = true;
                 Effect.enabled = false;
             }),//奥术书签
 
-            new ModItem("BondVessel", EItemRarity.Rare).CreateItem()
+            new ModItem("BondVessel", EItemRarity.Rare)
+            .CustomSet(Set => Set.IsWitchItem = true)
             .CustomCreateCharm(new List<string>(), Action =>
             {
                 Charm_BondVessel Effect = Action.resourcePrefab.AddComponent<Charm_BondVessel>();
@@ -1163,7 +1222,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//羁绊容器
 
-            new ModItem("ElectricIce").CreateItem(true)
+            new ModItem("ElectricIce").SetDual()
             .CustomCreateCharm(Tools.SetCategories("MAGITECH", "GLACIER"), Action =>
             {
                 Charm_CustomStatus Effect = Action.resourcePrefab.AddComponent<Charm_CustomStatus>();
@@ -1176,7 +1235,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//电冰体
 
-            new ModItem("EnergyRecoveryDevice", EItemRarity.Uncommon).CreateItem()
+            new ModItem("EnergyRecoveryDevice", EItemRarity.Uncommon)
             .CustomCreateCharm(new List<string>(), Action =>
             {
                 Charm_RemoveArtifact Effect = Action.resourcePrefab.AddComponent<Charm_RemoveArtifact>();
@@ -1187,7 +1246,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//能量回收装置
 
-            new ModItem("CommemorativeCoin", EItemRarity.Uncommon).CreateItem()
+            new ModItem("CommemorativeCoin", EItemRarity.Uncommon)
             .CustomCreateCharm(Tools.SetCategories("SAVVY"), Action =>
             {
                 Charm_ChangeMoney Effect = Action.resourcePrefab.AddComponent<Charm_ChangeMoney>();
@@ -1198,7 +1257,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//纪念币
 
-            new ModItem("PotionTransactionProof").CreateItem(true)
+            new ModItem("PotionTransactionProof").SetDual()
             .CustomCreateCharm(Tools.SetCategories("SAVVY", "ALCHEMY"), Action =>
             {
                 Charm_PotionTransactionProof Effect = Action.resourcePrefab.AddComponent<Charm_PotionTransactionProof>();
@@ -1209,7 +1268,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//药水交易凭证
 
-            new ModItem("CounterAttackTacticsGuide").CreateItem(true)
+            new ModItem("CounterAttackTacticsGuide").SetDual()
             .CustomCreateCharm(Tools.SetCategories("COMPANION", "SHADOW"), Action =>
             {
                 Charm_CustomStatus Effect = Action.resourcePrefab.AddComponent<Charm_CustomStatus>();
@@ -1227,7 +1286,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//反击战术指南
 
-            new ModItem("MysteryBox", EItemRarity.Common).CreateItem()
+            new ModItem("MysteryBox", EItemRarity.Common)
             .CustomCreateCharm(Tools.SetCategories("FORTUNE"), Action =>
             {
                 Charm_Lottery Effect = Action.resourcePrefab.AddComponent<Charm_Lottery>();
@@ -1238,7 +1297,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//神秘盒子
 
-            new ModItem("MysteryBox_Random", EItemRarity.Rare).CreateItem()
+            new ModItem("MysteryBox_Random", EItemRarity.Rare)
             .CustomCreateCharm(new List<string>(), Action =>
             {
                 Action.activeType = EItemActiveType.Hidden;
@@ -1258,7 +1317,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//神秘盒子(金)
 
-            new ModItem("Caltrop", EItemRarity.Rare).CreateItem()
+            new ModItem("Caltrop", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("GUARDIAN"), Action =>
             {
                 Charm_WeaponThorns Effect = Action.resourcePrefab.AddComponent<Charm_WeaponThorns>();
@@ -1269,9 +1328,651 @@ namespace SPMod.ModContent
                     Tools.SetStatusGroup("THORNS", 50, 100, 150, 200),
                 }.ToArray();
                 Effect.maxLevel = 3;
-                Effect.isUniqueEffect = false;
+                Effect.isUniqueEffect = true;
                 Effect.enabled = false;
             }),//铁蒺藜
+
+            new ModItem("Capricious", EItemRarity.Common)
+            .CustomCreateCharm(Tools.SetCategories("HURRICANE"), Action =>
+            {
+                Charm_ModFrostiumRing Effect = Action.resourcePrefab.AddComponent<Charm_ModFrostiumRing>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = new LocalizedString[] { new LocalizedString("Charm_FrostiumRing_Effect") };
+                Effect.damageId = "[Star's Sephiria Mod]Capricious";
+                Effect.ElementalName = "WindDamage";
+                Effect.maxLevel = 1;
+                Effect.elementalType = Wind;
+                Effect.damageByLevel = new int[2] { 15, 30 };
+                Effect.cooldownTimer.time = 0.2f;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//变幻无常
+
+            new ModItem("StrongWindAmulet", EItemRarity.Common)
+            .CreateCharm(Tools.SetCategories("HURRICANE"), new List<StatusGroup>()
+            {
+                Tools.SetStatusGroup("WIND_DAMAGE", 2, 4, 6, 8),
+            }, false),//疾风护符
+
+            new ModItem("CyanOrb", EItemRarity.Uncommon)
+            .CustomCreateCharm(Tools.SetCategories("HURRICANE"), Action =>
+            {
+                Charm_CyanOrb Effect = Action.resourcePrefab.AddComponent<Charm_CyanOrb>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_CyanOrb") };
+                Effect.maxLevel = 2;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//青色宝珠
+
+            new ModItem("WindVane", EItemRarity.Uncommon)
+            .CustomCreateCharm(Tools.SetCategories("HURRICANE"), Action =>
+            {
+                Charm_Burn Effect = Action.resourcePrefab.AddComponent<Charm_Burn>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_WindVane") };
+                Effect.stats = new StatusGroup[] { Tools.SetStatusGroup("ATTACK_SPEED", 4, 8, 12) };
+                Effect.targetElementalType = Wind;
+                Effect.addCriticalDamageByLevel = new int[] { 11, 22, 33 };
+                Effect.maxLevel = 2;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//风向标
+
+            new ModItem("AtmosClock", EItemRarity.Uncommon)
+            .CustomCreateCharm(Tools.SetCategories("HURRICANE"), Action =>
+            {
+                Charm_HarmfulValue Effect = Action.resourcePrefab.AddComponent<Charm_HarmfulValue>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_AtmosClock") };
+                Effect.StatusName = "WIND_EROSION_DOT";
+                Effect.Ending = "%";
+                Effect.BaseValueByLevel = new int[] { 25, 50, 75, 100 };
+                Effect.stats = new StatusGroup[] { Tools.SetStatusGroup("WIND_DAMAGE", 1, 2, 3, 4) };
+                Effect.maxLevel = 3;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//空气钟
+
+            new ModItem("WindJellyFish", EItemRarity.Uncommon)
+            .CustomCreateCharm(Tools.SetCategories("HURRICANE", "COMPANION"), Action =>
+            {
+                Charm_SummonUnit Effect = Action.resourcePrefab.AddComponent<Charm_SummonUnit>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_WindJelly") };
+                Effect.isJellyfish = true;
+                Effect.followerDamageId = "[Star's Sephiria Mod]希尔芙的灵魂粉末";
+                Effect.damageByLevel = new int[] { 15, 30, 45, 60, 75 };
+                Effect.hpByLevel = new int[] { 10, 20, 30, 40, 50 };
+                Effect.maxLevel = 4;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            })
+            .SetCustomItemEffect(Action =>
+            {
+                Charm_SummonUnit Charm = Action.resourcePrefab.GetComponent<Charm_SummonUnit>();
+                GameObject Vanilla = ItemDatabase.FindItemById(1198).resourcePrefab.GetComponent<Charm_SummonUnit>().unitPrefab;
+                Charm.unitPrefab = new ModUnitAvatar("WindJelly", Vanilla)
+                .SetAvatar(Unit =>
+                {
+                    Unit.defaultNameKey = "ModUnit_WindJelly";
+                    Unit.miniFaceChipSprite = Tools.LoadModSprite("Item_WindJellyFish_MiniIcon");
+                })
+                .SetCustom(Unit =>
+                {
+                    if (Unit.TryGetComponent<Unit_Grenadier>(out Unit_Grenadier Jelly))
+                    {
+                        Jelly.bulletDebuffPrefab = WindErosion.Prefab;
+                        if (Jelly.fireData is NewWeaponFireData_Bullet VanillaFire)
+                        {
+                            GameObject WindBullet = new ModBullet("WindJellyBullet", VanillaFire.bulletPrefab)
+                            .SetSpriteSet("Bullet",
+                                "JellyFish_IceBullet0", "JellyFish_IceBullet1", "JellyFish_IceBullet2")
+                            .SetCreateFxSprites("EffectFx",
+                                "JellyFish_IceAttackShootFX0", "JellyFish_IceAttackShootFX1", "JellyFish_IceAttackShootFX2",
+                                "JellyFish_IceAttackShootFX3", "JellyFish_IceAttackShootFX4", "JellyFish_IceAttackShootFX5")
+                            .SetDestroyFxSprites("EffectFx",
+                                "JellyFish_IceBullet_FX0", "JellyFish_IceBullet_FX1", "JellyFish_IceBullet_FX2",
+                                "JellyFish_IceBullet_FX3", "JellyFish_IceBullet_FX4", "JellyFish_IceBullet_FX5", "JellyFish_IceBullet_FX6")
+                            .SetTailFxSprites("Bullet",
+                                "JellyFish_IceBulletParticle0", "JellyFish_IceBulletParticle1", "JellyFish_IceBulletParticle2",
+                                "JellyFish_IceBulletParticle3", "JellyFish_IceBulletParticle4", "JellyFish_IceBulletParticle5")
+                            .EndCreate();
+                            NewWeaponFireData_Bullet Fire = Object.Instantiate(VanillaFire);
+                            Fire.bulletPrefab = WindBullet;
+                            Fire.damageElementalType = Wind; // 伤害属性改成风
+                            Jelly.fireData = Fire;
+                        }
+                    }
+                })
+                .SetAnimationSprites("UnitAvatar", "JellyFish_Ice_", "JellyFish_Wind_", ("Idle", 10), ("Attack", 12), ("Airborne", 3), ("Down", 1))
+                .EndCreate();
+                Charm.unitName = new LocalizedString("ModUnit_WindJelly");
+            }),//希尔芙的灵魂粉末
+
+            new ModItem("WindSail", EItemRarity.Uncommon)
+            .CustomCreateCharm(Tools.SetCategories("HURRICANE"), Action =>
+            {
+                Charm_HarmfulValue Effect = Action.resourcePrefab.AddComponent<Charm_HarmfulValue>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_WindSail") };
+                Effect.StatusName = "WIND_EROSION_OVER_FLOW";
+                Effect.Ending = "%";
+                Effect.BaseValueByLevel = new int[] { 8, 16, 24, 32, 40 };
+                Effect.stats = new StatusGroup[] { Tools.SetStatusGroup("WIND_DAMAGE", 1, 2, 3, 4, 5) };
+                Effect.AddValue = TextFile.WindErosionOverFlowAdd;
+                Effect.FindMult = 3f;
+                Effect.maxLevel = 4;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//风帆
+
+            new ModItem("CyanScarf", EItemRarity.Rare)
+            .CreateCharm(Tools.SetCategories("HURRICANE"), new List<StatusGroup>()
+            {
+                Tools.SetStatusGroup("WIND_EROSION_DAMAGE", 10, 20, 30, 40, 50),
+            }),//青色围巾
+
+            new ModItem("WhirlWindBug", EItemRarity.Rare)
+            .CreateCharm(Tools.SetCategories("HURRICANE"), new List<StatusGroup>()
+            {
+                Tools.SetStatusGroup("WIND_EROSION_MULT", 4, 8, 12, 16, 20, 24),
+            }),//旋风虫
+
+            new ModItem("Organ", EItemRarity.Rare)
+            .CustomCreateCharm(Tools.SetCategories("HURRICANE"), Action =>
+            {
+                Charm_DebuffsPenetrationDefense Effect = Action.resourcePrefab.AddComponent<Charm_DebuffsPenetrationDefense>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_DebuffsPenetrationDefense") };
+                Effect.stats = new List<StatusGroup>()
+                {
+                    Tools.SetStatusGroup("WIND_EROSION_COUNT", 0, 1, 1, 2),
+                }.ToArray();
+                Effect.maxLevel = 3;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//风琴
+
+            new ModItem("WeatherForEcast", EItemRarity.Legend)
+            .CreateCharm(Tools.SetCategories("HURRICANE"), new List<StatusGroup>()
+            {
+                Tools.SetStatusGroup("WIND_DAMAGE", 2, 4, 6, 8),
+                Tools.SetStatusGroup("WIND_EROSION_COUNT", 0, 1, 1, 2),
+                Tools.SetStatusGroup("WIND_EROSION_LUCK", 15, 30, 45, 60),
+            }),//天气预报
+
+            new ModItem("Convergence").SetDual()
+            .CustomCreateCharm(Tools.SetCategories("HURRICANE", "WINDSONG"), Action =>
+            {
+                Charm_Convergence Effect = Action.resourcePrefab.AddComponent<Charm_Convergence>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = new LocalizedString[1] { new LocalizedString("ModCharmEffect_Convergence") };
+                Effect.ValueByLevel = new int[] { 1 };
+                Effect.ValueName = TextFile.ScoreCount;
+                Effect.stats = new List<StatusGroup>()
+                {
+                    Tools.SetStatusGroup("ATTACK_SPEED", 4, 8, 12)
+                }.ToArray();
+                Effect.maxLevel = 2;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//乐谱<辐合>
+
+            new ModItem("Potion_Wind", EItemRarity.Rare)
+            .CreatePotion(Tools.SetCategories("ALCHEMY"), "WIND_DAMAGE", 4)
+            .SetCustomItemEffect(Action =>
+            {
+                Action.cost = ItemDatabase.FindItemById(28).cost;
+                Action.CopyPotionFX(28);
+            }),//阿依伦的吐息
+
+            new ModItem("Potion_Wind2", EItemRarity.Uncommon)
+            .CreatePotion(Tools.SetCategories("ALCHEMY"), "WIND_DAMAGE", 2)
+            .SetCustomItemEffect(Action =>
+            {
+                Action.cost = ItemDatabase.FindItemById(40).cost;
+                Action.CopyPotionFX(40);
+            }),//赛松之低语
+        };
+        public static void CreateModItems()
+        {
+            foreach (ModItem Data in ModItemEntityData)
+                Data.CreateItem();
+        }
+        //模组弹幕
+        public static readonly ModBullet WindArrow = new ModBullet("WindArrow", () =>
+        {
+            WeaponEntity? Entity = WeaponDatabase.FindWeaponById(WeaponIDs.PurpleJacket);
+            WeaponSimple? Simple = Entity?.mainWeaponPrefab?.GetComponent<WeaponSimple>();
+            if (Simple == null || Simple.basicComboAttacks.Length == 0) return null;
+            return (Simple.basicComboAttacks[0] as NewWeaponFireData_Bullet)?.bulletPrefab;
+        })
+        .SetBullet(Action =>
+        {
+            Action.pierceCreatureCount = 3;
+            Action.speedScale *= 1.5f;
+        })
+        .SetSpriteSet("Bullet", "PoisonBolt_00", "PoisonBolt_01", "PoisonBolt_02")
+        .SetAttackSucceededFxSprites("EffectFx", "JellyFish_Bullet_FX0", "JellyFish_Bullet_FX1", "JellyFish_Bullet_FX2",
+            "JellyFish_Bullet_FX3", "JellyFish_Bullet_FX4", "JellyFish_Bullet_FX5", "JellyFish_Bullet_FX6")
+        .SetDestroyFxSprites("Bullet", "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
+            "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5")
+        .SetTailFxSprites("Bullet", "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
+            "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5");
+
+        public static readonly ModBullet AirArrow = new ModBullet("AirArrow", () =>
+        {
+            WeaponEntity? Entity = WeaponDatabase.FindWeaponById(WeaponIDs.PurpleJacket);
+            WeaponSimple? Simple = Entity?.mainWeaponPrefab?.GetComponent<WeaponSimple>();
+            if (Simple == null || Simple.specialAttacks.Length == 0) return null;
+            return (Simple.specialAttacks[0] as NewWeaponFireData_Bullet)?.bulletPrefab;
+        })
+        .SetBullet(Action =>
+        {
+            Action.pierceCreatureCount = 1;
+            Action.speedScale *= 2f;
+            if (Action.bulletChildParticle != null)
+            {
+                Action.bulletChildParticle.gameObject.SetActive(false);
+                Action.bulletChildParticle = null;
+            }
+        })
+        .SetSpriteSet("Bullet", "Bolt_Special_Poison0", "Bolt_Special_Poison1", "Bolt_Special_Poison2",
+            "Bolt_Special_Poison3", "Bolt_Special_Poison4", "Bolt_Special_Poison5")
+        .SetAttackSucceededFxSprites("EffectFx", "JellyFish_Bullet_FX0", "JellyFish_Bullet_FX1", "JellyFish_Bullet_FX2",
+            "JellyFish_Bullet_FX3", "JellyFish_Bullet_FX4", "JellyFish_Bullet_FX5", "JellyFish_Bullet_FX6");
+
+        // 模组攻击数据
+        public static List<ModFireData> WindDagger_Basic = new List<ModFireData>()
+        {
+            ModFireData.Basic(WeaponIDs.FireDagger, 0).SetSwingSpriteFolder("Weapon.Dagger_Wind"),
+            ModFireData.Basic(WeaponIDs.FireDagger, 1).SetSwingSpriteFolder("Weapon.Dagger_Wind"),
+            ModFireData.Basic(WeaponIDs.FireDagger, 2).SetSwingSpriteFolder("Weapon.Dagger_Wind"),
+            ModFireData.Basic(WeaponIDs.FireDagger, 3).SetSwingSpriteFolder("Weapon.Dagger_Wind"),
+            ModFireData.Basic(WeaponIDs.FireDagger, 4).SetSwingSpriteFolder("Weapon.Dagger_Wind"),
+        };
+        public static ModFireData WindDagger_Fury = ModFireData.Special(WeaponIDs.FireDagger, 0).SetSwingSpriteFolder("Weapon.Dagger_Wind");
+        public static ModFireData WindDagger_Parry = ModFireData.Special(WeaponIDs.FireDagger, 1).SetSwingSpriteFolder("Weapon.Dagger_Wind");
+        public static ModFireData WindDagger_Dash = ModFireData.Dash(WeaponIDs.FireDagger, 0).SetSwingSpriteFolder("Weapon.Dagger_Wind");
+        public static ModFireData WindDagger_Vortex = ModFireData.BladeZone(WeaponIDs.ShadowofHope).SetElement(Wind).SetBladeZoneFxSprites("Weapon.Dagger_Vortex")
+             .CustomSet(Data =>
+             {
+                 Data.attackDashAngle = 0f;
+                 Data.attackDashSpeed = 0f;
+                 Data.attackDashTime = 0f;
+             });
+
+        public static ModFireData WindCrossbow_Basic = ModFireData.Basic(WeaponIDs.ColossalCrossbow, 0).SetDamage(0.8f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
+            .CustomSet(Data =>
+            {
+                if (Data is NewWeaponFireData_Bullet BulletData)
+                {
+                    BulletData.bulletPrefab = WindArrow.Template;
+                }
+            });
+        public static ModFireData WindCrossbow_AirValve = ModFireData.Special(WeaponIDs.ColossalCrossbow, 0).SetDamage(3.2f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
+            .CustomSet(Data =>
+            {
+                if (Data is NewWeaponFireData_Bullet BulletData)
+                {
+                    BulletData.bulletPrefab = AirArrow.Template;
+                }
+            });
+        public static List<ModFireData> WindKatana_Basic = new List<ModFireData>()
+        {
+            ModFireData.Basic(WeaponIDs.Helbanus, 0).SetDamage(0.88f).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Katana_Wind"),
+            ModFireData.Basic(WeaponIDs.Helbanus, 1).SetDamage(0.88f).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Katana_Wind"),
+            ModFireData.Basic(WeaponIDs.Helbanus, 2).SetDamage(1.32f).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Katana_Wind"),
+        };
+        public static List<ModFireData> WindKatana_Special = new List<ModFireData>()
+        {
+            ModFireData.Special(WeaponIDs.Helbanus, 0).SetDamage(1.88f).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Katana_Wind"),
+            ModFireData.Special(WeaponIDs.Helbanus, 1).SetDamage(1.88f).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Katana_Wind"),
+        };
+        public static ModFireData WindKatana_Dash = ModFireData.Dash(WeaponIDs.Helbanus, 0).SetDamage(1.88f)
+            .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Katana_Wind");
+        public static ModFireData WindKatana_Moment = ModFireData.GreatDraw(WeaponIDs.RendbladeHeavenrend)
+            .SetSwingRangeScaling(false).SetSwingScale(0.5f).SetSwingSpriteFolder("Weapon.Katana_Moment");
+        public static ModFireData WindKatana_Moment2 = ModFireData.Basic(WeaponIDs.Helbanus, 0).SetDamage(1.32f)
+            .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Katana_Wind");
+        public static List<ModFireData> WindStaff_Basic = new List<ModFireData>()
+        {
+            ModFireData.Basic(WeaponIDs.StaffOfEmbers, 0).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind"),
+            ModFireData.Basic(WeaponIDs.StaffOfEmbers, 1).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind"),
+            ModFireData.Basic(WeaponIDs.StaffOfEmbers, 2).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind"),
+            ModFireData.Basic(WeaponIDs.StaffOfEmbers, 3).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind"),
+            ModFireData.Basic(WeaponIDs.StaffOfEmbers, 4).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind"),
+            ModFireData.Basic(WeaponIDs.StaffOfEmbers, 5).SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind"),
+        };
+        public static ModFireData WindStaff_Special = ModFireData.Special(WeaponIDs.StaffOfEmbers, 0)
+            .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind");
+        public static ModFireData WindStaff_Special_Base = ModFireData.SecondSpecial(WeaponIDs.StaffOfEmbers)
+            .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind");
+        public static ModFireData WindStaff_Special_Enhanced = ModFireData.SecondSpecial(WeaponIDs.StaffOfEmbers, true)
+            .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind");
+        public static ModFireData WindStaff_Dash = ModFireData.Dash(WeaponIDs.StaffOfEmbers, 0)
+            .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind");
+        // 模组武器
+        public static List<ModWeapon> ModWeaponData = new List<ModWeapon>()
+        {
+            new ModWeapon("WindSword", WeaponIDs.WindSword, WeaponIDs.DefaultSwordandShield)
+            .SetEnhanceFrom(WeaponIDs.DefaultSwordandShield)
+            .SetSprite("Sword_Tier1", "ModWeapon_WindSword", "Weapon")
+            .SetSprite("Shield_Tier1", "ModWeapon_WindSword_Shield", "Weapon")
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindSword_Effect");
+                Effect.status = new WeaponAddonCommon_StatusUnsafe.Stat[]
+                {
+                    new WeaponAddonCommon_StatusUnsafe.Stat
+                    {
+                        statId = TextFile.WindDamage,
+                        value = 5,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                };
+                Addons.Add(Effect);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("SpiralCloudBand", WeaponIDs.SpiralCloudBand, WeaponIDs.DefaultSwordandShield)
+            .SetEnhanceFrom(WeaponIDs.WindSword)
+            .SetSprite("Sword_Tier1", "ModWeapon_SpiralCloudBand", "Weapon")
+            .SetSprite("Shield_Tier1", "ModWeapon_SpiralCloudBand_Shield", "Weapon")
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindSword_Effect");
+                Effect.status = new WeaponAddonCommon_StatusUnsafe.Stat[]
+                {
+                    new WeaponAddonCommon_StatusUnsafe.Stat
+                    {
+                        statId = TextFile.WindDamage,
+                        value = 5,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                    new WeaponAddonCommon_StatusUnsafe.Stat
+                    {
+                        statId = TextFile.CyanOrbUP,
+                        value = 1,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                };
+                Addons.Add(Effect);
+
+                WeaponAddon_MoveSpeed Effect2 = Weapon.gameObject.AddComponent<WeaponAddon_MoveSpeed>();
+                Effect2.parent = Weapon;
+                Effect2.effectText = new LocalizedString("ModWeapon_SpiralCloudBand_Effect");
+                Effect2.Bonus = 0.1f;
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("WindDagger", WeaponIDs.WindDagger, WeaponIDs.LightningDagger)
+            .SetEnhanceFrom(WeaponIDs.Dagger)
+            .SetSprite("Dagger_Tier2_Lightning", "ModWeapon_WindDagger", "Weapon")
+            .SetSprite("Dagger_Tier2_Lightning_Blade", "ModWeapon_WindDagger_1", "Weapon")
+            .SetBasicAttacks(WindDagger_Basic.ToArray())
+            .SetSpecialAttack(0, WindDagger_Fury)
+            .SetSpecialAttack(1, WindDagger_Parry)
+            .SetDashAttack(0, WindDagger_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
+                Effect.parent = Weapon;
+                Effect.DamageId = "武器附加伤害(风)";
+                Effect.ValueName = TextFile.WindDamage;
+                Effect.DamageMult = 40;
+                Effect.elementalType = Wind;
+                Effect.effectText = new LocalizedString("ModWeapon_WindDagger_Effect");
+                Addons.Add(Effect);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("Vortex", WeaponIDs.Vortex, WeaponIDs.LightningDagger)
+            .SetEnhanceFrom(WeaponIDs.WindDagger)
+            .SetSprite("Dagger_Tier2_Lightning", "ModWeapon_Vortex", "Weapon")
+            .SetSprite("Dagger_Tier2_Lightning_Blade", "ModWeapon_Vortex_1", "Weapon")
+            .SetBasicAttacks(WindDagger_Basic.ToArray())
+            .SetSpecialAttack(0, WindDagger_Fury)
+            .SetSpecialAttack(1, WindDagger_Parry)
+            .SetDashAttack(0, WindDagger_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
+                Effect.parent = Weapon;
+                Effect.DamageId = "武器附加伤害(风)";
+                Effect.ValueName = TextFile.WindDamage;
+                Effect.DamageMult = 40;
+                Effect.elementalType = Wind;
+                Effect.effectText = new LocalizedString("ModWeapon_WindDagger_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddon_VortexEffect Effect2 = Weapon.gameObject.AddComponent<WeaponAddon_VortexEffect>();
+                Effect2.parent = Weapon;
+                Effect2.effectText = new LocalizedString("ModWeapon_Vortex_Effect");
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("VacuumBlade", WeaponIDs.VacuumBlade, WeaponIDs.LightningDagger)
+            .SetEnhanceFrom(WeaponIDs.WindDagger)
+            .SetSprite("Dagger_Tier2_Lightning", "ModWeapon_VacuumBlade", "Weapon")
+            .SetSprite("Dagger_Tier2_Lightning_Blade", "ModWeapon_VacuumBlade_1", "Weapon")
+            .SetBasicAttacks(WindDagger_Basic.ToArray())
+            .SetSpecialAttack(0, WindDagger_Fury)
+            .SetSpecialAttack(1, WindDagger_Parry)
+            .SetDashAttack(0, WindDagger_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
+                Effect.parent = Weapon;
+                Effect.DamageId = "武器附加伤害(风)";
+                Effect.ValueName = TextFile.WindDamage;
+                Effect.DamageMult = 40;
+                Effect.elementalType = Wind;
+                Effect.effectText = new LocalizedString("ModWeapon_WindDagger_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddon_BasicSlash Effect2 = Weapon.gameObject.AddComponent<WeaponAddon_BasicSlash>();
+                Effect2.parent = Weapon;
+                Effect2.status = new WeaponAddonCommon_StatusUnsafe.Stat[]
+                {
+                    new WeaponAddonCommon_StatusUnsafe.Stat
+                    {
+                        statId = TextFile.AdditionalElementalDamageBonus,
+                        value = 60,
+                        displayMultiplier = 1f,
+                        displaySymbol = "%",
+                    },
+                };
+                Effect2.effectText = new LocalizedString("ModWeapon_VacuumBlade_Effect");
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("WindCrossbow", WeaponIDs.WindCrossbow, WeaponIDs.ColossalCrossbow)
+            .SetEnhanceFrom(WeaponIDs.ColossalCrossbow)
+            .SetSprite("Crossbow_Tier1_0", "ModWeapon_WindCrossbow_0", "Weapon")
+            .SetSprite("Crossbow_Tier1_1", "ModWeapon_WindCrossbow_1", "Weapon")
+            .SetSprite("Crossbow_Tier1_2", "ModWeapon_WindCrossbow_2", "Weapon")
+            .SetSprite("Crossbow_Tier1_3", "ModWeapon_WindCrossbow_3", "Weapon")
+            .SetBasicAttack(0, WindCrossbow_Basic)
+            .SetBasicAttack(1, WindCrossbow_Basic)
+            .SetCrossBowValue(0.2f, 1, 1, 6)
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindCrossbow_Effect");
+                Addons.Add(Effect);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("AirValve", WeaponIDs.AirValve, WeaponIDs.ColossalCrossbow)
+            .SetEnhanceFrom(WeaponIDs.WindCrossbow)
+            .SetSprite("Crossbow_Tier1_0", "ModWeapon_AirValve_0", "Weapon")
+            .SetSprite("Crossbow_Tier1_1", "ModWeapon_AirValve_1", "Weapon")
+            .SetSprite("Crossbow_Tier1_2", "ModWeapon_AirValve_2", "Weapon")
+            .SetSprite("Crossbow_Tier1_3", "ModWeapon_AirValve_3", "Weapon")
+            .SetBasicAttack(0, WindCrossbow_Basic)
+            .SetBasicAttack(1, WindCrossbow_Basic)
+            .SetSpecialAttack(0, WindCrossbow_AirValve)
+            .SetCrossBowValue(0.125f, 1.2f, 1, 6)
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindCrossbow_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddonCommon_StatusUnsafe Effect2 = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect2.parent = Weapon;
+                Effect2.effectText = new LocalizedString("ModWeapon_AirValve_Effect");
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("WindKatana", WeaponIDs.WindKatana, WeaponIDs.Helbanus)
+            .SetEnhanceFrom(WeaponIDs.Blade)
+            .SetSprite("Katana_Fire_Tier2_0", "ModWeapon_WindKatana", "Weapon")
+            .SetSprite("katana_Fire_Tier2_1", "ModWeapon_WindKatana_1", "Weapon")
+            .SetSprite("katana_Fire_Tier2_2", "ModWeapon_WindKatana_2", "Weapon")
+            .SetSprite("katana_Fire_Tier2_3", "ModWeapon_WindKatana_3", "Weapon")
+            .SetBasicAttacks(WindKatana_Basic.ToArray())
+            .SetSpecialAttacks(WindKatana_Special.ToArray())
+            .SetDashAttack(0, WindKatana_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindKatana_Effect");
+                Addons.Add(Effect);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("Moment", WeaponIDs.Moment, WeaponIDs.BeastMarksSwordHou)
+            .SetEnhanceFrom(WeaponIDs.WindKatana)
+            .SetSprite("katana_Sheath_Range_0", "ModWeapon_Moment", "Weapon")
+            .SetSprite("katana_Sheath_Range_1", "ModWeapon_Moment_1", "Weapon")
+            .SetSprite("katana_Sheath_Range_2", "ModWeapon_Moment_2", "Weapon")
+            .SetSprite("katana_Sheath_Range_3", "ModWeapon_Moment_3", "Weapon")
+            .SetBasicAttacks(WindKatana_Basic.ToArray())
+            .SetSpecialAttacks(WindKatana_Special.ToArray())
+            .SetDashAttack(0, WindKatana_Dash)
+            .SetKatanaQuickDraw(WindKatana_Moment2)
+            .CustomCreateWeapon(Weapon =>
+            {
+                if (Weapon is WeaponSimple_Katana Katana)
+                {
+                    Katana.useQuickDraw = true;
+                    Katana.quickDrawFireData.swingSoundEvent = Katana.specialAttacks[0].swingSoundEvent;
+                }
+
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindKatana_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddon_BasicDeBuff Effect2 = Weapon.gameObject.AddComponent<WeaponAddon_BasicDeBuff>();
+                Effect2.parent = Weapon;
+                Effect2.debuffPrefab = WindErosion.Prefab;
+                Effect2.effectText = new LocalizedString("ModWeapon_Moment_Effect");
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("WindStaff", WeaponIDs.WindStaff, WeaponIDs.StaffOfEmbers)
+            .SetEnhanceFrom(WeaponIDs.Quarterstaff)
+            .SetSprite("StaffFire_Tier2", "ModWeapon_WindStaff", "Weapon")
+            .SetSprite("StaffFire_Tier2_In", "ModWeapon_WindStaff_1", "Weapon")
+            .SetBasicAttacks(WindStaff_Basic.ToArray())
+            .SetSpecialAttack(0, WindStaff_Special)
+            .SetDashAttack(0, WindStaff_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                if (Weapon is WeaponSimple_QuartterStaff Staff)
+                {
+                    Staff.secondSpecialAttackFireData = WindStaff_Special_Base.Data;
+                    Staff.secondSpecialAttackEnhancedFireData = WindStaff_Special_Enhanced.Data;
+                }
+
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindStaff_Effect");
+                Addons.Add(Effect);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("Oars", WeaponIDs.Oars, WeaponIDs.StaffOfEmbers)
+            .SetEnhanceFrom(WeaponIDs.WindStaff)
+            .SetSprite("StaffFire_Tier2", "ModWeapon_Oars", "Weapon")
+            .SetSprite("StaffFire_Tier2_In", "ModWeapon_Oars_1", "Weapon")
+            .SetBasicAttacks(WindStaff_Basic.ToArray())
+            .SetSpecialAttack(0, WindStaff_Special)
+            .SetDashAttack(0, WindStaff_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                if (Weapon is WeaponSimple_QuartterStaff Staff)
+                {
+                    Staff.secondSpecialAttackFireData = WindStaff_Special_Base.Data;
+                    Staff.secondSpecialAttackEnhancedFireData = WindStaff_Special_Enhanced.Data;
+                }
+
+                List<WeaponAddon> Addons = new List<WeaponAddon>();
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.status = new WeaponAddonCommon_StatusUnsafe.Stat[]
+                {
+                    new WeaponAddonCommon_StatusUnsafe.Stat
+                    {
+                        statId = TextFile.WindErosionOverFlowAdd,
+                        value = 30,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                    new WeaponAddonCommon_StatusUnsafe.Stat
+                    {
+                        statId = TextFile.WindErosionOverFlowBase,
+                        value = 80,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                    new WeaponAddonCommon_StatusUnsafe.Stat
+                    {
+                        statId = TextFile.WeaponRange,
+                        value = 30,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                };
+                Effect.effectText = new LocalizedString("ModWeapon_WindStaff_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddon_DeBuffAttack Effect2 = Weapon.gameObject.AddComponent<WeaponAddon_DeBuffAttack>();
+                Effect2.parent = Weapon;
+                Effect2.debuffPrefab = WindErosion.Prefab;
+                Effect2.effectText = new LocalizedString("ModWeapon_Oars_Effect");
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
         };
     }
 }

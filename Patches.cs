@@ -19,11 +19,12 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using static AvatarStatsHooker;
+using static ComboEffect_Debuff;
 using static SPMod.ModContent.LoadModContent;
 using static SPMod.MonsterAI.ArmadilloGolem;
 using static SPMod.Tool.ModuleComponents;
 using static UnitAvatar;
-using static UnityEngine.GraphicsBuffer;
 using Object = UnityEngine.Object;
 using Random = System.Random;
 
@@ -40,7 +41,6 @@ namespace SPMod
         public static readonly FieldInfo isDodgeInvincibleAppliedField = AccessTools.Field(typeof(UnitAvatar), "isDodgeInvincibleApplied");
         public static readonly FieldInfo curShieldDatasField = AccessTools.Field(typeof(UnitAvatar), "curShieldDatas");
         public static readonly FieldInfo OnCostumeChangedClientsideField = AccessTools.Field(typeof(PlayerAvatar), "OnCostumeChangedClientside");
-        public static readonly MethodInfo CalculateEvasionMethod = AccessTools.Method(typeof(StarSephiriaPatches), "CalculateEvasionChance");
         public static readonly MethodInfo RegisterInternalMethod = AccessTools.Method(typeof(MiracleDatabase), "RegisterInternal");
 
         public static bool CustomStatsMessage = false;
@@ -317,6 +317,8 @@ namespace SPMod
                 }
                 if (Damage.origin is PlayerAvatar Player)
                 {
+                    if (Hard >= 4) Damage.damage *= 0.8f;
+
                     if (Player.IsWeapon(WeaponIDs.SolisImber))
                     {
                         if (Damage.id == "Ability_FlameSword")
@@ -325,16 +327,16 @@ namespace SPMod
                             Damage.damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
                         }
                     }
-                    if (Tools.CostumeSkinUse(Player.Name, "ForestCat", "_3"))
+                    if (Tools.CostumeSkinUse(Player.Name, "ForestCat_3"))
                     {
                         float Mult = Player.currentMoney / 400f;
                         Damage.damage *= 1f + Mult * 0.01f;
                     }
-                    if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit", "_3"))
+                    if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit_3"))
                     {
-                        Damage.damage *= 0.82f;
+                        Damage.damage *= 0.8f;
                     }
-                    if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit", "_2"))
+                    if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit_2"))
                     {
                         float Mult = (Player.MaxMp - Player.MP) / 20f;
                         Damage.damage *= 1f + Mult * 0.01f;
@@ -355,6 +357,8 @@ namespace SPMod
                 {
                     if (Orig.Leader is PlayerAvatar Leader)
                     {
+                        if (Hard >= 4) Damage.damage *= 0.8f;
+
                         if (Leader.IsWeapon(WeaponIDs.DarkVeil))
                         {
                             if (WeaponPatch.DarkVeilBuff.TryGetValue(Leader, out var Buff) && !Buff.IsEndBuff)
@@ -383,7 +387,7 @@ namespace SPMod
                         if (Player.FollowersCount > 1)
                             Damage.damage *= 0.5f;
                     }
-                    if (Tools.CostumeSkinUse(Player.Name, "Mole", "_3", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Mole_3", false))
                     {
                         string DamageId = "[Star's Sephiria Mod]国王力量";
                         if (Damage.flag != DamageId && Damage.damage > 0)
@@ -395,7 +399,7 @@ namespace SPMod
                             Target.ApplyDamage(Dam);
                         }
                     }//鼹鼠3
-                    if (Tools.CostumeSkinUse(Player.Name, "Mole", "_2", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Mole_2", false))
                     {
                         if (Player.FollowersCount <= 1)
                         {
@@ -500,7 +504,7 @@ namespace SPMod
                         float Time = 6f * (1f + Player.GetCustomStatUnsafe("BUFFDURATION") * 0.01f);
                         WeaponPatch.DraftbladeAttack[Player] = new Timer(Time, false);
                     }
-                    if (Tools.CostumeSkinUse(Player.Name, "Otter", "_3", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Otter_3", false))
                     {
                         float Time = 6f * (1f + Player.GetCustomStatUnsafe("BUFFDURATION") * 0.01f);
                         StarSephiriaMod.Otter3_AddCrit[Player] = new Timer(Time);
@@ -604,8 +608,10 @@ namespace SPMod
                         {
                             if (ModConfig.Instance.AddItem)
                             {
-                                foreach (ItemEntity ModItem in ModItemEntityData)
+                                foreach (ModItem Data in ModItemEntityData)
                                 {
+                                    ItemEntity? ModItem = Data.Item;
+                                    if (ModItem == null) continue;
                                     switch (ModItem.name)
                                     {
                                         case "ModItemEntity_RedDogSymbolA":
@@ -634,18 +640,9 @@ namespace SPMod
                                 float AddMult = DungeonPatchs.HardModAddLife;
                                 if (!ModConfig.BossRushMode) AddMult *= 1.5f;
                                 float Mult = 1f + AddMult;
-                                __instance.AddMaxHp(222 * Cout * Mult * Hard);
+                                __instance.AddMaxHp(250 * Cout * Mult * Hard);
                                 __instance.HealPercent(100f);
                             }
-                        }
-                        if (Hard >= 4)
-                        {
-                            __instance.AddCustomStatUnsafe(TextFile.PhysicalDefense, 20);
-                            __instance.AddCustomStatUnsafe(TextFile.FireDefense, 20);
-                            __instance.AddCustomStatUnsafe(TextFile.IceDefense, 20);
-                            __instance.AddCustomStatUnsafe(TextFile.LighningDefense, 20);
-                            __instance.AddCustomStatUnsafe(TextFile.HealingPenalty, 20);
-                            __instance.AddCustomStatUnsafe(TextFile.AllDamageBonus, 20);
                         }
 
                         if (DungeonPatchs.NumberofReincarnations > 0) TName += $"(轮回{DungeonPatchs.NumberofReincarnations})";
@@ -770,237 +767,36 @@ namespace SPMod
                 OnHit(damage);
             }
 
-            [HarmonyPatch("ApplyDamage")]
-            [HarmonyTranspiler]
-            static IEnumerable<CodeInstruction> ApplyDamage_Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+            [HarmonyPatch("GetEvasionChancePercent")]
+            [HarmonyPrefix]
+            public static bool GetEvasionChancePercent_Prefix(UnitAvatar __instance, ref float __result)
             {
                 if (!ModConfig.Instance.ModifyEvasionFormula)
                 {
-                    return instructions;
+                    return true;
                 }
-                try
+                float Value = __instance.GetCustomStatUnsafe(TextFile.Evasion) * 0.01f;
+                if (Value <= 0)
                 {
-                    StarSephiriaMod.LogInfoProjectile("===== 开始修改闪避公式 =====");
-
-                    List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
-                    int? formulaStart = null;
-                    int? formulaEnd = null;
-
-                    StarSephiriaMod.LogInfoProjectile($"总指令数: {codes.Count}");
-                    for (int i = 0; i < codes.Count - 20; i++)
-                    {
-                        // 查找包含 100f 的模式
-                        if (codes[i].opcode == OpCodes.Ldc_R4 &&
-                            codes[i].operand is float f1 && Mathf.Approximately(f1, 100f))
-                        {
-                            bool has6200f = false;
-                            bool has08f = false;
-                            bool hasLog = false;
-
-                            for (int j = i - 5; j < i + 10; j++)
-                            {
-                                if (j >= 0 && j < codes.Count)
-                                {
-                                    if (codes[j].opcode == OpCodes.Ldc_R4)
-                                    {
-                                        if (codes[j].operand is float f)
-                                        {
-                                            if (Mathf.Approximately(f, 6200f)) has6200f = true;
-                                            if (Mathf.Approximately(f, 0.8f)) has08f = true;
-                                        }
-                                    }
-                                    else if (codes[j].opcode == OpCodes.Call && codes[j].operand is MethodInfo method)
-                                    {
-                                        if (method.Name == "Log" && method.DeclaringType == typeof(Mathf))
-                                        {
-                                            hasLog = true;
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (has6200f && has08f && hasLog)
-                            {
-                                StarSephiriaMod.LogInfoProjectile($"找到闪避公式在位置 {i} (100f)");
-                                for (int j = i - 10; j < i; j++)
-                                {
-                                    if (j >= 0 && codes[j].opcode == OpCodes.Ldloc_S &&
-                                        codes[j].operand is LocalBuilder local && local.LocalType == typeof(float))
-                                    {
-                                        for (int k = j - 5; k < j; k++)
-                                        {
-                                            if (k >= 0 && codes[k].opcode == OpCodes.Call)
-                                            {
-                                                if (codes[k].operand is MethodInfo mi && mi.Name.Contains("GetCustomStat"))
-                                                {
-                                                    for (int l = k - 3; l < k; l++)
-                                                    {
-                                                        if (l >= 0 && codes[l].opcode == OpCodes.Ldc_I4_S)
-                                                        {
-                                                            if (codes[l].operand is sbyte statVal && statVal == 16)
-                                                            {
-                                                                formulaStart = l - 1;
-                                                                break;
-                                                            }
-                                                        }
-                                                    }
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        break;
-                                    }
-                                }
-
-                                if (formulaStart == null)
-                                {
-                                    formulaStart = i - 5;
-                                }
-                                for (int j = i; j < Mathf.Min(i + 15, codes.Count); j++)
-                                {
-                                    if (codes[j].opcode == OpCodes.Stloc_S &&
-                                        codes[j].operand is LocalBuilder resultLocal && resultLocal.LocalType == typeof(float))
-                                    {
-                                        formulaEnd = j;
-                                        StarSephiriaMod.LogInfoProjectile($"公式存储到 V_{resultLocal.LocalIndex}");
-                                        break;
-                                    }
-                                }
-
-                                if (formulaStart != null && formulaEnd != null)
-                                {
-                                    StarSephiriaMod.LogInfoProjectile($"公式范围: {formulaStart.Value} 到 {formulaEnd.Value}");
-                                    StarSephiriaMod.LogInfoProjectile("=== 原始公式代码 ===");
-                                    for (int j = formulaStart.Value; j <= formulaEnd.Value; j++)
-                                    {
-                                        string line = $"{j}: {codes[j].opcode}";
-                                        if (codes[j].operand != null)
-                                        {
-                                            if (codes[j].operand is float f)
-                                            {
-                                                line += $" {f}f";
-                                            }
-                                            else if (codes[j].operand is LocalBuilder lb)
-                                            {
-                                                line += $" V_{lb.LocalIndex}";
-                                            }
-                                            else if (codes[j].operand is MethodInfo mi)
-                                            {
-                                                line += $" {mi.DeclaringType?.Name}.{mi.Name}";
-                                            }
-                                            else
-                                            {
-                                                line += $" {codes[j].operand}";
-                                            }
-                                        }
-                                        StarSephiriaMod.LogInfoProjectile(line);
-                                    }
-                                    StarSephiriaMod.LogInfoProjectile("=================");
-
-                                    MethodInfo getCustomStatMethod = AccessTools.Method(typeof(UnitAvatar), "GetCustomStat", new Type[] { typeof(ECustomStat) });
-                                    List<CodeInstruction> newCodes = new List<CodeInstruction>
-                                    {
-                                        new CodeInstruction(OpCodes.Ldarg_0),
-                                        new CodeInstruction(OpCodes.Ldc_I4_S, (sbyte)16),
-                                        new CodeInstruction(OpCodes.Call, getCustomStatMethod),
-                                        new CodeInstruction(OpCodes.Conv_R4),
-                                        new CodeInstruction(OpCodes.Call, CalculateEvasionMethod)
-                                    };
-
-                                    if (codes[formulaEnd.Value].operand is LocalBuilder resultLocal)
-                                    {
-                                        newCodes.Add(new CodeInstruction(OpCodes.Stloc_S, resultLocal));
-                                    }
-                                    else
-                                    {
-                                        StarSephiriaMod.LogError("无法获取结果局部变量");
-                                        return instructions;
-                                    }
-
-                                    int replaceCount = formulaEnd.Value - formulaStart.Value + 1;
-                                    StarSephiriaMod.LogInfo($"将替换 {replaceCount} 条指令");
-
-                                    codes.RemoveRange(formulaStart.Value, replaceCount);
-                                    codes.InsertRange(formulaStart.Value, newCodes);
-
-                                    StarSephiriaMod.LogInfo("=== 替换成功 ===");
-                                    return codes;
-                                }
-                            }
-                        }
-                    }
-
-                    StarSephiriaMod.LogError("未找到闪避公式，尝试更详细的搜索...");
-                    for (int i = 0; i < codes.Count; i++)
-                    {
-                        if (codes[i].opcode == OpCodes.Ldc_I4_S && codes[i].operand is sbyte val && val == 16)
-                        {
-                            if (i + 1 < codes.Count && codes[i + 1].opcode == OpCodes.Call)
-                            {
-                                if (codes[i + 1].operand is MethodInfo method && method.Name.Contains("GetCustomStat"))
-                                {
-                                    StarSephiriaMod.LogInfo($"在位置 {i} 找到 GetCustomStat(ECustomStat.Evasion)");
-                                    for (int j = i + 2; j < Mathf.Min(i + 30, codes.Count); j++)
-                                    {
-                                        if (codes[j].opcode == OpCodes.Ldc_R4 && codes[j].operand is float f && Mathf.Approximately(f, 100f))
-                                        {
-                                            StarSephiriaMod.LogInfo($"在位置 {j} 找到 100f，这应该是闪避公式");
-
-                                            // 创建替换
-                                            List<CodeInstruction> newCodes = new List<CodeInstruction>();
-
-                                            // 保存现有的 GetCustomStat 调用
-                                            newCodes.Add(codes[i - 1]); // ldarg.0
-                                            newCodes.Add(codes[i]);     // ldc.i4.s 16
-                                            newCodes.Add(codes[i + 1]); // call GetCustomStat
-                                            newCodes.Add(new CodeInstruction(OpCodes.Conv_R4));
-                                            newCodes.Add(new CodeInstruction(OpCodes.Call, CalculateEvasionMethod));
-
-                                            // 找到存储结果的指令
-                                            for (int k = j + 1; k < Mathf.Min(j + 10, codes.Count); k++)
-                                            {
-                                                if (codes[k].opcode == OpCodes.Stloc_S)
-                                                {
-                                                    newCodes.Add(codes[k]); // 保留存储指令
-                                                    codes.RemoveRange(i - 1, k - (i - 1) + 1);
-                                                    codes.InsertRange(i - 1, newCodes);
-                                                    StarSephiriaMod.LogInfo("已用备用方案替换闪避公式");
-                                                    return codes;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    StarSephiriaMod.LogError("完全无法找到闪避公式");
-                    return instructions;
+                    __result = 0;
+                    return false;
                 }
-                catch (Exception ex)
-                {
-                    StarSephiriaMod.LogError($"修改闪避公式时出错: {ex}");
-                    StarSephiriaMod.LogError($"堆栈: {ex.StackTrace}");
-                    return instructions;
-                }
+
+                Value = 1f - 65f / (Value + 65f);
+                Value *= 1f + __instance.GetCustomStatUnsafe(TextFile.EvasionRateReduction) * 0.01f;
+                __result = Value * 100f;
+                return false;
             }
 
             [HarmonyPatch("GetDamageReduction")]
             [HarmonyPrefix]
-            public static bool GetDamageReduction_Prefix(UnitAvatar __instance, float damage, int defense, ref float __result)
+            public static bool GetDamageReduction_Prefix(float damage, int defense, ref float __result)
             {
                 if (!ModConfig.Instance.ModifyDefenseFormula)
                 {
                     return true;
                 }
-                if (defense < 200 && !(__instance is PlayerAvatar)) return true;
-                if (defense > 0)
-                {
-                    __result = damage * (1 - 80 / (defense + 80f));
-                    return false;
-                }
-                __result = damage * defense / 100f;
+                __result = damage * (1 - 65f / (defense + 65f));
                 return false;
             }
 
@@ -1157,7 +953,7 @@ namespace SPMod
                 if (PlayerSpawner.MultiplayerList.Count <= 1)
                 {
                     PlayerAvatar Player = PlayerSpawner.MultiplayerList[0].PlayerAvatar;
-                    StarSephiriaPatches.NoHitCount.Add(Player, new NoHitRecord(Player.GetCustomStatUnsafe(TextFile.CurrentRosion)));
+                    NoHitCount.Add(Player, new NoHitRecord(Player.GetCustomStatUnsafe(TextFile.CurrentRosion)));
                 }
                 yield break;
             }
@@ -1257,11 +1053,11 @@ namespace SPMod
 
             [HarmonyPatch("UpdateHighestElementalBonus")]
             [HarmonyPrefix]
-            public static bool UpdateHighestElementalBonus_Prefix(UnitAvatar __instance)
+            public static bool RefreshElementalBonus(UnitAvatar __instance)
             {
                 if (ModConfig.Instance.ModifyCharm || ModConfig.Instance.AddItem)
                 {
-                    int AddElemental = __instance.highestElementalBonus + StarSephiriaMod.PartyStats.Value.ElementalDamage;
+                    int AddElemental = __instance.highestElementalBonus + StarSephiriaMod.PartyStats.ElementalDamage;
                     if (AddElemental >= 0)
                     {
                         int MaxValue = Tools.BaseOrigStatToMax(__instance);
@@ -1272,10 +1068,7 @@ namespace SPMod
                                 __instance.calculatedBonusStats[Key] = AddElemental;
                                 continue;
                             }
-                            else
-                            {
-                                __instance.calculatedBonusStats[Key] = 0;
-                            }
+                            else __instance.calculatedBonusStats[Key] = 0;
                         }
                     }
                     OnUpdateHighestElemental?.Invoke();
@@ -1288,7 +1081,6 @@ namespace SPMod
         public static IEnumerator DeleteUnintentionalItems(PlayerAvatar Player, List<int>? StartItemId = null)
         {
             yield return new WaitForSeconds(0.5f);
-            StarSephiriaMod.PartyStats.Update = true;
             if (ModConfig.Instance.AddItem)
             {
                 foreach (PlayerSpawner Spawner in PlayerSpawner.MultiplayerList)
@@ -1306,7 +1098,7 @@ namespace SPMod
                 {
                     int Count = 0;
                     int MaxCount = 0;
-                    if (Tools.CostumeSkinUse(Player.Name, "Fox", "_2", false) || Tools.CostumeSkinUse(Player.Name, "Skeleton", "_2", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Fox_2", false) || Tools.CostumeSkinUse(Player.Name, "Skeleton_2", false))
                         MaxCount += 1;
                     foreach (StoneTablet Tablet in Player.Inventory.stoneTablets.Values)
                     {
@@ -1412,6 +1204,13 @@ namespace SPMod
         [HarmonyPatch(typeof(PlayerAvatar))]
         public static class PlayerAvatar_Patches
         {
+            [HarmonyPatch("OnStartServer")]
+            [HarmonyPostfix]
+            static void OnStartServer_Postfix(PlayerAvatar __instance)
+            {
+                __instance.AddCustomStatUnsafe(TextFile.WindDamage, KeywordDatabase.GetConstValue("playerDefaultElementalDamage", true));
+            }
+
             [HarmonyPatch("Update")]
             [HarmonyPostfix]
             static void Update_Postfix(PlayerAvatar __instance)
@@ -1437,6 +1236,7 @@ namespace SPMod
                     }
                     if (!Keyboard.current.f4Key.isPressed && ItemMessage)
                     {
+                        ItemMessage = false;
                         if (DisplayCustomStats)
                         {
                             foreach (KeywordEntity KeywordEntity in Resources.LoadAll<KeywordEntity>("Keyword"))
@@ -1462,9 +1262,10 @@ namespace SPMod
                             foreach (ItemEntity itemEntity in Resources.LoadAll<ItemEntity>("Item"))
                             {
                                 string A = $"—物品名称：{itemEntity.aName} ID：{itemEntity.id}";
+                                if (itemEntity.icon != null)
+                                    A += $" 贴图名称：{itemEntity.icon.name}";
                                 if (itemEntity.type == EItemType.Charm && itemEntity.resourcePrefab != null)
                                 {
-                                    A += $" 贴图名称：{itemEntity.icon.name}";
                                     foreach (Charm_Basic comps in itemEntity.resourcePrefab.GetComponents<Component>().OfType<Charm_Basic>())
                                     {
                                         if(comps is Charm_Magic Magic)
@@ -1477,7 +1278,21 @@ namespace SPMod
                             }
                             foreach (WeaponEntity weapon in WeaponDatabase.GetAll())
                             {
-                                StarSephiriaMod.LogInfo($"—武器名称：{weapon.aName} ID：{weapon.id}");
+                                string A = $"—武器名称：{weapon.aName} ID：{weapon.id}";
+                                if (weapon.mainWeaponPrefab != null)
+                                {
+                                    if (weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out var Simple))
+                                    {
+                                        A += $"\n 概率数据：{Simple.AttackWeightPerSwing}";
+                                        foreach (var addon in Simple.addons)
+                                        {
+                                            if (addon == null) continue;
+
+                                            A += $"\n 附加组件: {addon.GetType().Name}";
+                                        }
+                                    }
+                                }
+                                StarSephiriaMod.LogInfo(A);
                             }
                             foreach (ItemCategoryEntity itemcategoryEntiy in ItemDatabase.GetAllItemCategory())
                             {
@@ -1512,7 +1327,6 @@ namespace SPMod
                                 StarSephiriaMod.LogInfo($"—困难模式设置：{Dir.Key} 值：{Dir.Value}");
                             }
                         }
-                        ItemMessage = false;
                     }
                     if (!Keyboard.current.f5Key.isPressed && MonsterMessage)
                     {
@@ -1525,8 +1339,6 @@ namespace SPMod
                         MonsterMessage = false;
                     }
                 }
-
-                UpdatePartyEffect(__instance);
 
                 if (__instance.isInDungeon <= 0)
                 {
@@ -1580,7 +1392,7 @@ namespace SPMod
                     }
                 }
 
-                if (Tools.CostumeSkinUse(__instance.Name, "Bat", "_3"))
+                if (Tools.CostumeSkinUse(__instance.Name, "Bat_3"))
                 {
                     if (!BatTime.ContainsKey(__instance.Name))
                         BatTime.Add(__instance.Name, new Timer(0.2f));
@@ -1633,16 +1445,16 @@ namespace SPMod
                         StarSephiriaMod.BrownRabbit2Hit[__instance.Name] = new Timer(6f);
                     }
                 }
-                else if (Tools.CostumeSkinUse(__instance.Name, "BrownRabbit", "_2"))
+                else if (Tools.CostumeSkinUse(__instance.Name, "BrownRabbit_2"))
                 {
                     StarSephiriaMod.BrownRabbit2Hit.Add(__instance.Name, new Timer(6f));
                 }
 
-                if (WeaponPatch.RuadhsleaSpearTime.TryGetValue(__instance.Name, out Timer tim3))
+                if (WeaponPatch.RuadhsleaSpearTime.TryGetValue(__instance, out Timer tim3))
                 {
                     if (tim3.Update(Time.deltaTime))
                     {
-                        WeaponPatch.RuadhsleaSpearBuff[__instance.Name] = 0;
+                        WeaponPatch.RuadhsleaSpearBuff[__instance] = 0;
                     }
                 }
 
@@ -1653,8 +1465,7 @@ namespace SPMod
                 __instance.UpdateModEffectTime(ref WeaponPatch.LightningsWrathTime);
                 __instance.UpdateModEffectTime(ref WeaponPatch.FiaolasJudgmentStaffBuff);
                 __instance.UpdateModEffectTime(ref WeaponPatch.GlacialBladeEffect);
-                __instance.UpdateModEffectTime(ref WeaponPatch.TomeOfMimicryAddTime);
-                __instance.UpdateModEffectTime(ref WeaponPatch.LightningsWrathEffect2, Effect => 
+                __instance.UpdateModEffectTime(ref WeaponPatch.LightningsWrathEffect2, Effect =>
                 {
                     float Ratio = WeaponPatch.LightningsWrathEffect2[Effect].Ratio;
                     Effect.SetEffectHUDFillAmount("LightningsWrath_ThunderBeast", 1f - Ratio);
@@ -1684,6 +1495,7 @@ namespace SPMod
             public static FieldInfo guardAvailabilityRestoreTimerField = AccessTools.Field(typeof(UnitAvatar), "guardAvailabilityRestoreTimer");
             public static void UpdateGuardBroken(UnitAvatar __instance)
             {
+                if (ModConfig.HardMode <= 0) return;
                 if (isAvailableGuardField == null || guardAvailabilityRestoreTimerField == null) return;
 
                 isAvailableGuardField.SetValue(__instance, false);
@@ -1710,7 +1522,7 @@ namespace SPMod
             [HarmonyPostfix]
             static void ReviveAnotherPlayer_Postfix(PlayerAvatar __instance, PlayerAvatar patient)
             {
-                if (Tools.CostumeSkinUse(__instance.Name, "HolyRabbit", "_2", false))
+                if (Tools.CostumeSkinUse(__instance.Name, "HolyRabbit_2", false))
                 {
                     if (!UseHolyRabbitEffect.Contains(__instance))
                         UseHolyRabbitEffect.Add(__instance);
@@ -1724,7 +1536,7 @@ namespace SPMod
             [HarmonyPostfix]
             static void UserCode_CmdReviveAnotherPlayer__PlayerAvatar_Postfix(PlayerAvatar __instance, PlayerAvatar patient)
             {
-                if (Tools.CostumeSkinUse(__instance.Name, "HolyRabbit", "_2", false))
+                if (Tools.CostumeSkinUse(__instance.Name, "HolyRabbit_2", false))
                 {
                     if (!UseHolyRabbitEffect.Contains(__instance))
                         UseHolyRabbitEffect.Add(__instance);
@@ -1884,7 +1696,10 @@ namespace SPMod
                 {
                     CostumeSkinEntity costumeSkinByID = CostumeDatabase.GetCostumeSkinByID(skinID);
                     StarSephiriaMod.CostumeType[__instance.Name] = costumeID;
-                    StarSephiriaMod.CostumeSkinType[__instance.Name] = costumeSkinByID.skinID.ToSafeString();
+                    string SkinGuid = costumeSkinByID.skinID.ToSafeString();
+                    StarSephiriaMod.CostumeSkinType[__instance.Name] = SkinGuid;
+                    StarSephiriaMod.CostumeSkinKey[__instance.Name] =
+                        StarSephiriaMod.CostumeSkinIdToName.TryGetValue(SkinGuid, out string SkinKey) ? SkinKey : "";
                 }
                 TextFile.LoadText();
             }
@@ -1895,7 +1710,10 @@ namespace SPMod
             {
                 CostumeSkinEntity costumeSkinByID = CostumeDatabase.GetCostumeSkinByID(skinID);
                 StarSephiriaMod.CostumeType[__instance.Name] = costumeID;
-                StarSephiriaMod.CostumeSkinType[__instance.Name] = costumeSkinByID.skinID.ToSafeString();
+                string SkinGuid = costumeSkinByID.skinID.ToSafeString();
+                StarSephiriaMod.CostumeSkinType[__instance.Name] = SkinGuid;
+                StarSephiriaMod.CostumeSkinKey[__instance.Name] =
+                    StarSephiriaMod.CostumeSkinIdToName.TryGetValue(SkinGuid, out string SkinKey) ? SkinKey : "";
                 StarSephiriaMod.InitializeModStat(__instance.Name);
                 StarSephiriaMod.LogInfo($"—服装皮肤：{costumeSkinByID.skinID.ToSafeString()}");
                 UseCostomEffect[__instance.Name] = true;
@@ -2073,11 +1891,11 @@ namespace SPMod
             private static void UpdateMaxPassivePoint(PlayerAvatar __instance)
             {
                 int AddPassivePoint = 0;
-                if (Tools.CostumeSkinUse(__instance.Name, "PinkRabbit", "_3"))
+                if (Tools.CostumeSkinUse(__instance.Name, "PinkRabbit_3"))
                 {
                     AddPassivePoint += 5;
                 }
-                if (Tools.CostumeSkinUse(__instance.Name, "Deer", "_2"))
+                if (Tools.CostumeSkinUse(__instance.Name, "Deer_2"))
                 {
                     AddPassivePoint += 30;
                 }
@@ -2112,45 +1930,6 @@ namespace SPMod
                 if (CurrenPoint > __instance.NetworkmaxPassivePoint) ResetPassiveStat(__instance);
             }
 
-            private static void UpdatePartyEffect(PlayerAvatar __instance)
-            {
-                if (StarSephiriaMod.PartyEffect.TryGetValue(__instance.Name, out AllPlayerStatus Value))
-                {
-                    int NewValue = __instance.GetCustomStatUnsafe(TextFile.AllPlayerDefense);
-                    if (Value.Defense != NewValue)
-                    {
-                        Value.Defense = NewValue;
-                        StarSephiriaMod.PartyStats.Update = true;
-                    }
-
-                    NewValue = __instance.GetCustomStatUnsafe(TextFile.AllPlayerAllDamage);
-                    if (Value.AllDamage != NewValue)
-                    {
-                        Value.AllDamage = NewValue;
-                        StarSephiriaMod.PartyStats.Update = true;
-                    }
-
-                    NewValue = __instance.GetCustomStatUnsafe(TextFile.AllPlayerElementalDamage);
-                    if (Value.ElementalDamage != NewValue)
-                    {
-                        Value.ElementalDamage = NewValue;
-                        StarSephiriaMod.PartyStats.Update = true;
-                    }
-
-                    NewValue = __instance.GetCustomStatUnsafe(TextFile.AllPlayerCrit);
-                    if (Value.Crit != NewValue)
-                    {
-                        Value.Crit = NewValue;
-                        StarSephiriaMod.PartyStats.Update = true;
-                    }
-                }
-                else
-                {
-                    StarSephiriaMod.PartyEffect.Add(__instance.Name, new AllPlayerStatus(0, 0, 0, 0));
-                    StarSephiriaMod.PartyStats.Update = true;
-                }
-            }
-
             private static void UpdatePollutedBlood(PlayerAvatar __instance)
             {
                 if (!ModConfig.PollutedBlood) return;
@@ -2171,7 +1950,7 @@ namespace SPMod
                     if (__instance.hp > PBD.CurrentHP)
                     {
                         float Max = __instance.MaxHp * 0.5f;
-                        if (Tools.CostumeSkinUse(__instance.Name, "Bat", "_3"))
+                        if (Tools.CostumeSkinUse(__instance.Name, "Bat_3"))
                         {
                             Max = (__instance.maxHp + __instance.finalMaxHp * __instance.maxHp / 100f) * 0.5f;
                         }
@@ -2221,7 +2000,7 @@ namespace SPMod
                     return;
                 }
 
-                if (Tools.CostumeSkinUse(__instance.Name, "Deer", "_1", false))
+                if (Tools.CostumeSkinUse(__instance.Name, "Deer_1", false))
                 {
                     if(!StarSephiriaMod.Deer_Buff.Contains(__instance.Name))
                         StarSephiriaMod.Deer_Buff.Add(__instance.Name);
@@ -2471,41 +2250,105 @@ namespace SPMod
             }
         }
 
+        [HarmonyPatch(typeof(UI_StatsPanel))]
+        public static class UI_StatsPanel_Patch
+        {
+            [HarmonyPatch("Connect")]
+            [HarmonyPostfix]
+            static void Connect_Postfix(UI_StatsPanel __instance, GameObject playerObject)
+            {
+                if (playerObject.TryGetComponent<AvatarStatsHooker>(out AvatarStatsHooker Hooker))
+                {
+                    UI_StatusTooltipOpener? Exists = __instance.statElements.FirstOrDefault(x => x.statHookID == TextFile.WindDamage);
+                    if (Exists != null) { Exists.SetAvatar(Hooker); return; }
+                    UI_StatusTooltipOpener? Template = __instance.statElements.FirstOrDefault(x => x.statHookID == "LIGHTNING_DAMAGE");
+                    if (Template == null) return;
+
+                    GameObject Clone = Object.Instantiate(Template.gameObject, Template.transform.parent);
+                    Clone.name = "StatRow_WindDamage";
+                    Clone.transform.SetSiblingIndex(Template.transform.GetSiblingIndex() + 1);
+
+                    if (Clone.transform is RectTransform CloneRect)
+                    {
+                        List<RectTransform> Group = new List<RectTransform> { CloneRect };
+                        foreach (UI_StatusTooltipOpener Row in __instance.statElements)
+                        {
+                            if (Row.transform.parent != Template.transform.parent) continue;
+                            if (!ElementHooks.Contains(Row.statHookID)) continue;
+                            if (!(Row.transform is RectTransform RowRect)) continue;
+                            if (Group.Contains(RowRect)) continue; // 面板里同一行可能在数组中出现两次
+                            Group.Add(RowRect);
+                        }
+                        Group.Sort((A, B) => A.GetSiblingIndex().CompareTo(B.GetSiblingIndex()));
+                        if (Group.Count > 1)
+                        {
+                            Vector2 First = Group[0].anchoredPosition;
+                            Vector2 Last = Group[^1].anchoredPosition;
+                            Vector2 Dir = (Last - First).normalized;
+                            bool Horizontal = Mathf.Abs(Last.x - First.x) >= Mathf.Abs(Last.y - First.y);
+                            float Extent = Group.Max(R => Horizontal ? R.rect.width : R.rect.height);
+
+                            Vector2 Center = (First + Last) * 0.5f;
+                            float HalfSpan = (Last - First).magnitude * 0.5f;
+                            if (Template.transform.parent is RectTransform Container)
+                            {
+                                float ContainerSize = Horizontal ? Container.rect.width : Container.rect.height;
+                                if (ContainerSize > 0f) HalfSpan = Mathf.Max((ContainerSize - Extent) * 0.5f, 0f);
+                            }
+                            float Step = HalfSpan * 2f / (Group.Count - 1);
+                            for (int i = 0; i < Group.Count; i++)
+                                Group[i].anchoredPosition = Center + Dir * (-HalfSpan + Step * i);
+                        }
+                    }
+
+                    UI_StatusTooltipOpener Opener = Clone.GetComponent<UI_StatusTooltipOpener>();
+                    Opener.statHookID = TextFile.WindDamage;
+                    Opener.statKeyword = $"WindDamage";
+                    KeywordEntity WindKeyword = KeywordDatabase.GetEntity($"WindDamage");
+                    KeywordEntity? LightningKeyword = KeywordDatabase.GetEntity("LightningDamage");
+                    Sprite? LightIcon = LightningKeyword?.keywordImage;
+                    Image[] Icons = Opener.GetComponentsInChildren<Image>(true);
+                    Image? Icon = Icons.FirstOrDefault(I => I.sprite != null && I.sprite == LightIcon) ?? Icons.FirstOrDefault(I => I.sprite != null);
+                    if (Icon != null && WindKeyword != null && WindKeyword.keywordImage != null) Icon.sprite = WindKeyword.keywordImage;
+
+                    Opener.applySignColor = false;
+                    Opener.statusValueText.color = EffectConstant.WindColor;
+
+                    __instance.statElements = __instance.statElements.Append(Opener).ToArray();
+                    Opener.SetAvatar(Hooker);
+                }
+            }
+
+            static readonly string[] ElementHooks = { "PHYSICAL_DAMAGE", "FIRE_DAMAGE", "ICE_DAMAGE", "LIGHTNING_DAMAGE" };
+        }
+
         [HarmonyPatch(typeof(UI_StatusTooltipOpener))]
         public static class UI_StatusTooltipOpener_Patch
         {
+            public static FieldInfo hookerField = AccessTools.Field(typeof(UI_StatusTooltipOpener), "hooker");
+
             [HarmonyPatch("GetKeywords")]
             [HarmonyPrefix]
             static bool GetKeywords(UI_StatusTooltipOpener __instance, ref Loc.KeywordValue[] __result)
             {
-                if (!ModConfig.Instance.ModifyEvasionFormula) return true;
-                if (__instance.statHookID == "EVASION")
+                if (hookerField != null)
                 {
-                    FieldInfo hookerField = AccessTools.Field(typeof(UI_StatusTooltipOpener), "hooker");
-                    if (hookerField != null)
+                    AvatarStatsHooker hooker = (AvatarStatsHooker)hookerField.GetValue(__instance);
+                    if (hooker != null)
                     {
-                        AvatarStatsHooker hooker = (AvatarStatsHooker)hookerField.GetValue(__instance);
-                        if (hooker != null)
+                        if (__instance.statHookID == TextFile.WindDamage)
                         {
-                            float Evasion = hooker.GetCustomStatUnsafe("EVASION");
-                            float num3 = CalculateEvasionChance(Evasion);
                             __result = new Loc.KeywordValue[]
                             {
-                                new Loc.KeywordValue("EVASION_PERCENT", num3.ToString("0.##") + "%")
+                                new Loc.KeywordValue("BASE", hooker.HookStat(TextFile.WindDamage + "_BASE", out _, out _)),
+                                new Loc.KeywordValue("AMP", hooker.HookStat(TextFile.WindDamage + "_AMP", out _, out _)),
                             };
-                            StarSephiriaMod.LogError($"GetStatusDescriptionText_Postfix 成功: {num3:0.##}");
                             return false;
                         }
                     }
                 }
                 return true;
             }
-        }
-
-        public static float CalculateEvasionChance(float evasionStat)
-        {
-            float x = evasionStat / 100f;
-            return (1 - 80 / (x + 80f)) * 100f;
         }
 
         [HarmonyPatch(typeof(UI_CostumePanel))]
@@ -2543,14 +2386,8 @@ namespace SPMod
                         {
                             StarSephiriaMod.CostumeSkinType.TryGetValue(Player.Name, out string skin);
                             string Name = "";
-                            foreach (var skinID in StarSephiriaMod.CostumeSkinDate)
-                            {
-                                if (skinID.Value == skin)
-                                {
-                                    Name = skinID.Key;
-                                    break;
-                                }
-                            }
+                            if (!string.IsNullOrEmpty(skin) && StarSephiriaMod.CostumeSkinIdToName.TryGetValue(skin, out string FoundName))
+                                Name = FoundName;
                             if (TextFile.CostumeTextMap.TryGetValue(Name, out string Effect))
                             {
                                 FlavorText = Effect;
@@ -2587,6 +2424,15 @@ namespace SPMod
                     else
                     {
                         __instance.startingItem.gameObject.SetActive(false);
+                    }
+                    if (Unlocked && costume != null && ModConfig.Instance.EnableCostumeTransmog)
+                    {
+                        string Hint = Tools.GetLocalization("Instruction_TransmogHint");
+                        if (!string.IsNullOrEmpty(Hint))
+                        {
+                            __instance.tooltipEffectText.text = __instance.tooltipEffectText.text.TrimEnd()
+                                + "\n- <indent=10>" + Hint + "</indent>";
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -2636,13 +2482,11 @@ namespace SPMod
                     bool UseModText = false;
                     TextFile.LoadText();
                     string Name = "";
-                    foreach (var FindSkin in StarSephiriaMod.CostumeSkinDate)
+                    if (CostumeSkin != null)
                     {
-                        if (FindSkin.Value == CostumeSkin.skinID.ToSafeString())
-                        {
-                            Name = FindSkin.Key;
-                            break;
-                        }
+                        string SkinKey = CostumeSkin.skinID.ToSafeString();
+                        if (!string.IsNullOrEmpty(SkinKey) && StarSephiriaMod.CostumeSkinIdToName.TryGetValue(SkinKey, out string FoundName))
+                            Name = FoundName;
                     }
                     if (TextFile.CostumeTextMap.TryGetValue(Name, out string Effect))
                     {
@@ -2866,6 +2710,45 @@ namespace SPMod
             }
         }
 
+        [HarmonyPatch(typeof(ComboEffect_Debuff))]
+        public static class ComboEffect_Debuff_Patch
+        {
+            [HarmonyPatch("OnAttackUnit")]
+            [HarmonyPrefix]
+            static void OnAttackUnit_Prefix(ComboEffect_Debuff __instance, out int __state)
+            {
+                __state = __instance.cooldownInfos.Count;
+            }
+
+            [HarmonyPatch("OnAttackUnit")]
+            [HarmonyPostfix]
+            static void OnAttackUnit_Postfix(ComboEffect_Debuff __instance, UnitAvatar avatar, int __state)
+            {
+                if (!__instance.isServer) return;
+                if (__instance.cooldownInfos.Count <= __state) return;
+                if (!(__instance.debuffPrefab is CharacterDebuff_WindErosion)) return;
+
+                UnitAvatar Player = __instance.Networkavatar;
+                if (!Player.IsWeapon(WeaponIDs.Vortex)) return;
+                if (!Player.IsInBattle) return;
+
+                VortexEffect(Player, avatar.transform.position);
+            }
+
+            public static void VortexEffect(UnitAvatar Player, Vector3 Pos)
+            {
+                Vector2 vector = (Vector2)(Pos - Player.transform.position);
+                if (Player.isServer)
+                {
+                    float Damage = CharacterDebuff_WindErosion.GetWindErosionDamage(Player) / 24f * 50f;
+                    Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
+                    Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
+                    Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                    WindDagger_Vortex.Data.CreateAttack(EDamageFromType.DirectAttack, Damage, "[Star's Sephiria Mod]涡旋", true, Player, Pos, Pos, 0.5f, null);
+                }
+            }
+        }
+
         [HarmonyPatch(typeof(ComboEffect_FlameSword))]
         public static class ComboEffect_FlameSword_Patch
         {
@@ -2927,7 +2810,7 @@ namespace SPMod
             [HarmonyPostfix]
             static void GetMultipleCastCount_Postfix(SkillController __instance, ref int __result)
             {
-                if (Tools.CostumeSkinUse(__instance.UnitAvatar.Name, "Ghost", "_2"))
+                if (Tools.CostumeSkinUse(__instance.UnitAvatar.Name, "Ghost_2"))
                     __result += 1;
             }
 
@@ -2944,7 +2827,7 @@ namespace SPMod
                         Speed += skill.Charm.additionalcooldownRecoverySpeedSynced * 0.01f;
                         Speed *= 1f / (1f - Player.GetCustomStatUnsafe(TextFile.MagicCooldownReduction) * 0.01f);
                         float CharmDamage = skill.Charm.RequestCharmDamageBonusOnRoot() * 0.01f;
-                        if (WeaponPatch.LegacyofTheIllusionistAttack.TryGetValue(Player.Name, out var Attack))
+                        if (WeaponPatch.LegacyofTheIllusionistAttack.TryGetValue(Player, out var Attack))
                         {
                             if (Attack.Count <= 0)
                             {
@@ -2962,7 +2845,7 @@ namespace SPMod
                                 AttackSpeed = Speed,
                                 CharmDamageMult = CharmDamage
                             };
-                            WeaponPatch.LegacyofTheIllusionistAttack.Add(Player.Name, NewAttack);
+                            WeaponPatch.LegacyofTheIllusionistAttack.Add(Player, NewAttack);
                         }
                     }//幻术师的遗产
                     if (Player.IsWeapon(WeaponIDs.Successor))
@@ -2973,7 +2856,7 @@ namespace SPMod
                             WeaponPatch.SuccessorEffect[Player] = new SuccessorBoltData(Bolt, CharmDamage, __instance.GetMultipleCastCount());
                         }
                     }//继承者
-                    if (Tools.CostumeSkinUse(Player.Name, "Seren", "_2", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Seren_2", false))
                     {
                         bool Add = true;
                         float Mana = skill.Charm.GetCost(Player, skill.Charm.CurrentLevelToIdx());
@@ -2996,6 +2879,69 @@ namespace SPMod
                         if (Add && Mana > 0) Player.AddShield(Mana, "Seren2Shield");
                     }
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(AvatarStatsHooker))]
+        public static class AvatarStatsHooker_Patch
+        {
+            [HarmonyPatch("HasStat")]
+            [HarmonyPrefix]
+            static bool HasStat_Prefix(AvatarStatsHooker __instance, string id, ref bool __result)
+            {
+                if(__instance.TryGetComponent<UnitAvatar>(out UnitAvatar Player))
+                {
+                    if (id == TextFile.WindDamage)
+                    {
+                        __result = Player.GetCustomStatUnsafe(TextFile.WindDamage) != 0;
+                        return false;
+                    }
+                    if (id == TextFile.WindDamage + "_BASE")
+                    {
+                        __result = Player.GetCustomBaseStatUnsafe(TextFile.WindDamage) != 0;
+                        return false;
+                    }
+                    if (id == TextFile.WindDamage + "_AMP")
+                    {
+                        __result = Player.GetCustomStatAmpUnsafe(TextFile.WindDamage) != 0;
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            [HarmonyPatch("HookStat")]
+            [HarmonyPrefix]
+            static bool HookStat_Prefix(AvatarStatsHooker __instance, string id, ref EStatValueSign sign, ref bool hasStat, ref string __result)
+            {
+                if (__instance.TryGetComponent<UnitAvatar>(out UnitAvatar Player))
+                {
+                    if (id == TextFile.WindDamage)
+                    {
+                        int Value = Player.GetCustomStatUnsafe(TextFile.WindDamage);
+                        sign = Tools.GetStandardSign(Value);
+                        hasStat = Value != 0;
+                        __result = Value.ToString();
+                        return false;
+                    }
+                    if (id == TextFile.WindDamage + "_BASE")
+                    {
+                        int Value = Player.GetCustomBaseStatUnsafe(TextFile.WindDamage);
+                        sign = Tools.GetStandardSign(Value);
+                        hasStat = Value != 0;
+                        __result = Value.ToString();
+                        return false;
+                    }
+                    if (id == TextFile.WindDamage + "_AMP")
+                    {
+                        int Value = Player.GetCustomStatAmpUnsafe(TextFile.WindDamage);
+                        sign = Tools.GetStandardSign(Value);
+                        hasStat = Value != 0;
+                        __result = Value.ToString();
+                        return false;
+                    }
+                }
+                return true;
             }
         }
 
@@ -3062,7 +3008,7 @@ namespace SPMod
             {
                 if (!__instance.isServer) return;
 
-                if (Tools.CostumeSkinUse(__instance.Avatar.Name, "PinkRabbit", "_3"))
+                if (Tools.CostumeSkinUse(__instance.Avatar.Name, "PinkRabbit_3"))
                 {
                     if (__instance.currentLevel % 5 == 0)
                         __instance.GenerateItem(__instance.Avatar.RandomID + __instance.currentLevel + 500);
@@ -3118,7 +3064,7 @@ namespace SPMod
                         {
                             if (ModConfig.Instance.AddItem)
                             {
-                                if (Tools.CostumeSkinUse(Player.Name, "Squirrel", "_3", false))
+                                if (Tools.CostumeSkinUse(Player.Name, "Squirrel_3", false))
                                 {
                                     if (GetModItem.TryGetValue("MysteryBox_Random", out ItemEntity ModItem))
                                     {
@@ -3133,7 +3079,7 @@ namespace SPMod
                         {
                             if (__instance.type == Sephirite.Type.NORMAL)
                             {
-                                if (Tools.CostumeSkinUse(Player.Name, "Crocodile", "_2", false))
+                                if (Tools.CostumeSkinUse(Player.Name, "Crocodile_2", false))
                                 {
                                     Dictionary<EItemRarity, WeightedItemSelector> StoneList = new Dictionary<EItemRarity, WeightedItemSelector>();
                                     foreach (int All in Spawner.unlockedStoneTablets)
@@ -3183,7 +3129,7 @@ namespace SPMod
             {
                 if(__instance.UnitAvatar is PlayerAvatar Player)
                 {
-                    if (Tools.CostumeSkinUse(Player.Name, "Fox", "_3", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Fox_3", false))
                     {
                         if (add > 0)
                         {
@@ -3312,6 +3258,26 @@ namespace SPMod
                                     };
                                 }
                             }
+                            else if (itemCategoryEntity.id == "ELEMENTAL")
+                            {
+                                if (itemCategoryEntity.comboEffectPrefab.GetComponent<ComboEffectBase>() is ComboEffectBase ELEMENTAL)
+                                {
+                                    foreach(ComboEffectBase.ComboStat stat in ELEMENTAL.addStatByCombo)
+                                    {
+                                        if (stat.replaceEffectText)
+                                        {
+                                            stat.status = new string[]
+                                            {
+                                                "PHYSICAL_DAMAGE_AMP/10",
+                                                "FIRE_DAMAGE_AMP/10",
+                                                "ICE_DAMAGE_AMP/10",
+                                                "LIGHTNING_DAMAGE_AMP/10",
+                                                "WIND_DAMAGE_AMP/10",
+                                            };
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -3360,34 +3326,41 @@ namespace SPMod
                             if (LastId < AllItem.id)
                                 LastId = AllItem.id;
                         }
-                        foreach (ItemEntity ModItem in ModItemEntityData)
+                        foreach (ModItem Data in ModItemEntityData)
                         {
-                            ModItem.id = LastId + 1000;
-                            ModItem.iconInWorld = itemDictionary[1000].iconInWorld;
-                            string GetName = ModItem.name.Replace("ModItemEntity_", "");
-                            if (!GetModItem.ContainsKey(GetName))
+                            ItemEntity? ModItem = Data.Item;
+                            if (ModItem == null) continue;
+
+                            int NewId = LastId + 1000;
+                            while (itemDictionary.ContainsKey(NewId)) NewId++;
+                            LastId = NewId - 1000 + 1;
+
+                            try
                             {
-                                if (GetName == "BondVessel")
+                                ModItem.id = NewId;
+                                if (ModItem.type == EItemType.Potion && itemDictionary.TryGetValue(40, out ItemEntity PotionTemplate))
+                                    ModItem.iconInWorld = PotionTemplate.iconInWorld;
+                                else if (itemDictionary.TryGetValue(1000, out ItemEntity WorldTemplate))
+                                    ModItem.iconInWorld = WorldTemplate.iconInWorld;
+                                string GetName = ModItem.name.Replace("ModItemEntity_", "");
+                                if (!GetModItem.ContainsKey(GetName)) GetModItem.Add(GetName, ModItem);
+                                if (Data.IsWitchItem) allWitchHatItems.Add(ModItem);
+                                Data.ItemEffect?.Invoke(ModItem);
+                                if (ModConfig.Instance.DisableUniqueEffects)
                                 {
-                                    allWitchHatItems.Add(ModItem);
+                                    if (ModItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Basic))
+                                    {
+                                        Basic.isUniqueEffect = false;
+                                    }
                                 }
-                                GetModItem.Add(GetName, ModItem);
+                                ItemDatabase.Register(ModItem);
+                                if (ModItem.isDual && !BondingItems.Contains(ModItem.id))
+                                    BondingItems.Add(ModItem.id);
                             }
-                            if (GetModAction.TryGetValue(GetName, out var Action))
+                            catch (Exception ex)
                             {
-                                Action(ModItem);
+                                StarSephiriaMod.LogError($"[StarSephiria]物品注册失败{ModItem.name}: {ex}");
                             }
-                            if (ModConfig.Instance.DisableUniqueEffects)
-                            {
-                                if (ModItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Basic))
-                                {
-                                    Basic.isUniqueEffect = false;
-                                }
-                            }
-                            ItemDatabase.Register(ModItem);
-                            if (ModItem.isDual && !BondingItems.Contains(ModItem.id))
-                                BondingItems.Add(ModItem.id);
-                            LastId += 1;
                         }
                     }
 
@@ -3438,8 +3411,10 @@ namespace SPMod
                     SocialIDEntity social = SocialIDDatabase.FindByName("Traveler_Mercenary_WeaselKnight");
                     if (social)
                     {
-                        foreach (ItemEntity ModItem in ModItemEntityData)
+                        foreach (ModItem Data in ModItemEntityData)
                         {
+                            ItemEntity? ModItem = Data.Item;
+                            if (ModItem == null) continue;
                             switch (ModItem.name)
                             {
                                 case "ModItemEntity_RedDogSymbolA":
@@ -3648,12 +3623,32 @@ namespace SPMod
                 {
                     foreach(ModEffectHUD Effect in ModEffectHUDData)
                     {
-                        GameObject NewHud = GameObject.Instantiate(Orig);
+                        GameObject NewHud = Object.Instantiate(Orig);
                         Effect.SetEffectHUD(NewHud);
                         effectHUDDictionary[Effect.Name.ToUpperInvariant()] = Effect.EndCreate(NewHud);
                     }
                 }
                 effectHUDDictionaryField.SetValue(null, effectHUDDictionary);
+            }
+        }
+
+        [HarmonyPatch(typeof(UnitDatabase))]
+        public static class UnitDatabase_Patch
+        {
+            private static readonly FieldInfo? debuffEntitiesField = AccessTools.Field(typeof(UnitDatabase), "debuffEntities");
+
+            [HarmonyPatch("Initialize")]
+            [HarmonyPostfix]
+            public static void Initialize_Postfix()
+            {
+                if (debuffEntitiesField == null) return;
+                Dictionary<string, CharacterDebuff> DeBuffList = (Dictionary<string, CharacterDebuff>)debuffEntitiesField.GetValue(null);
+                foreach (ModCharacterDebuff Entity in ModDeBuffData)
+                {
+                    CharacterDebuff? Target = Entity.Prefab;
+                    if (Target != null) DeBuffList[Target.ID] = Target;
+                }
+                debuffEntitiesField.SetValue(null, DeBuffList);
             }
         }
 
@@ -3673,10 +3668,26 @@ namespace SPMod
                 }
                 if (ModConfig.Instance.AddItem)
                 {
-                    foreach (ItemEntity ModItem in ModItemEntityData)
+                    foreach (ModItem Data in ModItemEntityData)
                     {
-                        if(ModItem.activeType != EItemActiveType.Hidden)
-                            __instance.unlockedCharms.Add(ModItem.id);
+                        ItemEntity? ModItem = Data.Item;
+                        if (ModItem == null) continue;
+                        if (ModItem.activeType == EItemActiveType.Hidden) continue;
+                        switch (ModItem.type)
+                        {
+                            case EItemType.Potion:
+                                if (!__instance.unlockedPotions.Contains(ModItem.id))
+                                    __instance.unlockedPotions.Add(ModItem.id);
+                                break;
+                            case EItemType.StoneTablet:
+                                if (!__instance.unlockedStoneTablets.Contains(ModItem.id))
+                                    __instance.unlockedStoneTablets.Add(ModItem.id);
+                                break;
+                            default:
+                                if (!__instance.unlockedCharms.Contains(ModItem.id))
+                                    __instance.unlockedCharms.Add(ModItem.id);
+                                break;
+                        }
                     }
                 }
                 if (ModConfig.Instance.ModifyCharm)
@@ -3688,6 +3699,17 @@ namespace SPMod
                             __instance.unlockedCharms.Add(ID);
                     }
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(CombatManager))]
+        public static class CombatManager_Patch
+        {
+            [HarmonyPatch("Start")]
+            [HarmonyPostfix]
+            public static void Start_Postfix(CombatManager __instance)
+            {
+                __instance.elementalColors[EffectConstant.Wind] = EffectConstant.WindColor;
             }
         }
 
@@ -3743,10 +3765,10 @@ namespace SPMod
                     if (stack > 1)
                     {
                         int Add = stack - 1;
-                        if (WeaponPatch.LightningFlashBuff.ContainsKey(Player.Name))
-                            WeaponPatch.LightningFlashBuff[Player.Name] += Add;
+                        if (WeaponPatch.LightningFlashBuff.ContainsKey(Player))
+                            WeaponPatch.LightningFlashBuff[Player] += Add;
                         else
-                            WeaponPatch.LightningFlashBuff[Player.Name] = Add;
+                            WeaponPatch.LightningFlashBuff[Player] = Add;
                     }
                 }
             }
@@ -3782,7 +3804,11 @@ namespace SPMod
                         CountMult += Player.GetCustomStatUnsafe(TextFile.BurnStack);
                         FreezeCount -= Player.GetCustomStatUnsafe(TextFile.BurnAdd);
                     }
-                    if (__instance.NetworkTarget.monsterType != EMonsterType.Boss) FreezeCount = 1;
+                    if (__instance.NetworkTarget.monsterType != EMonsterType.Boss &&
+                        __instance.NetworkTarget.monsterType != EMonsterType.Dummy)
+                    {
+                        FreezeCount = 1;
+                    }
                     FreezeCount *= CountMult;
                 }
                 if (__instance.CurrentStack >= FreezeCount && __instance.NetworkTarget && Player)
@@ -3807,7 +3833,16 @@ namespace SPMod
                 bool Plasma = Player.GetCustomStatUnsafe(TextFile.PlasmaActive) > 0;
                 int FreezeCount = 5 - Player.GetCustomStatUnsafe(TextFile.FreezeThreshold);
                 int CountMult = 2 + Player.GetCustomStatUnsafe(TextFile.ElectricStack);
-                if (Plasma) CountMult += Player.GetCustomStatUnsafe(TextFile.BurnStack);
+                if (Plasma)
+                {
+                    CountMult += Player.GetCustomStatUnsafe(TextFile.BurnStack);
+                    FreezeCount -= Player.GetCustomStatUnsafe(TextFile.BurnAdd);
+                }
+                if (__instance.NetworkTarget.monsterType != EMonsterType.Boss &&
+                    __instance.NetworkTarget.monsterType != EMonsterType.Dummy)
+                {
+                    FreezeCount = 1;
+                }
                 int MaxFreezeCount = FreezeCount * CountMult;
                 float Damage = Player.GetCustomStatUnsafe(TextFile.IceDamage) + Player.GetCustomStatUnsafe(TextFile.LightningDamage);
                 if (Plasma)
@@ -4126,9 +4161,9 @@ namespace SPMod
                 if (__instance.gameObject != null && DisplayCustomStats)
                 {
                     string prefabName = __instance.gameObject.name.Replace("(Clone)", "");
-                    StarSephiriaMod.LogInfoBoss($"子弹生成: {prefabName}, 伤害：{damage}, 来源：{owner?.name}");
-                    StarSephiriaMod.LogInfoBoss($"子弹移动类型：{__instance.MoveModule.GetType().ToString()}");
-                    StarSephiriaMod.LogInfoBoss($"子弹死亡类型：{__instance.DestroyModule.GetType().ToString()}");
+                    StarSephiriaMod.LogInfo($"子弹生成: {prefabName}, 伤害：{damage}, 来源：{owner?.name}");
+                    StarSephiriaMod.LogInfo($"子弹移动类型：{__instance.MoveModule.GetType()}");
+                    StarSephiriaMod.LogInfo($"子弹死亡类型：{__instance.DestroyModule.GetType()}");
                     if (!Projectile.ContainsKey(prefabName))
                     {
                         Projectile.Add(prefabName, __instance.gameObject);
@@ -4153,6 +4188,28 @@ namespace SPMod
                         Projectile.Add(prefabName, __instance.gameObject);
                     }
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(LocalizedString))]
+        public static class LocalizedString_Patch
+        {
+            public static string GetMod(string Key)
+            {
+                string Text = Tools.GetLocalization(Key);
+                if (Text == null) return "";
+
+                Text = KeywordDatabase.Convert(KeywordDatabase.Convert(Text));
+                return Text;
+            }
+
+            [HarmonyPatch("ToString")]
+            [HarmonyPostfix]
+            static void ToString_Postfix(LocalizedString __instance, ref string __result)
+            {
+                string ModText = GetMod(__result);
+                if (ModText != "")
+                    __result = ModText;
             }
         }
 
@@ -4236,7 +4293,7 @@ namespace SPMod
                     NetworkIdentity netId = Target.AddComponent<NetworkIdentity>();
                     SetModAssetId(netId, AssetId.AssetId);
 
-                    StarSephiriaMod.LogError($"已经为复制体 {Target.name} 挂上NetworkIdentity");
+                    StarSephiriaMod.LogInfo($"已经为复制体 {Target.name} 挂上NetworkIdentity");
                     if (Target.GetComponent<ComboEffectBase>() is ComboEffectBase combo)
                     {
                         combo.enabled = true;
@@ -4249,8 +4306,65 @@ namespace SPMod
                     {
                         Charging.enabled = true;
                     }
+                    if (Target.GetComponent<CharacterDebuff>() is CharacterDebuff DeBuff)
+                    {
+                        DeBuff.enabled = true;
+                    }
+                }
+                if (Target.GetComponent<ModSpawnTemplate>() != null && !Target.activeSelf)
+                {
+                    Target.SetActive(true);
                 }
                 return clone;
+            }
+        }
+
+        [HarmonyPatch(typeof(PotionEffect_ElementalDamageBoost))]
+        public static class PotionEffect_ElementalDamageBoost_Patch
+        {
+            [HarmonyPatch("SetStatusEffect")]
+            [HarmonyPrefix]
+            static bool SetStatusEffect_Prefix(PotionEffect_ElementalDamageBoost __instance, UnitAvatar avatar)
+            {
+                Tools.GetHighestDamageElemental(avatar, out string BaseName);
+                if (!Tools.GetKeyWordToStatus(BaseName, out string StatusId)) return true;
+                int Type = EffectConstant.BaseStatsName.IndexOf(BaseName);
+
+                avatar.AddOrphanedStatusInstance(StatusDatabase.CreateStatusEntity(StatusId, __instance.potionEffectValue));
+                if (avatar.connectionToClient != null)
+                    __instance.TargetShowEffect(avatar.connectionToClient, avatar.transform.position, Type);
+                return false;
+            }
+
+            [HarmonyPatch("UserCode_TargetShowEffect__NetworkConnectionToClient__Vector2__Int32")]
+            [HarmonyPrefix]
+            static bool UserCode_TargetShowEffect_Prefix(PotionEffect_ElementalDamageBoost __instance, Vector2 pos, int type)
+            {
+                if (type != 4) return true;
+
+                StatusInstance Status = StatusDatabase.CreateStatusEntity("WIND_DAMAGE", __instance.potionEffectValue);
+                Loc.KeywordValue[] Keywords =
+                {
+                    new Loc.KeywordValue("STAT", Status.ToNameString(color: false, sprite: false)),
+                    new Loc.KeywordValue("VALUE", Status.ToValueString())
+                };
+                GameLogWriter.Instance.WriteLog(Loc.Convert(__instance.statLogString.ToString(), Keywords).Trim(), Color.white);
+                UIManager.Pool.Spawn<UI_DamageParticle>(pos + UnityEngine.Random.insideUnitCircle)
+                    .SetDamage(Status.ToSimpleString(reverse: true).Trim(), Color.white);
+                return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(SpriteFx_Simple))]
+        public static class SpriteFx_Simple_Patch
+        {
+            [HarmonyPatch("SetColor")]
+            [HarmonyPostfix]
+            static void SetColor_Postfix(SpriteFx_Simple __instance, Color color)
+            {
+                if (__instance == null) return;
+                ModFxVisibility? Vis = __instance.GetComponent<ModFxVisibility>();
+                Vis?.SetBaseColor(color);
             }
         }
     }

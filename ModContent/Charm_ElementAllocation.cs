@@ -12,9 +12,15 @@ namespace SPMod.ModContent
         private readonly List<string> EffectInstance = new List<string>();
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
+            float Mult = ValueByLevel.SafeRandomAccess(LevelToIdx(level)) * 0.01f;
+            if (Tools.CostumeSkinUse(avatar.Name, "WhiteRabbit_2", false))
+            {
+                Mult *= 1.25f;
+            }
+            Mult *= 100f;
             return new Loc.KeywordValue[]
             {
-                new Loc.KeywordValue("Value", ValueByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
+                new Loc.KeywordValue("Value", Mult.ToString() + "%", GetPositiveColor(virtualLevelOffset)),
             };
         }
         protected override void OnEnabledEffect()
@@ -78,10 +84,15 @@ namespace SPMod.ModContent
                         StatusList[key] = Value;
                 }
                 if (StatusList.Count <= 0) return;
-                int ElementalDamage = NetworkAvatar.highestElementalBonus + StarSephiriaMod.PartyStats.Value.ElementalDamage;
+                int ElementalDamage = NetworkAvatar.highestElementalBonus + StarSephiriaMod.PartyStats.ElementalDamage;
+                float Mult = ValueByLevel.SafeRandomAccess(CurrentLevelToIdx()) * 0.01f;
+                if (Tools.CostumeSkinUse(NetworkAvatar.Name, "WhiteRabbit_2", false))
+                {
+                    Mult *= 1.25f;
+                }
                 foreach (var key in StatusList.Keys)
                 {
-                    int Add = ElementalDamage.IntMult(ValueByLevel.SafeRandomAccess(CurrentLevelToIdx()) * 0.01f);
+                    int Add = ElementalDamage.IntMult(Mult);
                     NetworkAvatar.calculatedBonusStats[key] = Add;
                     EffectInstance.Add(key);
                 }

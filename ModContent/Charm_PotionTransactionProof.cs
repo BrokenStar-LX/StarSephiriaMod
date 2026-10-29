@@ -3,18 +3,19 @@ using SPMod.Tool;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static SPMod.Tool.ModuleComponents;
 
 namespace SPMod.ModContent
 {
-    public class Charm_PotionTransactionProof : Charm_Active
+    public class Charm_PotionTransactionProof : Charm_Active, IModCooldownReceiver, IModValueReceiver, IModEventReceiver
     {
         private static readonly System.Random _serverRng = new System.Random();
         public const int Expenses = 50;
         public Timer CooldownTimer = new Timer(3f);
-        [SyncVar]
         public int Stack = 1;
-        [SyncVar]
         public bool UseShootBack = false;
+        private float ClientPhaseEnd = 0f;
+        private float NextBroadcastTime = 0f;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             float UseCoin = Stack * Expenses / (1f + avatar.GetCustomStatUnsafe(TextFile.Negotiation) * 0.01f);
@@ -32,6 +33,10 @@ namespace SPMod.ModContent
 
         public override float GetCooldownRatio()
         {
+            if (!isServer)
+            {
+                return ModNetwork.ClientCooldown(ClientPhaseEnd, CooldownTimer.time);
+            }
             if (UseShootBack)
             {
                 return 0f;
@@ -39,16 +44,73 @@ namespace SPMod.ModContent
             return 1f - CooldownTimer.Ratio;
         }
 
+        public void OnClientCooldown(float PhaseEnd)
+        {
+            ClientPhaseEnd = PhaseEnd;
+        }
+
+        public void OnClientValues(int A, int B)
+        {
+            Stack = A;
+        }
+
+        public void OnClientEvent(byte Event, Vector3 Pos, string S1, string S2)
+        {
+            if (isServer) return;
+            if (Event == 1) ShowText(S1);
+        }
+
+        private void BroadcastCooldown()
+        {
+            float PhaseEnd = UseShootBack ? 0f : (float)NetworkTime.time + CooldownTimer.GetRemainingTime();
+            ModNetwork.SendCooldown(netId, PhaseEnd);
+        }
+
+        private void BroadcastValues()
+        {
+            ModNetwork.SendValues(netId, Stack);
+        }
+
+        private void BroadcastText(string Text)
+        {
+            if (isClient) ShowText(Text);
+            ModNetwork.SendEvent(netId, 1, NetworkAvatar ? NetworkAvatar.transform.position : Vector3.zero, Text);
+        }
+
         protected override void OnEnabledEffect()
         {
             base.OnEnabledEffect();
             CooldownTimer.Ratio = 1f;
             UseShootBack = true;
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
+            BroadcastValues();
+
+            foreach (ModItem Value in LoadModContent.ModItemEntityData)
+            {
+                if (Value.Item == null) continue;
+                if (Value.Item.type != EItemType.Potion) continue;
+
+                int Id = Value.Item.id;
+                if (Value.Item.rarity == EItemRarity.Uncommon)
+                {
+                    if (!PotionToLevel.Contains((Id, 4)))
+                        PotionToLevel.Add((Id, 4));
+                }
+                if (Value.Item.rarity == EItemRarity.Rare)
+                {
+                    if (!PotionToLevel.Contains((Id, 8)))
+                        PotionToLevel.Add((Id, 8));
+                }
+            }
         }
 
         protected override void OnDisabledEffect()
         {
             base.OnDisabledEffect();
+            CooldownTimer.Ratio = 1f;
+            UseShootBack = true;
+            BroadcastCooldown();
         }
 
         protected override void OnUpdate()
@@ -61,6 +123,13 @@ namespace SPMod.ModContent
             if (!UseShootBack && CooldownTimer.Update(Time.deltaTime))
             {
                 UseShootBack = true;
+                BroadcastCooldown();
+            }
+            else if (NetworkTime.time >= NextBroadcastTime)
+            {
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastCooldown();
+                BroadcastValues();
             }
         }
 
@@ -74,17 +143,25 @@ namespace SPMod.ModContent
         {
             Stack = saveData.GetInt($"CharmSaveData_PotionTransactionProof_{Item.InstanceID}", 1);
             base.LoadItemOnServer(saveData);
+            BroadcastValues();
         }
 
         protected override void FireCastingServer(Vector3 aimedPosition, UnitAvatar aimedTarget)
         {
+            if (NetworkAvatar is PlayerAvatar player)
+            {
+                if (player.isInDungeon <= 0) return;
+            }
             if (!UseShootBack) return;
+
             float UseCoin = Stack * Expenses / (1f + NetworkAvatar.GetCustomStatUnsafe(TextFile.Negotiation) * 0.01f);
             if (NetworkAvatar.Money < (int)UseCoin)
             {
                 UseShootBack = false;
                 CooldownTimer.Ratio = 0f;
-                RpcUIText("No Money!");
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastCooldown();
+                BroadcastText("No Money!");
                 return;
             }
 
@@ -96,13 +173,16 @@ namespace SPMod.ModContent
                 CooldownTimer.Ratio = 0.9f;
                 GetFixedPoolPotion(NetworkAvatar, CardPool, 1);
                 NetworkAvatar.SubMoney((int)UseCoin);
-                RpcUIText($"-{(int)UseCoin}{KeywordDatabase.GetEntity("Leaf").GetIcon()}!");
                 Stack += 1;
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastCooldown();
+                BroadcastValues();
+                BroadcastText($"-{(int)UseCoin}{KeywordDatabase.GetEntity("Leaf").GetIcon()}!");
+                SaveItemOnServer(SaveManager.CurrentRun);
             }
         }
 
-        [ClientRpc]
-        private void RpcUIText(string Text)
+        private void ShowText(string Text)
         {
             if (UIManager.Instance != null)
             {

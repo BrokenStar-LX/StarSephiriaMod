@@ -8,17 +8,17 @@ using UnityEngine;
 
 namespace SPMod.ModContent
 {
-    public class Charm_Lottery : Charm_Active
+    public class Charm_Lottery : Charm_Active, IModCooldownReceiver, IModValueReceiver
     {
         public List<StatusGroup> AddStatus = new List<StatusGroup>();
         public bool RandomLottery = false;
         public float LuckMult = 0.5f;
         public float LuckValue = 0;
-        [SyncVar]
         public int Level = 0;
         public Timer CooldownTimer = new Timer(3f);
-        [SyncVar]
         public bool UseShootBack = false;
+        private float ClientPhaseEnd = 0f;
+        private float NextBroadcastTime = 0f;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             float UseCoin = GetLevelUpValue(avatar.GetCustomStatUnsafe(TextFile.Luck)) * 100f;
@@ -60,6 +60,10 @@ namespace SPMod.ModContent
 
         public override float GetCooldownRatio()
         {
+            if (!isServer)
+            {
+                return ModNetwork.ClientCooldown(ClientPhaseEnd, CooldownTimer.time);
+            }
             if (UseShootBack)
             {
                 return 0f;
@@ -70,6 +74,29 @@ namespace SPMod.ModContent
         public override void CooldownDecrease(float ratio)
         {
             CooldownTimer.Ratio += ratio;
+            BroadcastCooldown();
+        }
+
+        public void OnClientCooldown(float PhaseEnd)
+        {
+            ClientPhaseEnd = PhaseEnd;
+        }
+
+        public void OnClientValues(int A, int B)
+        {
+            Level = A;
+            LuckValue = B;
+        }
+
+        private void BroadcastCooldown()
+        {
+            float PhaseEnd = UseShootBack ? 0f : (float)NetworkTime.time + CooldownTimer.GetRemainingTime();
+            ModNetwork.SendCooldown(netId, PhaseEnd);
+        }
+
+        private void BroadcastValues()
+        {
+            ModNetwork.SendValues(netId, Level, (int)LuckValue);
         }
 
         protected override void OnEnabledEffect()
@@ -82,6 +109,9 @@ namespace SPMod.ModContent
             DungeonPatchs.OnLoadNewNumberofReincarnations += ReSave;
             CooldownTimer.Ratio = 1f;
             UseShootBack = true;
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
+            BroadcastValues();
         }
 
         protected override void OnDisabledEffect()
@@ -93,6 +123,8 @@ namespace SPMod.ModContent
             }
             DungeonPatchs.OnLoadNewNumberofReincarnations -= ReSave;
             CooldownTimer.Ratio = 1f;
+            UseShootBack = true;
+            BroadcastCooldown();
         }
 
         private void ReSave()
@@ -134,6 +166,7 @@ namespace SPMod.ModContent
                 {
                     Level += 1;
                 }
+                BroadcastValues();
             }
         }
 
@@ -147,6 +180,7 @@ namespace SPMod.ModContent
         {
             Level = saveData.GetInt($"CharmSaveData_PotionTransactionProof_{Item.InstanceID}", 0);
             base.LoadItemOnServer(saveData);
+            BroadcastValues();
         }
 
         protected override void OnUpdate()
@@ -159,6 +193,13 @@ namespace SPMod.ModContent
             if (!UseShootBack && CooldownTimer.Update(Time.deltaTime))
             {
                 UseShootBack = true;
+                BroadcastCooldown();
+            }
+            else if (NetworkTime.time >= NextBroadcastTime)
+            {
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastCooldown();
+                BroadcastValues();
             }
         }
 
@@ -172,6 +213,8 @@ namespace SPMod.ModContent
 
             UseShootBack = false;
             CooldownTimer.Ratio = 0f;
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
 
             var MySpawner = PlayerSpawner.MultiplayerList.FirstOrDefault(s => s.PlayerAvatar == NetworkAvatar);
             if (MySpawner == null) return;

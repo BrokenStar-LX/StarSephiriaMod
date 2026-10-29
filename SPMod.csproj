@@ -10,11 +10,20 @@
     <None Remove="Localization\en-US.json" />
     <None Remove="Localization\ko-KR.json" />
     <None Remove="Localization\zh-CN.json" />
+    <None Remove="Localization\zh-TW.json" />
     <None Remove="ModContent\ComboEffect_Comet.prefab" />
     <None Remove="ModContent\modassetbundle" />
     <None Remove="Sprites\Weapon\**\*.png" />
+    <None Remove="Sprites\Categories\Fruits_FlowerButterflyFruit0.png" />
+    <None Remove="Sprites\Categories\Fruits_FlowerButterflyFruit1.png" />
+    <None Remove="Sprites\Categories\Fruits_Lime0.png" />
+    <None Remove="Sprites\Categories\Fruits_Lime1.png" />
     <None Remove="Sprites\Categories_Comet.png" />
     <None Remove="Sprites\Categories_Fortune.png" />
+    <None Remove="Sprites\Categories_Hurricane.png" />
+    <None Remove="Sprites\Categories_WindSword.png" />
+    <None Remove="Sprites\CharacterDebuff_WindErosion.png" />
+    <None Remove="Sprites\CharacterDebuff_WindErosion_FX.png" />
     <None Remove="Sprites\Engineer.png" />
     <None Remove="Sprites\Fruits_Pomegranate0.png" />
     <None Remove="Sprites\Fruits_Pomegranate1.png" />
@@ -27,6 +36,7 @@
     <None Remove="Sprites\Item_ArcaneBookMark.png" />
     <None Remove="Sprites\Item_ArtificialSpiritIfiel.png" />
     <None Remove="Sprites\Item_ArtificialSpiritIfiel_Skill.png" />
+    <None Remove="Sprites\Item_AtmosClock.png" />
     <None Remove="Sprites\Item_BluePointer.png" />
     <None Remove="Sprites\Item_BluePointer2.png" />
     <None Remove="Sprites\Item_BoltHead.png" />
@@ -35,12 +45,16 @@
     <None Remove="Sprites\Item_BumpyFate.png" />
     <None Remove="Sprites\Item_Caliburn.png" />
     <None Remove="Sprites\Item_Caltrop.png" />
+    <None Remove="Sprites\Item_Capricious.png" />
     <None Remove="Sprites\Item_ChaosGlyph.png" />
     <None Remove="Sprites\Item_CometaryHydrogenCorona.png" />
     <None Remove="Sprites\Item_CommemorativeCoin.png" />
+    <None Remove="Sprites\Item_Convergence.png" />
     <None Remove="Sprites\Item_CounterAttackBlade.png" />
     <None Remove="Sprites\Item_CounterAttackTacticsGuide.png" />
     <None Remove="Sprites\Item_CurseNail.png" />
+    <None Remove="Sprites\Item_CyanOrb.png" />
+    <None Remove="Sprites\Item_CyanScarf.png" />
     <None Remove="Sprites\Item_DeepSpaceObserver.png" />
     <None Remove="Sprites\Item_DevilPact.png" />
     <None Remove="Sprites\Item_DevilPact_MiniIcon.png" />
@@ -62,7 +76,10 @@
     <None Remove="Sprites\Item_MidasRing.png" />
     <None Remove="Sprites\Item_MysteryBox.png" />
     <None Remove="Sprites\Item_MysteryBox_Random.png" />
+    <None Remove="Sprites\Item_Organ.png" />
     <None Remove="Sprites\Item_PotionTransactionProof.png" />
+    <None Remove="Sprites\Item_Potion_Wind.png" />
+    <None Remove="Sprites\Item_Potion_Wind2.png" />
     <None Remove="Sprites\Item_PureWhiteCore.png" />
     <None Remove="Sprites\Item_RedDogSymbolA.png" />
     <None Remove="Sprites\Item_RedDogSymbolB.png" />
@@ -80,9 +97,15 @@
     <None Remove="Sprites\Item_UnityFlag.png" />
     <None Remove="Sprites\Item_Valiya.png" />
     <None Remove="Sprites\Item_WeaknessIndicator.png" />
+    <None Remove="Sprites\Item_WeatherForEcast.png" />
+    <None Remove="Sprites\Item_WhirlWindBug.png" />
     <None Remove="Sprites\Item_WhiteEggShell.png" />
+    <None Remove="Sprites\Item_WindSail.png" />
     <None Remove="Sprites\Item_WindSpriteHairWax.png" />
+    <None Remove="Sprites\Item_WindVane.png" />
+    <None Remove="Sprites\KeyWordIcon_Wind.png" />
     <None Remove="Sprites\Knight.png" />
+    <None Remove="Sprites\Miracle_Bard.png" />
     <None Remove="Sprites\Miracle_Engineer.png" />
     <None Remove="Sprites\Miracle_Knight.png" />
     <None Remove="Sprites\Miracle_Negotiator.png" />
@@ -100,15 +123,31 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Sprites\Categories\Categories_Hurricane.png" />
+    <EmbeddedResource Include="Sprites\Categories\Categories_WindSword.png" />
+    <EmbeddedResource Include="Sprites\Categories\Fruits_FlowerButterflyFruit0.png" />
+    <EmbeddedResource Include="Sprites\Categories\Fruits_FlowerButterflyFruit1.png" />
+    <EmbeddedResource Include="Sprites\Categories\Fruits_Lime0.png" />
+    <EmbeddedResource Include="Sprites\Categories\Fruits_Lime1.png" />
+    <EmbeddedResource Include="Sprites\CharacterDebuff_WindErosion.png" />
     <EmbeddedResource Include="Sprites\HardIcon.png" />
     <EmbeddedResource Include="Sprites\Item_ArcaneBookMark.png" />
+    <EmbeddedResource Include="Sprites\Item_AtmosClock.png" />
     <EmbeddedResource Include="Sprites\Item_BondVessel.png" />
     <EmbeddedResource Include="Sprites\Item_Caltrop.png" />
+    <EmbeddedResource Include="Sprites\Item_Capricious.png" />
     <EmbeddedResource Include="Sprites\Item_ChaosGlyph.png" />
+    <EmbeddedResource Include="Sprites\Item_Convergence.png" />
+    <EmbeddedResource Include="Sprites\Item_CyanScarf.png" />
+    <EmbeddedResource Include="Sprites\Item_Organ.png" />
+    <EmbeddedResource Include="Sprites\Item_Potion_Wind.png" />
+    <EmbeddedResource Include="Sprites\Item_Potion_Wind2.png" />
+    <EmbeddedResource Include="Sprites\Item_StrongWindAmulet.png" />
     <EmbeddedResource Include="Sprites\Item_CometaryHydrogenCorona.png" />
     <EmbeddedResource Include="Sprites\Item_CommemorativeCoin.png" />
     <EmbeddedResource Include="Sprites\Item_CounterAttackBlade.png" />
     <EmbeddedResource Include="Sprites\Item_CounterAttackTacticsGuide.png" />
+    <EmbeddedResource Include="Sprites\Item_CyanOrb.png" />
     <EmbeddedResource Include="Sprites\Item_EcologicalSphere.png" />
     <EmbeddedResource Include="Sprites\Item_ElectricIce.png" />
     <EmbeddedResource Include="Sprites\Item_EnergyRecoveryDevice.png" />
@@ -147,20 +186,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Sprites\Categories_Fortune.png" />
+    <EmbeddedResource Include="Sprites\Categories\Categories_Fortune.png" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Localization\en-US.json" />
     <EmbeddedResource Include="Localization\ko-KR.json" />
     <EmbeddedResource Include="Localization\zh-CN.json" />
-    <EmbeddedResource Include="Sprites\Fruits_Pomegranate0.png" />
-    <EmbeddedResource Include="Sprites\Fruits_Pomegranate1.png" />
+    <EmbeddedResource Include="Localization\zh-TW.json" />
+    <EmbeddedResource Include="Sprites\Categories\Fruits_Pomegranate0.png" />
+    <EmbeddedResource Include="Sprites\Categories\Fruits_Pomegranate1.png" />
     <EmbeddedResource Include="Sprites\Item_AmplifierComponent.png" />
     <EmbeddedResource Include="Sprites\Item_BoxingGloves.png" />
-    <EmbeddedResource Include="Sprites\Categories_Comet.png" />
-    <EmbeddedResource Include="Sprites\Fruits_StarApple0.png" />
-    <EmbeddedResource Include="Sprites\Fruits_StarApple1.png" />
+    <EmbeddedResource Include="Sprites\Categories\Categories_Comet.png" />
+    <EmbeddedResource Include="Sprites\Categories\Fruits_StarApple0.png" />
+    <EmbeddedResource Include="Sprites\Categories\Fruits_StarApple1.png" />
     <EmbeddedResource Include="Sprites\Item_BumpyFate.png" />
     <EmbeddedResource Include="Sprites\Item_CurseNail.png" />
     <EmbeddedResource Include="Sprites\Item_FrostyAnvil.png" />
@@ -188,8 +228,14 @@
     <EmbeddedResource Include="Sprites\Item_UnityFlag.png" />
     <EmbeddedResource Include="Sprites\Item_Valiya.png" />
     <EmbeddedResource Include="Sprites\Item_WeaknessIndicator.png" />
+    <EmbeddedResource Include="Sprites\Item_WeatherForEcast.png" />
+    <EmbeddedResource Include="Sprites\Item_WhirlWindBug.png" />
     <EmbeddedResource Include="Sprites\Item_WhiteEggShell.png" />
+    <EmbeddedResource Include="Sprites\Item_WindSail.png" />
     <EmbeddedResource Include="Sprites\Item_WindSpriteHairWax.png" />
+    <EmbeddedResource Include="Sprites\Item_WindVane.png" />
+    <EmbeddedResource Include="Sprites\KeywordIcon_Wind.png" />
+    <EmbeddedResource Include="Sprites\Miracle_Bard.png" />
     <EmbeddedResource Include="Sprites\Miracle_Engineer.png" />
     <EmbeddedResource Include="Sprites\Miracle_Knight.png" />
     <EmbeddedResource Include="Sprites\Miracle_Negotiator.png" />
@@ -198,12 +244,17 @@
     <EmbeddedResource Include="Sprites\ModEffectHUD_Rosion.png" />
     <EmbeddedResource Include="Sprites\ModEffectHUD_SpearofZeus.png" />
     <EmbeddedResource Include="Sprites\ModEffectHUD_ThunderBeast.png" />
+    <EmbeddedResource Include="Sprites\EffectFx\**\*.png" />
+    <EmbeddedResource Include="Sprites\UnitAvatar\**\*.png" />
+    <EmbeddedResource Include="Sprites\Bullet\**\*.png" />
+    <EmbeddedResource Include="Sprites\Item_WindJellyFish.png" />
+    <EmbeddedResource Include="Sprites\Item_WindJellyFish_MiniIcon.png" />
     <EmbeddedResource Include="Sprites\Weapon\**\*.png" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\AddOns\SPMod\0Harmony.dll</HintPath>
+      <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Assembly-CSharp.dll</HintPath>
@@ -225,24 +276,6 @@
     </Reference>
     <Reference Include="Mirror">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Mirror.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil">
-      <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\AddOns\SPMod\Mono.Cecil.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Mdb">
-      <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\AddOns\SPMod\Mono.Cecil.Mdb.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Pdb">
-      <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\AddOns\SPMod\Mono.Cecil.Pdb.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Rocks">
-      <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\AddOns\SPMod\Mono.Cecil.Rocks.dll</HintPath>
-    </Reference>
-    <Reference Include="MonoMod.RuntimeDetour">
-      <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\AddOns\SPMod\MonoMod.RuntimeDetour.dll</HintPath>
-    </Reference>
-    <Reference Include="MonoMod.Utils">
-      <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\AddOns\SPMod\MonoMod.Utils.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Newtonsoft.Json.dll</HintPath>

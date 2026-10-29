@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using Mirror;
 using Mirror.FizzySteam;
+using SPMod.Tool;
 
 namespace SPMod
 {
@@ -52,6 +53,17 @@ namespace SPMod
             static void IsConnectionAllowed_Prefix(int connectionId, string address)
             {
                 NetworkServer.maxConnections = 50;
+            }
+        }
+
+        [HarmonyPatch(typeof(NetworkManager))]
+        public static class NetworkManager_ModNetwork_Patch
+        {
+            [HarmonyPatch("RegisterClientMessages")]
+            [HarmonyPostfix]
+            static void RegisterClientMessages_Postfix()
+            {
+                ModNetwork.RegisterClientHandlers();
             }
         }
 

@@ -12,10 +12,13 @@ namespace SPMod.ModContent
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string text = MaxByLevel.SafeRandomAccess(LevelToIdx(level)).ToString();
+            string text2 = "0";
+            if (IsEffectEnabled)
+                text2 = CalculateDamage(this).ToString("#0");
             return new Loc.KeywordValue[]
             {
                 new Loc.KeywordValue("Mult", text + "%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Damage", CalculateDamage(this).ToString("#0"),  EffectConstant.WeaponColor),
+                new Loc.KeywordValue("Damage", text2,  EffectConstant.WeaponColor),
             };
         }
         protected override void OnEnabledEffect()
@@ -59,7 +62,7 @@ namespace SPMod.ModContent
                 var Dam = DamageInstance.GetDamage(NetworkAvatar, DamageId, avatar.transform.position, 4294967295L, Damage, EDamageType.Slice, EDamageFromType.None, Vector2.zero, 0, 0f);
                 Dam.elementalType = EDamageElementalType.Normal;
                 Dam.ignoreDefense = 100;
-                Dam.criticalChancePercent = -9999;
+                Dam.criticalChancePercent = -99999;
                 Dam.flag = DamageId;
                 Dam.SetElementalTypeToNormal(true, new Color(0.647f, 0.458f, 1f, 1f));
                 avatar.ApplyDamage(Dam);

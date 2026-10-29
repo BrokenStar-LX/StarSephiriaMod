@@ -59,6 +59,7 @@ namespace SPMod.Tool
         public const string MagicCriticalDamageBonus = "MAGICCRITICALDAMAGEBONUS";                          // 魔法暴击伤害
         public const string CooldownRecoverySpeed = "COOLDOWNRECOVERYSPEED";                                // 魔法书回复速度
         public const string Evasion = "EVASION";                                                            // 闪避率
+        public const string EvasionRateReduction = "EVASIONRATEREDUCTION";                                  // 闪避率倍率
         public const string DefenseToAttack = "DEFENSETOATTACK";                                            // 防御转伤害
         public const string DamageReduction = "DAMAGEREDUCTION";                                            // 防御力
         public const string Thorns = "THORNS";                                                              // 荆棘
@@ -234,6 +235,17 @@ namespace SPMod.Tool
         public const string ElectricIce = "STAT_ELECTRICICE";                                               // 模组属性：电冰体效果
         public const string GoldObtained = "STAT_GOLDOBTAINED";                                             // 模组属性：总获取叶子数量
         public const string CompanionStrikeBack = "STAT_COMPANIONSTRIKEBACK";                               // 模组属性：同伴继承反击
+        public const string WindDamage = "WINDDAMAGE";                                                      // 模组属性：风属性伤害
+        public const string WindErosionDamage = "STAT_WINDEROSIONDAMAGE";                                   // 模组属性：风蚀伤害
+        public const string WindErosionMult = "STAT_WINDEROSIONMULT";                                       // 模组属性：风蚀基础倍率
+        public const string WindErosionCount = "STAT_WINDEROSIONCOUNT";                                     // 模组属性：风蚀可触发次数
+        public const string WindErosionLuck = "STAT_WINDEROSIONLUCK";                                       // 模组属性：风蚀额外触发概率
+        public const string WindErosionCritDamage = "STAT_WINDEROSIONCRITDAMAGE";                           // 模组属性：风蚀暴击伤害
+        public const string WindErosionDot = "STAT_WINDEROSIONDOT";                                         // 模组属性：空气钟倍率
+        public const string WindErosionOverFlow = "STAT_WINDEROSIONOVERFLOW";                               // 模组属性：风帆倍率
+        public const string WindErosionOverFlowAdd = "STAT_WINDEROSIONOVERFLOWADD";                         // 模组属性：风帆额外倍率
+        public const string WindErosionOverFlowBase = "STAT_WINDEROSIONOVERFLOWBASE";                       // 模组属性：风帆基础伤害
+        public const string CyanOrbUP = "STAT_CYANORBUP";                                                   // 模组属性：强化青绿色宝珠
         #endregion
         #region 服装文本
         public static string Costume_PinkRabbit_2 => Tools.GetLocalization(nameof(Costume_PinkRabbit_2));
@@ -810,7 +822,7 @@ namespace SPMod.Tool
             Text = AddStringIcon(Text);
             return new LocalizedString(Text);
         }
-        private static string AddStringIcon(string line)
+        public static string AddStringIcon(string line)
         {
             if (string.IsNullOrEmpty(line))
             {
@@ -836,7 +848,7 @@ namespace SPMod.Tool
         private static readonly Regex tokenRegex = new Regex(
             @"\{(?<sign>[+\-])(?<value>\d+(?:\.\d+)?%?)\}|\{(?<mul>[×xX])(?<percent>\d+(?:\.\d+)?)%\}",
             RegexOptions.Compiled);
-        private static string FormatLine(string line)
+        public static string FormatLine(string line)
         {
             try
             {

@@ -2,6 +2,7 @@
 using Mirror;
 using SPMod.ModContent;
 using SPMod.Tool;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -162,7 +163,7 @@ namespace SPMod
             [HarmonyPrefix]
             static void OnUpdate_Prefix(Charm_IceBow __instance)
             {
-                if (IceBowAttack.TryGetValue(__instance.NetworkAvatar.Name, out bool falg) && falg)
+                if (IceBowAttack.TryGetValue(__instance.NetworkAvatar, out bool falg) && falg)
                 {
                     Vector2 aimedPosition = __instance.NetworkAvatar.AimedPosition;
                     Vector3 targetPos = aimedPosition;
@@ -181,7 +182,7 @@ namespace SPMod
                     }
                     FireArrow(__instance, targetPos);
                     __instance.RpcFireAnimation();
-                    IceBowAttack[__instance.NetworkAvatar.Name] = false;
+                    IceBowAttack[__instance.NetworkAvatar] = false;
                 }
             }
 
@@ -275,7 +276,7 @@ namespace SPMod
                 if (__instance.NetworkAvatar)
                 {
                     UnitAvatar Player = __instance.NetworkAvatar;
-                    if (Tools.CostumeSkinUse(Player.Name, "Turtle", "_2", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Turtle_2", false))
                     {
                         ItemEntity itemEntity = ItemDatabase.FindItemById(__instance.Item.EntityID);
                         int Add = 5;
@@ -293,12 +294,12 @@ namespace SPMod
                         }
                         __result += Add;
                     }//乌龟2
-                    if (Tools.CostumeSkinUse(Player.Name, "Turtle", "_3", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Turtle_3", false))
                     {
                         if (__result > 0) __result += Mathf.Min(70, __result);
                         if (__result > 210) __result = 210;
                     }
-                    if (Tools.CostumeSkinUse(Player.Name, "Bird", "_3", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Bird_3", false))
                     {
                         if (__instance is Charm_Active && !(__instance is Charm_SpearofZeus))
                             __result += Player.GetCustomStatUnsafe(TextFile.DashAttackDamageBonus).IntMult(0.8f);
@@ -327,7 +328,7 @@ namespace SPMod
                             __result += Player.GetCustomStatUnsafe(TextFile.DamageReduction) * DamageMult * Mult;
                         }
                     }//藤壶
-                    if (Tools.CostumeSkinUse(Player.Name, "Deer", "_3", false))
+                    if (Tools.CostumeSkinUse(Player.Name, "Deer_3", false))
                     {
                         if (charm.Item.Position == new ItemPosition(0, 0))
                         {
@@ -354,7 +355,7 @@ namespace SPMod
                     if (__instance.NetworkAvatar)
                     {
                         UnitAvatar Player = __instance.NetworkAvatar;
-                        if (Tools.CostumeSkinUse(Player.Name, "Bird", "_3"))
+                        if (Tools.CostumeSkinUse(Player.Name, "Bird_3"))
                         {
                             if (__instance.GetCooldownRatio() <= 0f)
                                 Player.CurrentDashModule.RestoreDashCount(1);
@@ -379,6 +380,52 @@ namespace SPMod
                     {
                         __instance.AddCooldownBonus(Value * 0.01f);
                     }
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(Charm_Reddew))]
+        public static class Charm_Reddew_Patch
+        {
+            private readonly static FieldInfo? chanceField = AccessTools.Field(typeof(Charm_Reddew), "chance");
+            private readonly static MethodInfo? RpcCreateFxMethod = AccessTools.Method(typeof(Charm_Reddew), "RpcCreateFx");
+
+            [HarmonyPatch("SummonDueFromVictim")]
+            [HarmonyPrefix]
+            static bool SummonDueFromVictim_Prefix(Charm_Reddew __instance, UnitAvatar unit, DamageInstance damage)
+            {
+                if (ModConfig.Instance.AddCategory)
+                {
+                    if (chanceField == null || RpcCreateFxMethod == null) return true;
+
+                    bool chance = (bool)chanceField.GetValue(__instance);
+                    if (__instance.NetworkAvatar.IsDead || !damage.IsCriticalOrExecutionAttack || !chance || damage.id == __instance.damageId) return false;
+                    chanceField.SetValue(__instance, false);
+                    RpcCreateFxMethod.Invoke(__instance, new object[] { (Vector2)unit.transform.position });
+                    EDamageElementalType ElementalType = Tools.GetHighestDamageElemental(__instance.NetworkAvatar, out _);
+                    float Damage = Charm_Basic.CalculateDamage(__instance);
+                    List<UnitAvatar> TargetList = Tools.SearchEnemiesInRange(__instance.NetworkAvatar, unit.transform.position, __instance.attackRadius);
+                    foreach (UnitAvatar Target in TargetList)
+                    {
+                        var Dam = DamageInstance.GetDamage(__instance.NetworkAvatar, __instance.damageId, Target.transform.position, __instance.NetworkAvatar.GetHostileFactionLayers(EDamageFromType.None), Damage, EDamageType.Projectile, EDamageFromType.None, Vector2.zero, 0, 0f);
+                        Dam.criticalChancePercent = -999999f;
+                        Dam.elementalType = ElementalType;
+                        Target.ApplyDamage(Dam);
+                    }
+                    return false;
+                }
+                return true;
+            }
+
+            [HarmonyPatch("GetDamage")]
+            [HarmonyPostfix]
+            static void GetDamage_Postfix(Charm_Reddew __instance, UnitAvatar avatar, ref float __result)
+            {
+                if (ModConfig.Instance.AddCategory)
+                {
+                    Tools.GetHighestDamageElemental(avatar, out string StatusName);
+                    float Mult = __instance.damagePercentByLevel.SafeRandomAccess(__instance.CurrentLevelToIdx()) / 100f;
+                    __result = __instance.NetworkAvatar.GetCustomStatUnsafe(StatusName) * Mult;
                 }
             }
         }
@@ -672,7 +719,6 @@ namespace SPMod
         [HarmonyPatch(typeof(Unit_Grenadier))]
         public static class Unit_Grenadier_Patches
         {
-
             [HarmonyPatch("Attack")]
             [HarmonyPostfix]
             static void Attack_Postfix(Unit_Grenadier __instance)
@@ -764,6 +810,200 @@ namespace SPMod
                 }
                 EvasionRestoreCD[Player] = Now + CooldownDuration;
                 return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(Charm_AddStatByDefense))]
+        public static class Charm_AddStatByDefense_Patch
+        {
+            private readonly static FieldInfo? addedField = AccessTools.Field(typeof(Charm_AddStatByDefense), "added");
+            private readonly static FieldInfo? addedValueField = AccessTools.Field(typeof(Charm_AddStatByDefense), "addedValue");
+
+            [HarmonyPatch("AddStat")]
+            [HarmonyPrefix]
+            static void AddStat_Prefix(Charm_AddStatByDefense __instance, int defense)
+            {
+                if (addedField == null) return;
+                if (!(bool)addedField.GetValue(__instance))
+                {
+                    int Value = __instance.addByLevel.SafeRandomAccess(__instance.CurrentLevelToIdx()) * Mathf.FloorToInt(defense / 10f);
+                    __instance.NetworkAvatar.AddCustomStatUnsafe(TextFile.WindDamage, Value);
+                }
+            }
+
+            [HarmonyPatch("RemoveStat")]
+            [HarmonyPrefix]
+            static void RemoveStat_Prefix(Charm_AddStatByDefense __instance)
+            {
+                if (addedField == null || addedValueField == null) return;
+                if ((bool)addedField.GetValue(__instance))
+                {
+                    int Value = (int)addedValueField.GetValue(__instance);
+                    __instance.NetworkAvatar.AddCustomStatUnsafe(TextFile.WindDamage, -Value);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(Charm_WoodenBox))]
+        public static class Charm_WoodenBox_Patch
+        {
+            private readonly static FieldInfo? appliedField = AccessTools.Field(typeof(Charm_WoodenBox), "applied");
+            private readonly static FieldInfo? appliedLevelField = AccessTools.Field(typeof(Charm_WoodenBox), "appliedLevel");
+
+            [HarmonyPatch("ApplyEffect")]
+            [HarmonyPrefix]
+            static void ApplyEffect_Prefix(Charm_WoodenBox __instance, int level, int applyCount)
+            {
+                if (appliedField == null) return;
+                if ((int)appliedField.GetValue(__instance) == 0 && applyCount > 0)
+                {
+                    int Value = __instance.apPerQuickSlotCharmByLevel.SafeRandomAccess(__instance.LevelToIdx(level)) * applyCount;
+                    __instance.NetworkAvatar.AddCustomStatUnsafe(TextFile.WindDamage, Value);
+                }
+            }
+
+            [HarmonyPatch("RemoveEffect")]
+            [HarmonyPrefix]
+            static void RemoveEffect_Prefix(Charm_WoodenBox __instance)
+            {
+                if (appliedField == null || appliedLevelField == null) return;
+                int Applied = (int)appliedField.GetValue(__instance);
+                if (Applied != 0)
+                {
+                    int Level = (int)appliedLevelField.GetValue(__instance);
+                    int Value = __instance.apPerQuickSlotCharmByLevel.SafeRandomAccess(Level) * Applied;
+                    __instance.NetworkAvatar.AddCustomStatUnsafe(TextFile.WindDamage, -Value);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(Charm_FireBulletInRange))]
+        public static class Charm_FireBulletInRange_Patch
+        {
+            public static GameObject? WindBullet = null;
+            private static readonly FieldInfo? chanceField = AccessTools.Field(typeof(Charm_FireBulletInRange), "chance");
+            private static readonly FieldInfo? coroutineField = AccessTools.Field(typeof(Charm_FireBulletInRange), "currentCoroutine");
+            private static readonly MethodInfo? rpcFireFxMethod = AccessTools.Method(typeof(Charm_FireBulletInRange), "RpcFireFx");
+
+            private static readonly string[] WindBodySprites =
+            {
+                "ElementalBomb_Fire_00", "ElementalBomb_Fire_01", "ElementalBomb_Fire_02", "ElementalBomb_Fire_03",
+                "ElementalBomb_Fire_04", "ElementalBomb_Fire_05", "ElementalBomb_Fire_06", "ElementalBomb_Fire_07",
+            };
+
+            private static readonly Dictionary<string, string> WindExplosionSprites = new Dictionary<string, string>()
+            {
+                { "DynamiteFX00", "DynamiteFX00" },
+                { "DynamiteFX01", "DynamiteFX01_0" },
+                { "DynamiteFX02", "DynamiteFX02_0" },
+                { "DynamiteFX03", "DynamiteFX03_0" },
+                { "DynamiteFX04", "DynamiteFX04_0" },
+                { "DynamiteFX05", "DynamiteFX05" },
+                { "DynamiteFX06", "DynamiteFX06" },
+                { "DynamiteFX07", "DynamiteFX07" },
+                { "DynamiteFX08", "DynamiteFX08" },
+                { "DynamiteFX09", "DynamiteFX09" },
+                { "DynamiteFX10", "DynamiteFX10" },
+                { "DynamiteFX11", "DynamiteFX11" },
+                { "DynamiteFX12", "DynamiteFX12" },
+                { "DynamiteFX13", "DynamiteFX13" },
+            };
+
+            private class BulletData
+            {
+                public GameObject Prefab;
+                public EDamageElementalType Type;
+                public BulletData(GameObject prefab, EDamageElementalType type)
+                {
+                    Prefab = prefab;
+                    Type = type;
+                }
+            }
+
+            public static void EnsureWindBullet(Charm_FireBulletInRange Charm)
+            {
+                if (WindBullet != null) return;
+                if (Charm == null || Charm.bulletPrefabs == null || Charm.bulletPrefabs.Count <= (int)EDamageElementalType.Fire) return;
+                GameObject BaseBullet = Charm.bulletPrefabs[(int)EDamageElementalType.Fire];
+                if (BaseBullet == null) return;
+
+                WindBullet = new ModuleComponents.ModBullet("ElementalBomb_Wind", BaseBullet)
+                    .SetSpriteSet("Bullet", WindBodySprites)
+                    .SetDestroyFxSprites("EffectFx", WindExplosionSprites)
+                    .SetBullet(B =>
+                    {
+                        if (B.DestroyModule is BulletDestroyModule_Explode Explode)
+                        {
+                            Explode.inheritElementalType = true;
+                            Explode.elementalType = EffectConstant.Wind;
+                        }
+                    })
+                    .EndCreate();
+            }
+
+            [HarmonyPatch("GetDamage")]
+            [HarmonyPrefix]
+            static bool GetDamage_Prefix(Charm_FireBulletInRange __instance, UnitAvatar avatar, ref float __result)
+            {
+                if (avatar == null) return true;
+                Tools.GetHighestDamageElemental(avatar, out _, out int MaxValue);
+                __result = MaxValue * (__instance.damageRatioByLevel.SafeRandomAccess(__instance.CurrentLevelToIdx()) / 100f);
+                return false;
+            }
+
+            [HarmonyPatch("FireCastingServer")]
+            [HarmonyPrefix]
+            static bool FireCastingServer_Prefix(Charm_FireBulletInRange __instance, Vector3 aimedPosition, UnitAvatar aimedTarget)
+            {
+                if (chanceField == null || coroutineField == null) return true;
+                if (WindBullet == null || __instance.bulletPrefabs == null || __instance.bulletPrefabs.Count < 4) return true;
+
+                UnitAvatar? Avatar = __instance.NetworkAvatar;
+                if (Avatar == null) return true;
+
+                int Physical = Avatar.GetCustomStat(ECustomStat.PhysicalDamage);
+                int Fire = Avatar.GetCustomStat(ECustomStat.FireDamage);
+                int Ice = Avatar.GetCustomStat(ECustomStat.IceDamage);
+                int Lightning = Avatar.GetCustomStat(ECustomStat.LightningDamage);
+                int Wind = Avatar.GetCustomStatUnsafe(TextFile.WindDamage);
+                Tools.GetHighestDamageElemental(Avatar, out _, out int Max);
+                if (Wind <= 0 || Wind < Max) return true;
+                if (!(bool)chanceField.GetValue(__instance)) return false;
+
+                chanceField.SetValue(__instance, false);
+                __instance.NetworkestimatedFireChanceTime = (float)(NetworkTime.time + __instance.coolDownTimer.time);
+
+                List<BulletData> Pool = new List<BulletData>();
+                if (Physical == Max) Pool.Add(new BulletData(__instance.bulletPrefabs[0], EDamageElementalType.Physical));
+                if (Fire == Max) Pool.Add(new BulletData(__instance.bulletPrefabs[1], EDamageElementalType.Fire));
+                if (Ice == Max) Pool.Add(new BulletData(__instance.bulletPrefabs[2], EDamageElementalType.Ice));
+                if (Lightning == Max) Pool.Add(new BulletData(__instance.bulletPrefabs[3], EDamageElementalType.Lightning));
+                if (Wind >= Max) Pool.Add(new BulletData(WindBullet, EffectConstant.Wind));
+                if (Pool.Count == 0) return true;
+
+                int Count = __instance.countByLevel.SafeRandomAccess(__instance.CurrentLevelToIdx());
+                float Damage = Charm_Basic.CalculateDamage(__instance);
+                coroutineField.SetValue(__instance, __instance.StartCoroutine(ThrowBulletCoroutine(__instance, aimedPosition, Count, Pool, Damage)));
+                return false;
+            }
+
+            private static IEnumerator ThrowBulletCoroutine(Charm_FireBulletInRange Instance, Vector3 AimedPosition, int Count, List<BulletData> Pool, float Damage)
+            {
+                int Thrown = 0;
+                while (Thrown < Count)
+                {
+                    BulletData Data = Pool[Random.Range(0, Pool.Count)];
+                    Vector3 Target = AimedPosition + (Vector3)Random.insideUnitCircle * Instance.fireRadiusError;
+                    Bullet.Pool.Spawn(Data.Prefab, Instance.NetworkAvatar.transform.position, true, EDamageFromType.None, Instance.damageId, Damage, 25, 5f, Instance.NetworkAvatar, Instance.NetworkAvatar.GetHostileFactionLayers(EDamageFromType.None), 0f, Instance.NetworkAvatar.transform.position, Target, null, null, 0f, Data.Type);
+                    rpcFireFxMethod?.Invoke(Instance, null);
+                    Thrown++;
+                    if (Thrown < Count)
+                    {
+                        yield return new WaitForSeconds(Instance.fireInterval + Random.Range(0f - Instance.fireIntervalError, Instance.fireIntervalError));
+                        continue;
+                    }
+                    break;
+                }
             }
         }
     }

@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using static AvatarStatsHooker;
 using static Miracle_StatusInstance;
 using static SPMod.Tool.ModuleComponents;
 using StatusGroup = Charm_StatusInstance.StatusGroup;
@@ -16,67 +18,52 @@ namespace SPMod.Tool
 {
     public static class Tools
     {
-        public static ItemEntity CreateCharm(this ItemEntity Entity, List<string> Categories, List<StatusGroup> Status, bool Unique = true)
+        public static void CopyPotionFX(this ItemEntity Entity, int VanillaId)
         {
-            Entity.categories = Categories;
-            Entity.type = EItemType.Charm;
-            Charm_StatusInstance Effect = Entity.resourcePrefab.AddComponent<Charm_StatusInstance>();
-            Effect.isWeaponRelatedCharm = false;
-            Effect.effectsString = new LocalizedString[0] { };
-            Effect.stats = Status.ToArray();
-            int MaxLv = 0;
-            foreach (StatusGroup Group in Status)
+            ItemEntity? Vanilla = ItemDatabase.FindItemById(VanillaId);
+            if (Vanilla == null || Vanilla.resourcePrefab == null || Entity.resourcePrefab == null) return;
+
+            WieldingPotion? SourcePotion = Vanilla.resourcePrefab.GetComponent<WieldingPotion>();
+            PotionEffect? SourceEffect = Vanilla.resourcePrefab.GetComponent<PotionEffect>();
+            WieldingPotion? TargetPotion = Entity.resourcePrefab.GetComponent<WieldingPotion>();
+            PotionEffect? TargetEffect = Entity.resourcePrefab.GetComponent<PotionEffect>();
+
+            if (TargetPotion != null && SourcePotion != null)
             {
-                if (MaxLv < Group.valuesByLevel.Length) MaxLv = Group.valuesByLevel.Length - 1;
+                TargetPotion.drinkFxPrefab = SourcePotion.drinkFxPrefab;
+                TargetPotion.potionDrinkingTime = SourcePotion.potionDrinkingTime;
             }
-            Effect.maxLevel = MaxLv;
-            Effect.isUniqueEffect = Unique;
-            Effect.enabled = false;
-            return Entity;
-        }
-        public static ItemEntity CustomCreateCharm(this ItemEntity Entity, List<string> Categories, Action<ItemEntity> Action)
-        {
-            Entity.categories = Categories;
-            Entity.type = EItemType.Charm;
-            Action(Entity);
-            return Entity;
-        }
-        public static ItemEntity SetCustomItemEffect(this ItemEntity Entity, Action<ItemEntity> Action)
-        {
-            string GetName = Entity.name.Replace("ModItemEntity_", "");
-            LoadModContent.GetModAction[GetName] = Action;
-            return Entity;
+            if (TargetEffect != null && SourceEffect != null)
+            {
+                TargetEffect.gulpSoundEvent = SourceEffect.gulpSoundEvent;
+                TargetEffect.drinkSoundEvent = SourceEffect.drinkSoundEvent;
+                TargetEffect.canUseInBattle = SourceEffect.canUseInBattle;
+            }
+            if (TargetEffect is PotionEffect_StatusInstance TargetStatus && SourceEffect is PotionEffect_StatusInstance SourceStatus)
+            {
+                TargetStatus.effectFxPrefab = SourceStatus.effectFxPrefab;
+                TargetStatus.effectSoundEvent = SourceStatus.effectSoundEvent;
+                TargetStatus.statLogString = SourceStatus.statLogString;
+                TargetStatus.statLogEndString = SourceStatus.statLogEndString;
+                TargetStatus.changeString_Up = SourceStatus.changeString_Up;
+                TargetStatus.changeString_Down = SourceStatus.changeString_Down;
+            }
         }
         public static AllPlayerStatus GetMaxPlayerStatus()
         {
-            AllPlayerStatus maxStatus = new AllPlayerStatus(0, 0, 0, 0);
-            foreach (var Status in StarSephiriaMod.PartyEffect)
+            int Defense = 0, AllDamage = 0, Elemental = 0, Crit = 0;
+            foreach (PlayerSpawner Spawner in PlayerSpawner.MultiplayerList)
             {
-                AllPlayerStatus Curren = Status.Value;
-                if (maxStatus.Defense < Curren.Defense)
-                {
-                    maxStatus.Defense = Curren.Defense;
-                }
-                if (maxStatus.AllDamage < Curren.AllDamage)
-                {
-                    maxStatus.AllDamage = Curren.AllDamage;
-                }
-                if (maxStatus.Crit < Curren.Crit)
-                {
-                    maxStatus.Crit = Curren.Crit;
-                }
-                if (maxStatus.ElementalDamage < Curren.ElementalDamage)
-                {
-                    maxStatus.ElementalDamage = Curren.ElementalDamage;
-                }
+                PlayerAvatar Player = Spawner.PlayerAvatar;
+                if (Player == null) continue;
+                Defense = Math.Max(Defense, Player.GetCustomStatUnsafe(TextFile.AllPlayerDefense));
+                AllDamage = Math.Max(AllDamage, Player.GetCustomStatUnsafe(TextFile.AllPlayerAllDamage));
+                Elemental = Math.Max(Elemental, Player.GetCustomStatUnsafe(TextFile.AllPlayerElementalDamage));
+                Crit = Math.Max(Crit, Player.GetCustomStatUnsafe(TextFile.AllPlayerCrit));
             }
-            float MaxStackMult = 1f / (MathF.Max(1, PlayerSpawner.MultiplayerList.Count - 1) * 0.5f);
-            if (PlayerSpawner.MultiplayerList.Count <= 1) MaxStackMult = 1f;
-            maxStatus.Defense = maxStatus.Defense.IntMult(MaxStackMult);
-            maxStatus.AllDamage = maxStatus.AllDamage.IntMult(MaxStackMult);
-            maxStatus.Crit = maxStatus.Crit.IntMult(MaxStackMult);
-            maxStatus.ElementalDamage = maxStatus.ElementalDamage.IntMult(MaxStackMult);
-            return maxStatus;
+            int Count = PlayerSpawner.MultiplayerList.Count;
+            float Mult = Count <= 1 ? 1f : 1f / ((Count - 1) * 0.5f);
+            return new AllPlayerStatus(Defense.IntMult(Mult), AllDamage.IntMult(Mult), Elemental.IntMult(Mult), Crit.IntMult(Mult));
         }
 
         public static int GetRosionStack(this UnitAvatar Player)
@@ -85,24 +72,6 @@ namespace SPMod.Tool
             if (ModConfig.HardMode >= 4) i *= 3;
             if (PlayerSpawner.MultiplayerList.Count > 1) return Mathf.Min(90, i);  
             return i;
-        }
-
-        public static int GetMaxPlayerStatusForName(string Name)
-        {
-            int Value = 0;
-            switch(Name)
-            {
-                case TextFile.AllDamageBonus:
-                    Value = StarSephiriaMod.PartyStats.Value.AllDamage;
-                    break;
-                case TextFile.DamageReduction:
-                    Value = StarSephiriaMod.PartyStats.Value.Defense;
-                    break;
-                case TextFile.Critical:
-                    Value = StarSephiriaMod.PartyStats.Value.Crit * 100;
-                    break;
-            }
-            return Value;
         }
 
         public static List<string> SetCategories(params string[] categories)
@@ -150,6 +119,171 @@ namespace SPMod.Tool
                 statusID = statName,
                 valuesByLevel = values
             };
+        }
+
+        public static WeaponEntity SetAddons(this WeaponEntity Weapon, Action<WeaponAddon[]> action)
+        {
+            if (Weapon.mainWeaponPrefab == null)
+                return Weapon;
+            if (Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+            {
+                action.Invoke(Target.addons);
+            }
+            return Weapon;
+        }
+
+        public static WeaponAddonCommon_Status.Stat SetAddonStatus(ECustomStat statName, int V)
+        {
+            return new WeaponAddonCommon_Status.Stat
+            {
+                statId = statName,
+                value = V
+            };
+        }
+
+        public static WeaponEntity SetStatus(this WeaponEntity Weapon, params WeaponAddonCommon_Status.Stat[] Stats)
+        {
+            if (Weapon.mainWeaponPrefab == null)
+                return Weapon;
+            if (Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+            {
+                foreach (var Addon in Target.addons)
+                {
+                    if (Addon is WeaponAddonCommon_Status V)
+                    {
+                        V.status = Stats;
+                    }
+                }
+            }
+            return Weapon;
+        }
+
+        public static WeaponAddonCommon_StatusUnsafe.Stat SetAddonStatusUnsafe(string statName, int V, string Symbol = "")
+        {
+            return new WeaponAddonCommon_StatusUnsafe.Stat
+            {
+                statId = statName,
+                value = V,
+                displaySymbol = Symbol
+            };
+        }
+
+        public static WeaponEntity SetStatusUnsafe(this WeaponEntity Weapon, params WeaponAddonCommon_StatusUnsafe.Stat[] Stats)
+        {
+            if (Weapon.mainWeaponPrefab == null)
+                return Weapon;
+            if (Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+            {
+                foreach(var Addon in Target.addons)
+                {
+                    if (Addon is WeaponAddonCommon_StatusUnsafe V)
+                    {
+                        V.status = Stats;
+                    }
+                }
+            }
+            return Weapon;
+        }
+
+        public static WeaponEntity SetAddonStat(this WeaponEntity Weapon, string StatId, int Value)
+        {
+            if (Weapon.mainWeaponPrefab == null)
+                return Weapon;
+            if (!Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+                return Weapon;
+
+            bool Found = false;
+            foreach (WeaponAddon Addon in Target.addons)
+            {
+                if (Addon is WeaponAddonCommon_Status Status)
+                {
+                    foreach (WeaponAddonCommon_Status.Stat S in Status.status)
+                    {
+                        if (string.Equals(S.statId.ToString(), StatId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            S.value = Value;
+                            Found = true;
+                            break;
+                        }
+                    }
+                }
+                if (Found) break;
+                if (Addon is WeaponAddonCommon_StatusUnsafe Unsafe)
+                {
+                    foreach (WeaponAddonCommon_StatusUnsafe.Stat S in Unsafe.status)
+                    {
+                        if (string.Equals(S.statId, StatId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            S.value = Value;
+                            Found = true;
+                            break;
+                        }
+                    }
+                }
+                if (Found) break;
+            }
+
+            if (!Found)
+            {
+                if (Value == 0)
+                    return Weapon;
+
+                foreach (WeaponAddon Addon in Target.addons)
+                {
+                    if (Addon is WeaponAddonCommon_Status Status && Enum.TryParse(StatId, true, out ECustomStat EnumStat))
+                    {
+                        Status.status = Status.status.Append(new WeaponAddonCommon_Status.Stat
+                        {
+                            statId = EnumStat,
+                            value = Value
+                        }).ToArray();
+                        Found = true;
+                        break;
+                    }
+                    if (Addon is WeaponAddonCommon_StatusUnsafe Unsafe)
+                    {
+                        Unsafe.status = Unsafe.status.Append(new WeaponAddonCommon_StatusUnsafe.Stat
+                        {
+                            statId = StatId,
+                            value = Value
+                        }).ToArray();
+                        Found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!Found)
+                StarSephiriaMod.LogError($"[SetAddonStat]{Weapon.id} 的 addon 中没有 {StatId}，{Value} 未应用");
+            return Weapon;
+        }
+
+        public static WeaponEntity SetSimple(this WeaponEntity Weapon, Action<WeaponSimple> Action)
+        {
+            if (Weapon.mainWeaponPrefab == null)
+                return Weapon;
+            if (Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+                Action(Target);
+            return Weapon;
+        }
+
+        public static WeaponEntity ChangeAddon<T>(this WeaponEntity Weapon, Action<T> Action) where T : WeaponAddon
+        {
+            if (Weapon.mainWeaponPrefab == null)
+                return Weapon;
+            if (!Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+                return Weapon;
+
+            foreach (WeaponAddon Addon in Target.addons)
+            {
+                if (Addon is T Typed)
+                {
+                    Action(Typed);
+                    return Weapon;
+                }
+            }
+            StarSephiriaMod.LogError($"[ChangeAddon]{Weapon.id} 的 addon 中没有 {typeof(T).Name}");
+            return Weapon;
         }
 
         public static WeaponEntity SetCrossBowValue(this WeaponEntity Weapon, bool Mult, float FireSpeed, float RoldSpeed = -1f, int MagazineCount = -1, int MagazineCapacity = -1)
@@ -217,59 +351,78 @@ namespace SPMod.Tool
             }
         }
 
-        public static EDamageElementalType BaseStatTypeToMax(UnitAvatar Player)
+        public static EDamageElementalType GetHighestDamageElemental(UnitAvatar avatar, out string BaseName)
         {
-            int[] numbers = {
-                                Player.GetCustomStat(ECustomStat.PhysicalDamage),
-                                Player.GetCustomStat(ECustomStat.FireDamage),
-                                Player.GetCustomStat(ECustomStat.IceDamage),
-                                Player.GetCustomStat(ECustomStat.LightningDamage)
-                            };
-            if (numbers.Max() == numbers[1]) return EDamageElementalType.Fire;
-            if (numbers.Max() == numbers[2]) return EDamageElementalType.Ice;
-            if (numbers.Max() == numbers[3]) return EDamageElementalType.Lightning;
+            return GetHighestDamageElemental(avatar, out BaseName, out _);
+        }
+
+        public static EDamageElementalType GetHighestDamageElemental(UnitAvatar avatar, out string BaseName, out int MaxValue)
+        {
+            MaxValue = int.MinValue;
+            BaseName = TextFile.PhysicalDamage;
+            int Count = 0;
+            foreach (string Base in EffectConstant.BaseStatsName)
+            {
+                int Value = avatar.GetCustomStatUnsafe(Base);
+                if (Value > MaxValue)
+                {
+                    MaxValue = Value;
+                    Count = 1;
+                    BaseName = Base;
+                }
+                else if (Value == MaxValue)
+                {
+                    Count++;
+                    if (UnityEngine.Random.Range(0, Count) == 0)
+                        BaseName = Base;
+                }
+            }
+            if (EffectConstant.BaseStatusToElemental.TryGetValue(BaseName, out var Target))
+                return Target;
+            BaseName = TextFile.PhysicalDamage;
             return EDamageElementalType.Physical;
         }
 
         public static int BaseStatToMax(UnitAvatar Player)
         {
-            int[] numbers = {Player.GetCustomStat(ECustomStat.PhysicalDamage),
-                        Player.GetCustomStat(ECustomStat.FireDamage),
-                        Player.GetCustomStat(ECustomStat.IceDamage),
-                        Player.GetCustomStat(ECustomStat.LightningDamage)
-                        };
-            return numbers.Max();
+            int Max = int.MinValue;
+            foreach (string BaseStat in EffectConstant.BaseStatsName)
+            {
+                int Value = Player.GetCustomStatUnsafe(BaseStat);
+                if (Value > Max) Max = Value;
+            }
+            return Max;
         }
 
         public static int BaseStatToAverage(UnitAvatar Player)
         {
-            int[] numbers = {Player.GetCustomStat(ECustomStat.PhysicalDamage),
-                        Player.GetCustomStat(ECustomStat.FireDamage),
-                        Player.GetCustomStat(ECustomStat.IceDamage),
-                        Player.GetCustomStat(ECustomStat.LightningDamage)
-                        };
-            return (int)numbers.Average();
+            int Sum = 0;
+            foreach (string BaseStat in EffectConstant.BaseStatsName)
+            {
+                Sum += Player.GetCustomStatUnsafe(BaseStat);
+            }
+            return Sum / EffectConstant.BaseStatsName.Count;
         }
 
         public static int BaseStatToMin(UnitAvatar Player)
         {
-            int[] numbers = {Player.GetCustomStat(ECustomStat.PhysicalDamage),
-                        Player.GetCustomStat(ECustomStat.FireDamage),
-                        Player.GetCustomStat(ECustomStat.IceDamage),
-                        Player.GetCustomStat(ECustomStat.LightningDamage)
-                        };
-            return numbers.Min();
+            int Min = int.MaxValue;
+            foreach (string BaseStat in EffectConstant.BaseStatsName)
+            {
+                int Value = Player.GetCustomStatUnsafe(BaseStat);
+                if (Value < Min) Min = Value;
+            }
+            return Min;
         }
 
         public static int BaseOrigStatToMax(UnitAvatar Player)
         {
-            int[] numbers = {
-                Player.customStats.GetValueOrDefault(TextFile.PhysicalDamage, 0),
-                Player.customStats.GetValueOrDefault(TextFile.FireDamage, 0),
-                Player.customStats.GetValueOrDefault(TextFile.IceDamage, 0),
-                Player.customStats.GetValueOrDefault(TextFile.LightningDamage, 0),
-                        };
-            return numbers.Max();
+            List<int> Stat = new List<int>();
+            foreach (string BaseStat in EffectConstant.BaseStatsName)
+            {
+                Stat.Add(Player.customStats.GetValueOrDefault(BaseStat, 0));
+            }
+            return Stat.Max();
         }
 
         public static float GetMaxLife(UnitAvatar __instance)
@@ -279,8 +432,10 @@ namespace SPMod.Tool
             return baseHp + (baseHp * finalHp / 100f);
         }
 
-        public static bool GetMatchDebuffType(this CharacterDebuff DeBuff, PlayerAvatar Player, Type Base)
+        public static bool GetMatchDebuffType(this CharacterDebuff DeBuff, UnitAvatar Player, Type Base)
         {
+            if (DeBuff.NetworkAttacker != Player) return false;
+
             bool ElectricIce = Player.GetCustomStatUnsafe(TextFile.ElectricIce) > 0;
             bool Plasma = Player.GetCustomStatUnsafe(TextFile.PlasmaActive) > 0;
             if (Base == typeof(CharacterDebuff_Burn))
@@ -321,30 +476,11 @@ namespace SPMod.Tool
             return baseHp - 50;
         }
 
-        public static bool CostumeSkinUse(string playerName, string costumeID, string skinID, bool Net = true)
+        public static bool CostumeSkinUse(string playerName, string skinKey, bool Net = true)
         {
-            if (!ModConfig.Instance.EnableCostumeModifier || !NetworkServer.active && Net) return false;
+            if (!ModConfig.Instance.EnableCostumeModifier || (!NetworkServer.active && Net)) return false;
 
-            if (!StarSephiriaMod.CostumeType.TryGetValue(playerName, out string useCostume) || costumeID != useCostume)
-                return false;
-
-            if (!StarSephiriaMod.CostumeSkinDate.TryGetValue(costumeID + skinID, out string skinData))
-                return false;
-
-            if (!StarSephiriaMod.CostumeSkinType.TryGetValue(playerName, out string skin))
-                return false;
-
-            return skinData == skin;
-        }
-
-        public static bool CostumeSkinUse(string UseSkinName, string CostumeSkinID)
-        {
-            if (!ModConfig.Instance.EnableCostumeModifier) return false;
-
-            if (!StarSephiriaMod.CostumeSkinDate.TryGetValue(CostumeSkinID, out string skinData))
-                return false;
-
-            return UseSkinName == CostumeSkinID;
+            return StarSephiriaMod.CostumeSkinKey.TryGetValue(playerName, out string useKey) && useKey == skinKey;
         }
 
         public static Vector2 RotateTarget(Vector3 playerPos, Vector2 targetPos, float angleDegrees)
@@ -409,10 +545,10 @@ namespace SPMod.Tool
             if (StarSephiriaMod.WeaponType.TryGetValue(Player.Name, out int WeaponType))
             {
                 Weapon = WeaponType;
-                if (WeaponPatch.DamageIdx.TryGetValue((Player.Name, WeaponType), out (string, int) ForIdx))
+                if (WeaponPatch.DamageIdx.TryGetValue((Player, WeaponType), out (string, int) ForIdx))
                 {
                     Data = ForIdx;
-                    WeaponPatch.DamageIdx[(Player.Name, WeaponType)] = ("Nothing", -1);
+                    WeaponPatch.DamageIdx[(Player, WeaponType)] = ("Nothing", -1);
                     return true;
                 }
                 return true;
@@ -498,17 +634,27 @@ namespace SPMod.Tool
         public static Dictionary<string, Sprite> ModSpriteList = new Dictionary<string, Sprite>();
         public static Sprite? LoadModSprite(string Name)
         {
-            if (ModSpriteList.TryGetValue(Name, out var Value))
+            return LoadModSpriteInternal("", Name);
+        }
+        public static Sprite? LoadModSpriteForPath(string Path, string Name)
+        {
+            return LoadModSpriteInternal(Path, Name);
+        }
+        private static Sprite? LoadModSpriteInternal(string Path, string Name)
+        {
+            string Key = string.IsNullOrEmpty(Path) ? Name : $"{Path}.{Name}";
+            if (ModSpriteList.TryGetValue(Key, out var Value))
             {
                 return Value;
             }
             try
             {
                 Assembly assembly = Assembly.GetExecutingAssembly();
-                using Stream stream = assembly.GetManifestResourceStream($"SPMod.Sprites.{Name}.png");
+                string Resource = string.IsNullOrEmpty(Path) ? $"SPMod.Sprites.{Name}.png" : $"SPMod.Sprites.{Path}.{Name}.png";
+                using Stream stream = assembly.GetManifestResourceStream(Resource);
                 if (stream == null)
                 {
-                    StarSephiriaMod.LogError($"找不到嵌入资源：{Name}，请检查命名和生成操作");
+                    StarSephiriaMod.LogError($"找不到嵌入资源：{Resource}，请检查命名和生成操作");
                     return null;
                 }
 
@@ -516,10 +662,11 @@ namespace SPMod.Tool
                 stream.Read(imageData, 0, imageData.Length);
                 Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
                 texture.LoadImage(imageData);
+                texture.name = Name;
                 Sprite a = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 16f);
                 a.name = Name;
                 a.texture.filterMode = FilterMode.Point;
-                ModSpriteList[Name] = a;
+                ModSpriteList[Key] = a;
                 return a;
             }
             catch (Exception ex)
@@ -528,37 +675,159 @@ namespace SPMod.Tool
                 return null;
             }
         }
-        public static Sprite? LoadModSpriteForPath(string Path, string Name)
+
+        public static List<TMP_SpriteAsset> InjectedKeywordSpriteAssets = new List<TMP_SpriteAsset>();
+        public static void InjectKeywordSpriteAssets()
         {
-            if (ModSpriteList.TryGetValue(Name, out var Value))
-            {
-                return Value;
-            }
+            if (InjectedKeywordSpriteAssets.Count > 0) return;
             try
             {
+                const string ResourcePrefix = "SPMod.Sprites.";
+                const string IconPrefix = "KeywordIcon_";
                 Assembly assembly = Assembly.GetExecutingAssembly();
-                using Stream stream = assembly.GetManifestResourceStream($"SPMod.Sprites.{Path}.{Name}.png");
-                if (stream == null)
+                List<Sprite> Icons = new List<Sprite>();
+                foreach (string Resource in assembly.GetManifestResourceNames())
                 {
-                    StarSephiriaMod.LogError($"找不到嵌入资源：{Name}，请检查命名和生成操作");
-                    return null;
+                    if (!Resource.StartsWith(ResourcePrefix + IconPrefix) || !Resource.EndsWith(".png")) continue;
+                    string Name = Resource.Substring(ResourcePrefix.Length, Resource.Length - ResourcePrefix.Length - 4);
+                    Sprite? Icon = LoadModSprite(Name);
+                    if (Icon != null) Icons.Add(Icon);
+                }
+                if (Icons.Count == 0)
+                {
+                    StarSephiriaMod.LogInfo("TMP 图标注入：没有找到 KeywordIcon_ 开头的嵌入图标");
+                    return;
                 }
 
-                byte[] imageData = new byte[stream.Length];
-                stream.Read(imageData, 0, imageData.Length);
-                Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-                texture.LoadImage(imageData);
-                Sprite a = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 16f);
-                a.name = Name;
-                a.texture.filterMode = FilterMode.Point;
-                ModSpriteList[Name] = a;
-                return a;
+                TMP_SpriteAsset Asset = CreateKeywordSpriteAsset(Icons);
+                InjectedKeywordSpriteAssets.Add(Asset);
+
+                TMP_SpriteAsset? Default = TMP_Settings.defaultSpriteAsset;
+                if (Default != null) AddSpriteAssetFallback(Default, Asset);
+                else TMP_Settings.defaultSpriteAsset = Asset;
+
+                foreach (TMP_SpriteAsset Existing in Resources.FindObjectsOfTypeAll<TMP_SpriteAsset>())
+                {
+                    if (Existing != null && Existing.name == "Keyword") AddSpriteAssetFallback(Existing, Asset);
+                }
+                StarSephiriaMod.LogInfo($"TMP 图标注入：已注册 {string.Join(", ", Icons.Select(Icon => Icon.name))}");
             }
             catch (Exception ex)
             {
-                StarSephiriaMod.LogError($"加载嵌入图标失败：{ex.Message}");
-                return null;
+                StarSephiriaMod.LogError($"TMP 图标注入失败：{ex}");
             }
+        }
+        private static void AddSpriteAssetFallback(TMP_SpriteAsset Target, TMP_SpriteAsset Fallback)
+        {
+            if (Target == Fallback || Target.fallbackSpriteAssets == null) return;
+            if (!Target.fallbackSpriteAssets.Contains(Fallback)) Target.fallbackSpriteAssets.Add(Fallback);
+        }
+        private static TMP_SpriteAsset CreateKeywordSpriteAsset(List<Sprite> Icons)
+        {
+            const int Padding = 2;
+            int TotalWidth = Icons.Sum(Icon => Icon.texture.width) + Padding * (Icons.Count - 1);
+            int TotalHeight = Icons.Max(Icon => Icon.texture.height);
+            Texture2D Sheet = new Texture2D(TotalWidth, TotalHeight, TextureFormat.RGBA32, false)
+            {
+                name = "ModKeyword",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            Sheet.SetPixels(new Color[TotalWidth * TotalHeight]);
+
+            TMP_SpriteAsset Asset = ScriptableObject.CreateInstance<TMP_SpriteAsset>();
+            Asset.name = "Keyword";
+            Asset.spriteSheet = Sheet;
+            Asset.material = new Material(Shader.Find("TextMeshPro/Sprite"))
+            {
+                mainTexture = Sheet
+            };
+            Asset.spriteInfoList = new List<TMP_Sprite>();
+
+            int Offset = 0;
+            foreach (Sprite Icon in Icons)
+            {
+                Texture2D Source = Icon.texture;
+                Sheet.SetPixels(Offset, 0, Source.width, Source.height, Source.GetPixels());
+                Asset.spriteInfoList.Add(new TMP_Sprite
+                {
+                    name = Icon.name,
+                    sprite = Icon,
+                    x = Offset,
+                    y = 0,
+                    width = Source.width,
+                    height = Source.height,
+                });
+                Offset += Source.width + Padding;
+            }
+            Sheet.Apply(false);
+
+            for (int i = 0; i < Asset.spriteInfoList.Count; i++)
+            {
+                TMP_Sprite Entry = Asset.spriteInfoList[i];
+                Entry.id = i;
+                Entry.scale = 1f;
+                Entry.xAdvance = Entry.width;
+                Entry.yOffset = Entry.height * 0.9f;
+                Entry.unicode = 0xE000 + i;
+                Entry.hashCode = TMP_TextUtilities.GetSimpleHashCode(Entry.name);
+            }
+            Asset.UpdateLookupTables();
+
+            if (Asset.spriteCharacterTable != null && Asset.spriteGlyphTable != null)
+            {
+                for (int i = 0; i < Asset.spriteCharacterTable.Count && i < Asset.spriteGlyphTable.Count; i++)
+                    Asset.spriteCharacterTable[i].glyph = Asset.spriteGlyphTable[i];
+            }
+            return Asset;
+        }
+
+        public static EStatValueSign GetStandardSign(float value, float defaultValue = 0f)
+        {
+            if (Mathf.Abs(value - defaultValue) <= float.Epsilon)
+            {
+                return EStatValueSign.Neutral;
+            }
+
+            if (value < defaultValue)
+            {
+                return EStatValueSign.Negative;
+            }
+
+            return EStatValueSign.Positive;
+        }
+
+        /// <summary>
+        /// 搜索范围内所有敌对单位。
+        /// </summary>
+        /// <param name="owner">攻击者，用于排除自身和判断阵营</param>
+        /// <param name="center">范围中心</param>
+        /// <param name="radius">范围半径</param>
+        /// <param name="attackingLayer"> 0=只打地面, 1=无视高度</param>
+        /// <param name="includeBodySize">是否把目标身体体积补偿进范围</param>
+        public static List<UnitAvatar> SearchEnemiesInRange(UnitAvatar owner, Vector3 center, float radius, int attackingLayer = 0, bool includeBodySize = false)
+        {
+            List<UnitAvatar> Target = new List<UnitAvatar>();
+            foreach (UnitAvatar target in CombatManager.Instance.AllCreatures)
+            {
+                if (target == null || target == owner) continue;
+                if (target.IsDead || target.hp <= 0f) continue;
+                if (target.IsInvulnerable) continue;
+                if (target.canBeTarget.IsFalse()) continue;
+                if (!target.gameObject.activeSelf) continue;
+                if (attackingLayer != -1 && target.TopdownActor != null && target.TopdownActor.HitboxLayer != attackingLayer) continue;
+                if (!CombatManager.ContainsAttackableFaction(target.GetHostileFactionLayers(EDamageFromType.None), owner.faction)) continue;
+                float checkRadius = radius;
+                if (includeBodySize && target.TopdownActor != null)
+                {
+                    Vector2 size = target.TopdownActor.size;
+                    checkRadius += Mathf.Max(size.x, size.y) * 0.5f;
+                }
+                Vector2 targetPos = target.transform.position;
+                if ((targetPos - (Vector2)center).sqrMagnitude > checkRadius * checkRadius) continue;
+                Target.Add(target);
+            }
+            return Target;
         }
 
         // 值计算辅助方法

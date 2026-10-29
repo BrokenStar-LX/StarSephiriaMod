@@ -9,6 +9,7 @@ public class ModConfigData
     public bool IsTestMode { get; set; } = false;
     public bool DisplayDisabledItems { get; set; } = false;
     public bool EnableCostumeModifier { get; set; } = true;
+    public bool EnableCostumeTransmog { get; set; } = true;
     public bool EnableWeaponModifier { get; set; } = true;
     public bool EnableDamageStatistics { get; set; } = true;
 

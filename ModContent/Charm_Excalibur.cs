@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace SPMod.ModContent
 {
-    public class Charm_Excalibur : Charm_Active, IAttackableCharm
+    public class Charm_Excalibur : Charm_Active, IAttackableCharm, IModCooldownReceiver, IModEventReceiver
     {
         public float[] MultByLevel = new float[] { 200, 400, 600, 800, 1000 };
         public Timer CooldownTimer = new Timer(4f);
@@ -13,17 +13,18 @@ namespace SPMod.ModContent
         public GameObject? Shoot = null;
         public NewWeaponFireData? EffectData = null;
         public string DamageId = "[Star's Sephiria Mod]湖中剑";
-        [SyncVar]
         public bool UseAddTimer = false;
-        [SyncVar]
         public bool UseEffect = false;
-        [SyncVar]
-        private float SyncPhaseEnd;
+        private float ClientPhaseEnd = 0f;
+        private float NextBroadcastTime = 0f;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
+            string text = "0";
+            if (IsEffectEnabled)
+                text = CalculateDamage(this).ToString("#0");
             return new Loc.KeywordValue[]
             {
-                new Loc.KeywordValue("Damage", CalculateDamage(this).ToString("#0"), EffectConstant.WeaponColor),
+                new Loc.KeywordValue("Damage", text, EffectConstant.WeaponColor),
                 new Loc.KeywordValue("Mult", MultByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
             };
         }
@@ -37,12 +38,7 @@ namespace SPMod.ModContent
         {
             if (!isServer)
             {
-                float ReMain = SyncPhaseEnd - (float)NetworkTime.time;
-                if (ReMain > 0)
-                {
-                    return 1f - Mathf.Clamp01(ReMain / CooldownTimer.time);
-                }
-                return 0f;
+                return ModNetwork.ClientCooldown(ClientPhaseEnd, CooldownTimer.time);
             }
             if (UseEffect)
             {
@@ -55,9 +51,19 @@ namespace SPMod.ModContent
         {
             if (!isServer) return;
 
-            float Delta = ratio * CooldownTimer.time;
             CooldownTimer.Ratio += ratio;
-            SyncPhaseEnd -= Delta;
+            BroadcastCooldown();
+        }
+
+        public void OnClientCooldown(float PhaseEnd)
+        {
+            ClientPhaseEnd = PhaseEnd;
+        }
+
+        private void BroadcastCooldown()
+        {
+            float PhaseEnd = UseEffect ? 0f : (float)NetworkTime.time + CooldownTimer.GetRemainingTime();
+            ModNetwork.SendCooldown(netId, PhaseEnd);
         }
 
         protected override void OnEnabledEffect()
@@ -77,8 +83,10 @@ namespace SPMod.ModContent
             }
             base.OnEnabledEffect();
             NetworkAvatar.OnAttackUnit += AddDamage;
-            CooldownTimer.Ratio = 1f;
-            SyncPhaseEnd = (float)NetworkTime.time;
+            CooldownTimer.Ratio = 0f;
+            UseEffect = true;
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
         }
 
         private void AddDamage(UnitAvatar Target, DamageInstance Damage)
@@ -96,7 +104,9 @@ namespace SPMod.ModContent
         {
             base.OnDisabledEffect();
             NetworkAvatar.OnAttackUnit -= AddDamage;
-            CooldownTimer.Ratio = 1f;
+            CooldownTimer.Ratio = 0f;
+            UseEffect = true;
+            BroadcastCooldown();
         }
 
         protected override void OnUpdate()
@@ -110,6 +120,12 @@ namespace SPMod.ModContent
             if (!UseEffect && CooldownTimer.Update(Time.deltaTime))
             {
                 UseEffect = true;
+                BroadcastCooldown();
+            }
+            else if (!UseEffect && NetworkTime.time >= NextBroadcastTime)
+            {
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastCooldown();
             }
         }
 
@@ -124,14 +140,15 @@ namespace SPMod.ModContent
             float Damage = CalculateDamage(this);
             MeleeCollision.Pool.Spawn(Shoot, position, true, EDamageFromType.None, DamageId, Damage, 25, 2f, NetworkAvatar, NetworkAvatar.GetHostileFactionLayers(EDamageFromType.None), 0.3f, position, position, null, null, 0f, EDamageElementalType.Physical, false);
 
-            RpcPlaySwingFx();
+            if (isClient) PlaySwingFx();
+            ModNetwork.SendEvent(netId, 1, NetworkAvatar.transform.position);
 
             UseEffect = false;
-            SyncPhaseEnd = (float)(NetworkTime.time + CooldownTimer.time);
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
         }
 
-        [ClientRpc]
-        void RpcPlaySwingFx()
+        private void PlaySwingFx()
         {
             if (EffectData == null)
             {
@@ -139,7 +156,17 @@ namespace SPMod.ModContent
                 WeaponSimple_Katana Katana = Weapon.mainWeaponPrefab.GetComponent<WeaponSimple_Katana>();
                 EffectData = Katana.greatDrawFireData;
             }
-            WeaponController?.currentWeapon?.CreateBasicAttackSwingFxFullyManual(EffectData);
+            // WeaponController 只在服务端 Connect 里赋值，客机要用 NetworkAvatar 现取
+            WeaponControllerSimple? Controller = WeaponController;
+            if (Controller == null && NetworkAvatar != null)
+                Controller = NetworkAvatar.GetComponent<WeaponControllerSimple>();
+            Controller?.currentWeapon?.CreateBasicAttackSwingFxFullyManual(EffectData);
+        }
+
+        public void OnClientEvent(byte Event, Vector3 Pos, string S1, string S2)
+        {
+            if (isServer) return;
+            if (Event == 1) PlaySwingFx();
         }
 
         public float GetDamage(UnitAvatar avatar)

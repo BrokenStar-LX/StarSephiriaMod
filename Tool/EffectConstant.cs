@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using static SPMod.Tool.ModuleComponents;
 using Color = UnityEngine.Color;
 
 namespace SPMod.Tool
@@ -9,6 +11,7 @@ namespace SPMod.Tool
         public const int UncommonCost = 600;
         public const int RareCost = 800;
         public const int LegendCost = 1100;
+        public static EDamageElementalType Wind = (EDamageElementalType)100;
 
         public static Color WeaponColor = new Color(0.9725f, 0.9176f, 0.847f);
         public static Color WeaponColor2 = new Color(0.8745f, 0.4431f, 0.1490f);
@@ -17,6 +20,7 @@ namespace SPMod.Tool
         public static Color IceColor = new Color(0.8392157f, 0.9137255f, 0.9529412f);
         public static Color FireColor = new Color(1f, 0.7882353f, 0f);
         public static Color LightningColor = new Color(0.5294118f, 1f, 1f);
+        public static Color WindColor = new Color(0.6039f, 0.9176f, 0.6078f);
         public static Color CritColor = new Color(0.9056604f, 0.8040091f, 0.2862228f);
         public static Color PoisonColor = new Color(0.5986261f, 0.136659f, 0.7830189f);
         public static Color MagicColor = new Color(0.2784314f, 0.5529412f, 0.9803922f);
@@ -32,11 +36,22 @@ namespace SPMod.Tool
 
         public static List<string> BaseStatsName = new List<string>()
         {
-            TextFile.PhysicalDamage, TextFile.FireDamage, TextFile.IceDamage, TextFile.LightningDamage
+            TextFile.PhysicalDamage, TextFile.FireDamage, TextFile.IceDamage, TextFile.LightningDamage, TextFile.WindDamage
         };
-        public static List<string> PartyStatsName = new List<string>()
+        public static Dictionary<string, EDamageElementalType> BaseStatusToElemental = new Dictionary<string, EDamageElementalType>()
         {
-            TextFile.DamageReduction, TextFile.AllDamageBonus, TextFile.Critical
+            { TextFile.PhysicalDamage, EDamageElementalType.Physical },
+            { TextFile.FireDamage, EDamageElementalType.Fire },
+            { TextFile.IceDamage, EDamageElementalType.Ice },
+            { TextFile.LightningDamage, EDamageElementalType.Lightning },
+            { TextFile.WindDamage, Wind }
+        };
+
+        public static readonly Dictionary<string, Func<AllPlayerStatus, int>> PartyStatsGetter = new Dictionary<string, Func<AllPlayerStatus, int>>()
+        {
+            { TextFile.DamageReduction, s => s.Defense },
+            { TextFile.AllDamageBonus, s => s.AllDamage },
+            { TextFile.Critical, s => s.Crit * 100 },
         };
         public static Dictionary<string, int> ActiveSkillList = new Dictionary<string, int>();
     }

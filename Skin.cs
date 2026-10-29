@@ -13,16 +13,16 @@ namespace SPMod
     {
         private static readonly List<SpriteReplaceData> SkinList = new List<SpriteReplaceData>();
         private static readonly Dictionary<string, SpriteReplaceData> SpriteToSkin = new Dictionary<string, SpriteReplaceData>(StringComparer.OrdinalIgnoreCase);
-        private static readonly Dictionary<Sprite, Sprite> PivotFixed = new Dictionary<Sprite, Sprite>();
+        private static readonly Dictionary<(Sprite Origin, Sprite Replacement), Sprite> PivotFixed = new Dictionary<(Sprite Origin, Sprite Replacement), Sprite>();
         public static Sprite FixPivot(Sprite origin, Sprite repl)
         {
-            if (PivotFixed.TryGetValue(origin, out Sprite Cached)) return Cached;
+            if (PivotFixed.TryGetValue((origin, repl), out Sprite Cached)) return Cached;
 
             Vector2 Pivot = new Vector2(origin.pivot.x / origin.rect.width,
                                         origin.pivot.y / origin.rect.height);
             Sprite Fixed = Sprite.Create(repl.texture, repl.rect, Pivot, origin.pixelsPerUnit, 0, SpriteMeshType.FullRect);
             Fixed.name = repl.name;
-            PivotFixed[origin] = Fixed;
+            PivotFixed[(origin, repl)] = Fixed;
             return Fixed;
         }
         public static void Add(SpriteReplaceData Data)
@@ -34,6 +34,16 @@ namespace SPMod
         private static void Handle(Animator2D_Basic animator, ref Sprite sprite)
         {
             if (sprite == null) return;
+            if (ModBullet.HasSpriteName(sprite.name))
+            {
+                ModSpriteMap? Marker = animator.GetComponentInParent<ModSpriteMap>(true);
+                if (Marker != null && ModBullet.TryGetSpriteMap(Marker.Key, out Dictionary<string, Sprite> ModMap)
+                    && ModMap.TryGetValue(sprite.name, out Sprite? ModSprite) && ModSprite != null)
+                {
+                    sprite = FixPivot(sprite, ModSprite);
+                    return;
+                }
+            }
             if (!SpriteToSkin.TryGetValue(sprite.name, out SpriteReplaceData Data)) return;
             UnitAvatar? Player = GetPlayer(animator);
             if (Player == null) return;

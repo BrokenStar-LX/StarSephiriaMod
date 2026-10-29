@@ -7,6 +7,7 @@ namespace SPMod.Tool
 {
     public static class WeaponIDs
     {
+        public const int ModWeaponId = 1000000;
         // 剑盾
         public const int DefaultSwordandShield = 0;                 // 标准剑盾
         public const int ProtectionoftheFuzz = 1;                   // 绒毛的守护
@@ -42,6 +43,9 @@ namespace SPMod.Tool
         public const int BlindingSilence = 1028;                    // 耀目的寂静 
         public const int GardenofNeedleIce = 1029;                  // 霜针花园  
         public const int PrismaticMagic = 1030;                     // 棱镜法杖
+
+        public const int WindSword = ModWeaponId;                   // 风语者
+        public const int SpiralCloudBand = ModWeaponId + 1;         // 螺旋云带
 
         // 大剑系列  
         public const int SteelGreatsword = 10;                      // 钢铁巨剑
@@ -108,6 +112,10 @@ namespace SPMod.Tool
         public const int FrozenSmelt = 1216;                        // 冷冻公鱼
         public const int Drífa = 1217;                              // 德里法
 
+        public const int WindDagger = ModWeaponId + 1200;           // 层流
+        public const int Vortex = ModWeaponId + 1201;               // 漩涡
+        public const int VacuumBlade = ModWeaponId + 1202;          // 真空刃
+
         //弩系列
         public const int ColossalCrossbow = 100;                    // 重型弩
         public const int ReloadDevice = 101;                        // 重型弩：重装装置
@@ -139,6 +147,9 @@ namespace SPMod.Tool
         public const int TheBarnacle = 127;                         // 藤壶
         public const int M9200 = 128;                               // M-9200
 
+        public const int WindCrossbow = ModWeaponId + 100;          // 重型弩：穿风刺
+        public const int AirValve = ModWeaponId + 101;              // 重型弩：气阀
+
         // 太刀系列
         public const int Blade = 400;                               // 刀
         public const int LongBladeOnohara = 401;                    // 太刀「小野原」
@@ -164,6 +175,9 @@ namespace SPMod.Tool
         public const int ArmorBender = 423;                         // 破甲之刃
         public const int BreakplateBlade = 424;                     // 破甲刀
         public const int CeruleanCloudSwordArges = 425;             // 苍云刀“阿尔格斯”
+
+        public const int WindKatana = ModWeaponId + 400;            // 岚切
+        public const int Moment = ModWeaponId + 401;                // 刹那
 
         // 棍系列
         public const int Quarterstaff = 500;                        // 长棍
@@ -191,6 +205,9 @@ namespace SPMod.Tool
         public const int SacredJar = 530;                           // 神圣之壶
         public const int FormlessDance = 531;                       // 无形之舞
         public const int Successor = 532;                           // 继承者
+
+        public const int WindStaff = ModWeaponId + 500;             // 拨云棍
+        public const int Oars = ModWeaponId + 501;                  // 空舟船桨
 
         public enum WeaponCategory
         {

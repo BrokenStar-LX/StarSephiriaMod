@@ -1,17 +1,17 @@
 ﻿using Mirror;
+using SPMod.Tool;
 using UnityEngine;
 
 namespace SPMod.ModContent
 {
-    public class Charm_ShootBack : Charm_Active
+    public class Charm_ShootBack : Charm_Active, IModCooldownReceiver
     {
         public Timer CooldownTimer = new Timer(5f);
         public float Effect = 0.3f;
         public float EffectTimer = 0f;
-        [SyncVar]
         public bool UseShootBack = false;
-        [SyncVar]
-        private float SyncPhaseEnd;
+        private float ClientPhaseEnd = 0f;
+        private float NextBroadcastTime = 0f;
         public override float GetCooldownTime(out bool changeByLevel, int level, int virtualLevelOffset)
         {
             changeByLevel = false;
@@ -22,12 +22,7 @@ namespace SPMod.ModContent
         {
             if (!isServer)
             {
-                float ReMain = SyncPhaseEnd - (float)NetworkTime.time;
-                if (ReMain > 0)
-                {
-                    return 1f - Mathf.Clamp01(ReMain / GetCooldownTime(out _, 0, 0));
-                }
-                return 0f;
+                return ModNetwork.ClientCooldown(ClientPhaseEnd, CooldownTimer.time);
             }
             if (UseShootBack)
             {
@@ -40,12 +35,25 @@ namespace SPMod.ModContent
         {
         }
 
+        public void OnClientCooldown(float PhaseEnd)
+        {
+            ClientPhaseEnd = PhaseEnd;
+        }
+
+        private void BroadcastCooldown()
+        {
+            float PhaseEnd = UseShootBack ? 0f : (float)NetworkTime.time + CooldownTimer.GetRemainingTime();
+            ModNetwork.SendCooldown(netId, PhaseEnd);
+        }
+
         protected override void OnEnabledEffect()
         {
             base.OnEnabledEffect();
             NetworkAvatar.OnParry += OnParry;
             CooldownTimer.Ratio = 1f;
-            SyncPhaseEnd = (float)NetworkTime.time;
+            UseShootBack = true;
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
         }
 
         protected override void OnDisabledEffect()
@@ -53,17 +61,17 @@ namespace SPMod.ModContent
             base.OnDisabledEffect();
             NetworkAvatar.OnParry -= OnParry;
             CooldownTimer.Ratio = 1f;
+            UseShootBack = true;
+            BroadcastCooldown();
         }
 
         private void OnParry(DamageInstance obj)
         {
             if (EffectTimer > 0)
             {
-                float OldRatio = CooldownTimer.Ratio;
                 CooldownTimer.Ratio = 0.9f;
-                float DeltaSec = (CooldownTimer.Ratio - OldRatio) * CooldownTimer.time;
-                SyncPhaseEnd -= DeltaSec;
                 EffectTimer = 0f;
+                BroadcastCooldown();
             }
         }
 
@@ -81,6 +89,12 @@ namespace SPMod.ModContent
             if (!UseShootBack && CooldownTimer.Update(Time.deltaTime))
             {
                 UseShootBack = true;
+                BroadcastCooldown();
+            }
+            else if (!UseShootBack && NetworkTime.time >= NextBroadcastTime)
+            {
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastCooldown();
             }
         }
 
@@ -92,8 +106,9 @@ namespace SPMod.ModContent
                 WeaponController.StartParryInvincible(Effect);
                 EffectTimer = Effect;
                 CooldownTimer.Ratio = 0f;
-                SyncPhaseEnd = (float)(NetworkTime.time + CooldownTimer.time);
                 UseShootBack = false;
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastCooldown();
             }
         }
 

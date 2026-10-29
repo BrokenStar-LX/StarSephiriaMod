@@ -48,17 +48,17 @@ namespace SPMod.Tool
                         }
                         if (Player.IsWeaponUseNet(WeaponIDs.Minimalism, WeaponIDs.TheSecond, WeaponIDs.BlackIronHalberd))
                         {
-                            if (WeaponPatch.MinimalismDashAttack.TryGetValue(Player.Name, out int Stack3))
+                            if (WeaponPatch.MinimalismDashAttack.TryGetValue(Player, out int Stack3))
                                 text += string.Format(Tools.GetLocalization("UI_Buff_MinimalismStack"), Stack3);
                         }
-                        if (Player.IsWeaponUseNet(WeaponIDs.Heidi) && WeaponPatch.HeidiDashAttack.TryGetValue(Player.Name, out int HeidiDash))
+                        if (Player.IsWeaponUseNet(WeaponIDs.Heidi) && WeaponPatch.HeidiDashAttack.TryGetValue(Player, out int HeidiDash))
                         {
                             text += string.Format(Tools.GetLocalization("UI_Buff_HeidiResidualHeat"), HeidiDash);
                         }
                         if (Player.IsWeaponUseNet(WeaponIDs.RuadhsleaSpear))
                         {
-                            if (WeaponPatch.RuadhsleaSpearTime.TryGetValue(Player.Name, out Timer Buff) &&
-                                WeaponPatch.RuadhsleaSpearBuff.TryGetValue(Player.Name, out int BuffStack) && BuffStack > 0)
+                            if (WeaponPatch.RuadhsleaSpearTime.TryGetValue(Player, out Timer Buff) &&
+                                WeaponPatch.RuadhsleaSpearBuff.TryGetValue(Player, out int BuffStack) && BuffStack > 0)
                             {
                                 text += string.Format(Tools.GetLocalization("UI_Buff_RuadhsleaDamageStack"), BuffStack);
                                 text += string.Format(Tools.GetLocalization("UI_Buff_RuadhsleaDamageTime"), (1f - Buff.Ratio) * Buff.time);
@@ -66,7 +66,7 @@ namespace SPMod.Tool
                         }
                         if (Player.IsWeaponUseNet(WeaponIDs.YuisShortDagger))
                         {
-                            if (WeaponPatch.YuisShortDaggerMagic.TryGetValue(Player.Name, out int Value))
+                            if (WeaponPatch.YuisShortDaggerMagic.TryGetValue(Player, out int Value))
                             {
                                 text += string.Format(Tools.GetLocalization("UI_Buff_YuisShortDaggerMagic"), Value);
                             }
@@ -76,13 +76,6 @@ namespace SPMod.Tool
                             if (WeaponPatch.FiaolasJudgmentStaffBuff.TryGetValue(Player, out Timer Buff) && Buff.Ratio < 1f)
                             {
                                 text += string.Format(Tools.GetLocalization("UI_Buff_FiaolasJudgmentStaff"), (1f - Buff.Ratio) * Buff.time);
-                            }
-                        }
-                        if (Player.IsWeaponUseNet(WeaponIDs.TomeOfMimicry))
-                        {
-                            if (WeaponPatch.TomeOfMimicryEffectTime.TryGetValue(Player.Name, out Timer Buff))
-                            {
-                                text += string.Format(Tools.GetLocalization("UI_Buff_PassiveCooldown"), (1f - Buff.Ratio) * Buff.time);
                             }
                         }
                         if (Player.IsWeaponUseNet(WeaponIDs.FrozenSmelt))

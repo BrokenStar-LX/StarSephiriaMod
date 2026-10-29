@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace SPMod.ModContent
 {
-    public class Charm_SilentStrike : Charm_Active, IAttackableCharm
+    public class Charm_SilentStrike : Charm_Active, IAttackableCharm, IModCastStateReceiver
     {
         public float[] MultByLevel = new float[] { 1000, 2000, 3000, 4000, 5000 };
         public Timer CooldownTimer = new Timer(12f);
@@ -18,15 +18,21 @@ namespace SPMod.ModContent
         private StatusInstance? MoveSpeedInstance = null;
         private Coroutine? EffectCoroutine = null;
         public float ProgressTime = 0f;
-        [SyncVar]
         public bool UseEffect = false;
-        [SyncVar]
-        private float SyncPhaseEnd;
+        private float ServerCastTime = 0f;
+        private float ClientCastTime = 0f;
+        private float NextBroadcastTime = 0f;
+        private const byte EventState = 0;
+        private const byte EventCast = 1;
+        private const byte EventStrike = 2;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
+            string text = "0";
+            if (IsEffectEnabled)
+                text = CalculateDamage(this).ToString("#0");
             return new Loc.KeywordValue[]
             {
-                new Loc.KeywordValue("Damage", CalculateDamage(this).ToString("#0"), EffectConstant.WeaponColor),
+                new Loc.KeywordValue("Damage", text, EffectConstant.WeaponColor),
                 new Loc.KeywordValue("Mult", MultByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
             };
         }
@@ -40,15 +46,11 @@ namespace SPMod.ModContent
         {
             if (!isServer)
             {
-                float ReMain = SyncPhaseEnd - (float)NetworkTime.time;
-                if (ReMain > 0)
-                {
-                    if (ReMain <= 3f)
-                    {
-                        return Mathf.Clamp01(ReMain);
-                    }
-                    return 1f - Mathf.Clamp01((ReMain - 3f) / CooldownTimer.time);
-                }
+                if (ClientCastTime <= 0f) return 0f;
+                float Elapsed = (float)NetworkTime.time - ClientCastTime;
+                if (Elapsed < 3f) return Mathf.Clamp01(Elapsed / 3f);
+                if (Elapsed < 3f + CooldownTimer.time)
+                    return Mathf.Clamp01(1f - (Elapsed - 3f) / CooldownTimer.time);
                 return 0f;
             }
             if (UseEffect)
@@ -83,7 +85,8 @@ namespace SPMod.ModContent
             NetworkAvatar.OnCalculateDamage += OnCalculateDamage;
             NetworkAvatar.OnAttackUnitBeforeOperation += OnAttack;
             CooldownTimer.Ratio = 1f;
-            SyncPhaseEnd = (float)NetworkTime.time;
+            ServerCastTime = 0f;
+            BroadcastState(EventState);
         }
 
         private void OnAttack(UnitAvatar Target, DamageInstance Damage)
@@ -113,6 +116,8 @@ namespace SPMod.ModContent
         {
             base.OnDisabledEffect();
             CooldownTimer.Ratio = 1f;
+            ServerCastTime = 0f;
+            BroadcastState(EventState);
             EndEffect();
         }
 
@@ -126,14 +131,31 @@ namespace SPMod.ModContent
                     UseEffect = true;
                 }
             }
+
+            if (ServerCastTime > 0f)
+            {
+                float Now = (float)NetworkTime.time;
+                if (Now - ServerCastTime >= 3f + CooldownTimer.time)
+                {
+                    ServerCastTime = 0f;
+                    BroadcastState(EventState);
+                }
+                else if (Now >= NextBroadcastTime)
+                {
+                    NextBroadcastTime = Now + 2f;
+                    BroadcastState(EventState);
+                }
+            }
         }
 
         protected override void FireCastingServer(Vector3 aimedPosition, UnitAvatar aimedTarget)
         {
             if (!UseEffect) return;
 
-            SyncPhaseEnd = (float)(NetworkTime.time + 3f + CooldownTimer.time);
+            ServerCastTime = (float)NetworkTime.time;
+            NextBroadcastTime = ServerCastTime + 2f;
             EffectCoroutine = StartCoroutine(StealthCoroutine());
+            BroadcastState(EventCast);
             if (UIManager.Instance && NetworkAvatar)
             {
                 UIManager.Pool.Spawn<UI_DamageParticle>(NetworkAvatar.transform.position + (Vector3)UnityEngine.Random.insideUnitCircle).SetDamage("Stealth!", EffectConstant.DefenseColor);
@@ -154,7 +176,6 @@ namespace SPMod.ModContent
             EvasionHit = 0;
             ProgressTime = 0f;
             EffectCoroutine = null;
-            SyncPhaseEnd = (float)NetworkTime.time;
         }
 
         private IEnumerator StealthCoroutine()
@@ -186,14 +207,14 @@ namespace SPMod.ModContent
             {
                 UIManager.Pool.Spawn<UI_DamageParticle>(NetworkAvatar.transform.position + (Vector3)UnityEngine.Random.insideUnitCircle).SetDamage("Sakuragi!", EffectConstant.DefenseColor);
             }
-            RpcPlaySwingFx();
+            if (isClient) PlaySwingFx();
+            BroadcastState(EventStrike);
             EvasionHit = 0;
             ProgressTime = 0f;
             yield break;
         }
 
-        [ClientRpc]
-        void RpcPlaySwingFx()
+        private void PlaySwingFx()
         {
             if (EffectData == null)
             {
@@ -201,7 +222,33 @@ namespace SPMod.ModContent
                 WeaponSimple_Katana Katana = Weapon.mainWeaponPrefab.GetComponent<WeaponSimple_Katana>();
                 EffectData = Katana.greatDrawFireData;
             }
-            WeaponController?.currentWeapon?.CreateBasicAttackSwingFxFullyManual(EffectData);
+            WeaponControllerSimple? Controller = WeaponController;
+            if (Controller == null && NetworkAvatar != null)
+                Controller = NetworkAvatar.GetComponent<WeaponControllerSimple>();
+            Controller?.currentWeapon?.CreateBasicAttackSwingFxFullyManual(EffectData);
+        }
+
+        public void OnClientCastState(float CastTime, byte Event)
+        {
+            ClientCastTime = CastTime;
+            if (isServer) return;
+
+            if (Event == EventCast)
+            {
+                if (UIManager.Instance && NetworkAvatar)
+                    UIManager.Pool.Spawn<UI_DamageParticle>(NetworkAvatar.transform.position + (Vector3)UnityEngine.Random.insideUnitCircle).SetDamage("Stealth!", EffectConstant.DefenseColor);
+            }
+            else if (Event == EventStrike)
+            {
+                PlaySwingFx();
+                if (UIManager.Instance && NetworkAvatar)
+                    UIManager.Pool.Spawn<UI_DamageParticle>(NetworkAvatar.transform.position + (Vector3)UnityEngine.Random.insideUnitCircle).SetDamage("Sakuragi!", EffectConstant.DefenseColor);
+            }
+        }
+
+        private void BroadcastState(byte Event)
+        {
+            ModNetwork.SendCastState(netId, ServerCastTime, Event);
         }
 
         public float GetDamage(UnitAvatar avatar)

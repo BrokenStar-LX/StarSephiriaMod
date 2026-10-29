@@ -1,6 +1,7 @@
 ﻿using Mirror;
 using System.Collections.Generic;
 using System.Linq;
+using static SPMod.Tool.ModuleComponents;
 
 namespace SPMod.ModContent
 {
@@ -18,6 +19,23 @@ namespace SPMod.ModContent
             base.OnEnabledEffect();
             NetworkAvatar.OnAttackUnit += HandleCheck;
             DungeonPatchs.OnLoadNewNumberofReincarnations += ReSave;
+            foreach (ModItem Value in LoadModContent.ModItemEntityData)
+            {
+                if (Value.Item == null) continue;
+                if (Value.Item.type != EItemType.Potion) continue;
+
+                int Id = Value.Item.id;
+                if (Value.Item.rarity == EItemRarity.Uncommon)
+                {
+                    if (!UncommonPotion.Contains(Id))
+                        UncommonPotion.Add(Id);
+                }
+                if (Value.Item.rarity == EItemRarity.Rare)
+                {
+                    if (!RarePotion.Contains(Id))
+                        RarePotion.Add(Id);
+                }
+            }
         }
 
 

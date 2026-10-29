@@ -4,32 +4,24 @@ using UnityEngine;
 
 namespace SPMod.ModContent
 {
-    public class Charm_BodyBomb : Charm_Active, IAttackableCharm
+    public class Charm_BodyBomb : Charm_Active, IAttackableCharm, IModCooldownReceiver
     {
-        public float[] MaxByLevel = new float[] { 140, 280, 420, 560, 700 };
+        public float[] MaxByLevel = new float[] { 90, 180, 270, 360, 450 };
         public Timer CooldownTimer = new Timer(1f);
         public GameObject? Boom = null;
         public string DamageId = "[Star's Sephiria Mod]邪祭咒纸";
-        [SyncVar]
         public bool UseShootBack = false;
-        [SyncVar]
-        private float SyncPhaseEnd;
+        private float ClientPhaseEnd = 0f;
+        private float NextBroadcastTime = 0f;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
-            string text;
-            if (!showAllLevel)
-            {
-                text = MaxByLevel.SafeRandomAccess(LevelToIdx(level)).ToString();
-            }
-            else
-            {
-                text = MaxByLevel.SafeRandomAccess(0).ToString() + "→" + MaxByLevel.SafeRandomAccess(maxLevel).ToString();
-            }
+            float text = MaxByLevel.SafeRandomAccess(LevelToIdx(level));
             return new Loc.KeywordValue[]
             {
-                new Loc.KeywordValue("Max", text.ToString(), GetPositiveColor(virtualLevelOffset)),
+                new Loc.KeywordValue("Max", text.ToString("#0"), GetPositiveColor(virtualLevelOffset)),
             };
         }
+
         public override float GetCooldownTime(out bool changeByLevel, int level, int virtualLevelOffset)
         {
             changeByLevel = false;
@@ -40,12 +32,7 @@ namespace SPMod.ModContent
         {
             if (!isServer)
             {
-                float ReMain = SyncPhaseEnd - (float)NetworkTime.time;
-                if (ReMain > 0)
-                {
-                    return 1f - Mathf.Clamp01(ReMain / CooldownTimer.time);
-                }
-                return 0f;
+                return ModNetwork.ClientCooldown(ClientPhaseEnd, CooldownTimer.time);
             }
             if (UseShootBack)
             {
@@ -56,9 +43,19 @@ namespace SPMod.ModContent
 
         public override void CooldownDecrease(float ratio)
         {
-            float Delta = ratio * CooldownTimer.time;
             CooldownTimer.Ratio += ratio;
-            SyncPhaseEnd -= Delta;
+            BroadcastCooldown();
+        }
+
+        public void OnClientCooldown(float PhaseEnd)
+        {
+            ClientPhaseEnd = PhaseEnd;
+        }
+
+        private void BroadcastCooldown()
+        {
+            float PhaseEnd = UseShootBack ? 0f : (float)NetworkTime.time + CooldownTimer.GetRemainingTime();
+            ModNetwork.SendCooldown(netId, PhaseEnd);
         }
 
         protected override void OnEnabledEffect()
@@ -73,13 +70,16 @@ namespace SPMod.ModContent
             base.OnEnabledEffect();
             CooldownTimer.Ratio = 1f;
             UseShootBack = true;
-            SyncPhaseEnd = (float)NetworkTime.time;
+            NextBroadcastTime = (float)NetworkTime.time + 2f;
+            BroadcastCooldown();
         }
 
         protected override void OnDisabledEffect()
         {
             base.OnDisabledEffect();
             CooldownTimer.Ratio = 1f;
+            UseShootBack = true;
+            BroadcastCooldown();
         }
 
         protected override void OnUpdate()
@@ -92,6 +92,12 @@ namespace SPMod.ModContent
             if (!UseShootBack && CooldownTimer.Update(Time.deltaTime))
             {
                 UseShootBack = true;
+                BroadcastCooldown();
+            }
+            else if (!UseShootBack && NetworkTime.time >= NextBroadcastTime)
+            {
+                NextBroadcastTime = (float)NetworkTime.time + 2f;
+                BroadcastCooldown();
             }
         }
 
@@ -121,14 +127,17 @@ namespace SPMod.ModContent
 
                     CooldownTimer.Ratio = 0f;
                     UseShootBack = false;
-                    SyncPhaseEnd = (float)(NetworkTime.time + CooldownTimer.time);
+                    NextBroadcastTime = (float)NetworkTime.time + 2f;
+                    BroadcastCooldown();
                 }
             }
         }
 
         public float GetDamage(UnitAvatar avatar)
         {
-            return MaxByLevel.SafeRandomAccess(CurrentLevelToIdx());
+            float Value = MaxByLevel.SafeRandomAccess(CurrentLevelToIdx());
+            Value *= 1f + avatar.GetCustomStatUnsafe(TextFile.FollowerDamage) * 0.01f;
+            return Value;
         }
 
         public override bool Weaved()

@@ -349,7 +349,7 @@ namespace SPMod.MonsterAI
                     int Stack = 1;
                     if (Hard >= 2)
                     {
-                        Damage *= 0.75f;
+                        Damage *= 0.6f;
                         Stack = 2;
                     }
                     for (int A = 0; A < Stack; A++)
