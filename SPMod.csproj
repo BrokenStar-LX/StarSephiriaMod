@@ -12,6 +12,7 @@
     <None Remove="Localization\ko-KR.json" />
     <None Remove="Localization\zh-CN.json" />
     <None Remove="Localization\zh-TW.json" />
+    <None Remove="Localization\ja-JP.json" />
     <None Remove="ModContent\ComboEffect_Comet.prefab" />
     <None Remove="ModContent\modassetbundle" />
     <None Remove="Sprites\Weapon\**\*.png" />
@@ -213,6 +214,7 @@
     <EmbeddedResource Include="Localization\ko-KR.json" />
     <EmbeddedResource Include="Localization\zh-CN.json" />
     <EmbeddedResource Include="Localization\zh-TW.json" />
+    <EmbeddedResource Include="Localization\ja-JP.json" />
     <EmbeddedResource Include="Sprites\Categories\Fruits_Pomegranate0.png" />
     <EmbeddedResource Include="Sprites\Categories\Fruits_Pomegranate1.png" />
     <EmbeddedResource Include="Sprites\Item_AmplifierComponent.png" />

@@ -201,50 +201,51 @@ namespace SPMod.ModContent
         public static List<ModDamageKey> ModDamageKeyEntityData =
         [
             //神器
-            new ModDamageKey("邪祭咒纸", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("石中剑", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("湖中剑", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("辐合", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("青色宝珠", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("影武者", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("白蛋壳", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("增幅器组件", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("隐秘斗篷", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("宙斯之矛", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("铁蒺藜", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("坎坷命运", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("空气钟", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("风帆", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("恶魔契约", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("希尔芙的灵魂粉末", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("瓶中闪电", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("电冰体", DamageIdEntity.ECategory.Charm),
-            new ModDamageKey("等离子结晶", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("UnhallowedRitePaper", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("Caliburn", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("Excalibur", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("Convergence", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("CyanOrb", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("ShadowWarrior", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("WhiteEggshell", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("AmplifierComponent", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("SecretCloak", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("SpearofZeus", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("Caltrop", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("Capricious", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("BumpyFate", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("AtmosClock", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("WindSail", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("DevilPact", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("SylphsSoulPowder", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("BottledLightning", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("ElectricIce", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("PlasmaCrystal", DamageIdEntity.ECategory.Charm),
 
             //武器
-            new ModDamageKey("冰晶", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("冰刃", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("冰川剑气", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("胡萝卜飞弹", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("电卷云", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("飞盾", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("撕裂", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("影荆棘", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("落石", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("落雷", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("涡旋", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("冰锥", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("武器附加伤害(风)", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("毒爆", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("IceCrystal", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("IceBlade", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("GlacierSwordQi", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("CarrotMissile", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("Thunderhead", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("FlyingShield", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("Rend", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("ShadowThorns", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("FallingRock", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("LightningStrike", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("Vortex", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("IceSpike", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("AdditionalWeaponDamageWind", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("PoisonDetonation", DamageIdEntity.ECategory.Weapon),
 
             //能力
-            new ModDamageKey("国王力量", DamageIdEntity.ECategory.Ability),
-            new ModDamageKey("反击", DamageIdEntity.ECategory.Ability),
-            new ModDamageKey("风蚀", DamageIdEntity.ECategory.Ability),
+            new ModDamageKey("KingsPower", DamageIdEntity.ECategory.Ability),
+            new ModDamageKey("Counterattack", DamageIdEntity.ECategory.Ability),
+            new ModDamageKey("WindErosion", DamageIdEntity.ECategory.Ability),
 
             //魔法
-            new ModDamageKey("霜针花园", DamageIdEntity.ECategory.Magic),
-            new ModDamageKey("光棱镜", DamageIdEntity.ECategory.Magic),
+            new ModDamageKey("GardenofNeedleIce", DamageIdEntity.ECategory.Magic),
+            new ModDamageKey("LightPrism", DamageIdEntity.ECategory.Magic),
         ];
         //模组HUD
         public static List<ModEffectHUD> ModEffectHUDData =
@@ -854,7 +855,7 @@ namespace SPMod.ModContent
                 Charm_SummonUnit Effect = Action.resourcePrefab.AddComponent<Charm_SummonUnit>();
                 Effect.isWeaponRelatedCharm = false;
                 Effect.effectsString = [new("ModCharmEffect_DevilPact")];
-                Effect.followerDamageId = "[Star's Sephiria Mod]恶魔契约";
+                Effect.followerDamageId = "[Star's Sephiria Mod]DevilPact";
                 Effect.damageByLevel = [64, 128, 192, 256, 320];
                 Effect.hpByLevel = [40, 80, 120, 160, 200];
                 Effect.maxLevel = 4;
@@ -1466,7 +1467,7 @@ namespace SPMod.ModContent
                 Effect.isWeaponRelatedCharm = false;
                 Effect.effectsString = [new("ModCharmEffect_WindJelly")];
                 Effect.isJellyfish = true;
-                Effect.followerDamageId = "[Star's Sephiria Mod]希尔芙的灵魂粉末";
+                Effect.followerDamageId = "[Star's Sephiria Mod]SylphsSoulPowder";
                 Effect.damageByLevel = [15, 30, 45, 60, 75];
                 Effect.hpByLevel = [10, 20, 30, 40, 50];
                 Effect.maxLevel = 4;
@@ -1847,7 +1848,7 @@ namespace SPMod.ModContent
                 List<WeaponAddon> Addons = [];
                 WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
                 Effect.parent = Weapon;
-                Effect.DamageId = "[Star's Sephiria Mod]武器附加伤害(风)";
+                Effect.DamageId = "[Star's Sephiria Mod]AdditionalWeaponDamageWind";
                 Effect.ValueName = TextFile.WindDamage;
                 Effect.DamageMult = 20;
                 Effect.elementalType = Wind;
@@ -1874,7 +1875,7 @@ namespace SPMod.ModContent
                 List<WeaponAddon> Addons = [];
                 WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
                 Effect.parent = Weapon;
-                Effect.DamageId = "[Star's Sephiria Mod]武器附加伤害(风)";
+                Effect.DamageId = "[Star's Sephiria Mod]AdditionalWeaponDamageWind";
                 Effect.ValueName = TextFile.WindDamage;
                 Effect.DamageMult = 20;
                 Effect.elementalType = Wind;
@@ -1901,7 +1902,7 @@ namespace SPMod.ModContent
                 List<WeaponAddon> Addons = [];
                 WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
                 Effect.parent = Weapon;
-                Effect.DamageId = "[Star's Sephiria Mod]武器附加伤害(风)";
+                Effect.DamageId = "[Star's Sephiria Mod]AdditionalWeaponDamageWind";
                 Effect.ValueName = TextFile.WindDamage;
                 Effect.DamageMult = 40;
                 Effect.elementalType = Wind;
@@ -1923,7 +1924,7 @@ namespace SPMod.ModContent
                 List<WeaponAddon> Addons = [];
                 WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
                 Effect.parent = Weapon;
-                Effect.DamageId = "[Star's Sephiria Mod]武器附加伤害(风)";
+                Effect.DamageId = "[Star's Sephiria Mod]AdditionalWeaponDamageWind";
                 Effect.ValueName = TextFile.WindDamage;
                 Effect.DamageMult = 40;
                 Effect.elementalType = Wind;
@@ -1950,7 +1951,7 @@ namespace SPMod.ModContent
                 List<WeaponAddon> Addons = [];
                 WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
                 Effect.parent = Weapon;
-                Effect.DamageId = "[Star's Sephiria Mod]武器附加伤害(风)";
+                Effect.DamageId = "[Star's Sephiria Mod]AdditionalWeaponDamageWind";
                 Effect.ValueName = TextFile.WindDamage;
                 Effect.DamageMult = 40;
                 Effect.elementalType = Wind;

@@ -18,7 +18,7 @@ namespace SPMod.ModContent
         public const int DownValue = 10;
         public int MaxShootCount = 1;
         public GameObject? Thunder = null;
-        public string DamageId = "[Star's Sephiria Mod]宙斯之矛";
+        public string DamageId = "[Star's Sephiria Mod]SpearofZeus";
         public ChargingCharm? chargingCharm = null;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {

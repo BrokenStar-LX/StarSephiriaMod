@@ -10,7 +10,7 @@ namespace SPMod.ModContent
         public bool Deformation = false;
         public bool UseEffect = false;
         public Timer CooldownTimer = new(0.1f);
-        private readonly string DamageId = "[Star's Sephiria Mod]石中剑";
+        private readonly string DamageId = "[Star's Sephiria Mod]Caliburn";
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             return

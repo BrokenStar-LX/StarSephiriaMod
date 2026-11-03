@@ -253,7 +253,7 @@ namespace SPMod.Tool
                 {
                     Vector3 Pos = Weapon.FirePosition(0);
                     Vector3 Vec = Vector3.Normalize(Target.transform.position - Pos);
-                    string Id = "[Star's Sephiria Mod]光棱镜";
+                    string Id = "[Star's Sephiria Mod]LightPrism";
                     float Damage = Tools.BaseStatToMax(Player) * 2f;
                     float Mult = 1f + Player.GetCustomStatUnsafe(TextFile.MagicDamageBonus) * 0.01f;
                     Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.MPSkillDamage) * 0.01f;

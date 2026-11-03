@@ -182,7 +182,7 @@ namespace SPMod
                                 {
                                     EDamageElementalType Elemental = EDamageElementalType.Lightning;
                                     Vector3 Pos = DeBuff.NetworkTarget.transform.position;
-                                    string DamageID = "[Star's Sephiria Mod]落雷";
+                                    string DamageID = "[Star's Sephiria Mod]LightningStrike";
                                     Bullet.Pool.Spawn(Pro, Pos, true, EDamageFromType.None, DamageID, BaseDamage, 25, 2f, Player, Player.GetHostileFactionLayers(EDamageFromType.None), 0.3f, Pos, Pos, null, null, 0f, Elemental, false);
                                 }
                             }
@@ -237,7 +237,7 @@ namespace SPMod
                 float Damage = 40 + Tools.BaseStatToMax(Player) * 2f;
                 Damage *= 1f + Stack * 0.1f;
                 Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                DamageInstance damage = DamageInstance.GetDamage(Player, "[Star's Sephiria Mod]毒爆", Target.transform.position, Player.GetHostileFactionLayers(EDamageFromType.None), Damage, EDamageType.ElementalEffectDamage, EDamageFromType.None, Vector2.zero, 0, 0f);
+                DamageInstance damage = DamageInstance.GetDamage(Player, "[Star's Sephiria Mod]PoisonDetonation", Target.transform.position, Player.GetHostileFactionLayers(EDamageFromType.None), Damage, EDamageType.ElementalEffectDamage, EDamageFromType.None, Vector2.zero, 0, 0f);
                 damage.elementalType = EDamageElementalType.Chaos;
                 damage.SetCustomColor(true, new Color(0.72f, 0.44f, 0.82f, 1f));
                 Target.ApplyDamage(damage);
@@ -379,7 +379,7 @@ namespace SPMod
                     }
                     if (Tools.CostumeSkinUse(Player.Name, "Mole_3", false))
                     {
-                        string DamageId = "[Star's Sephiria Mod]国王力量";
+                        string DamageId = "[Star's Sephiria Mod]KingsPower";
                         if (Damage.flag != DamageId && Damage.damage > 0)
                         {
                             float AddDamage = Player.GetCustomStatUnsafe(TextFile.TrueDamage) * 0.5f;
@@ -452,7 +452,7 @@ namespace SPMod
                         if (Value > 0 && !StrikeBackTime.ContainsKey(Player))
                         {
                             float Damage = Value * Player.GetCustomStatUnsafe(TextFile.Evasion) * 0.01f;
-                            string Id = "[Star's Sephiria Mod]反击";
+                            string Id = "[Star's Sephiria Mod]Counterattack";
                             if (Damage > 0)
                             {
                                 var Dam = DamageInstance.GetDamage(Player, Id, NPC.transform.position, 4294967295L, Damage, EDamageType.Slice, EDamageFromType.DirectAttack, Vector2.zero, 0, 0f);
@@ -2156,7 +2156,7 @@ namespace SPMod
                     Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
                     Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
                     Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
-                    WindDagger_Vortex.Data.CreateAttack(EDamageFromType.DirectAttack, Damage, "[Star's Sephiria Mod]涡旋", true, Player, Pos, Pos, 0.5f, null);
+                    WindDagger_Vortex.Data.CreateAttack(EDamageFromType.DirectAttack, Damage, "[Star's Sephiria Mod]Vortex", true, Player, Pos, Pos, 0.5f, null);
                 }
             }
         }
@@ -2786,7 +2786,7 @@ namespace SPMod
                 if (Player.GetCustomStatUnsafe(TextFile.ElectricIce) > 0)
                 {
                     bool Plasma = Player.GetCustomStatUnsafe(TextFile.PlasmaActive) > 0;
-                    string DamageId = Plasma ? "[Star's Sephiria Mod]等离子结晶" : "[Star's Sephiria Mod]电冰体";
+                    string DamageId = Plasma ? "[Star's Sephiria Mod]PlasmaCrystal" : "[Star's Sephiria Mod]ElectricIce";
                     float Damage = GetElectricIceDamage(__instance);
                     DamageInstance damage = DamageInstance.GetDamage(Player, DamageId, __instance.NetworkTarget.transform.position, 4294967295L, Damage, EDamageType.ElementalEffectDamage, EDamageFromType.None, Vector2.zero, 0, 0f);
                     damage.elementalType = EDamageElementalType.IceAndLightning;
@@ -2846,7 +2846,7 @@ namespace SPMod
                 {
                     Vector2 Offset = HorayUtility.GetVector2FromAngle(i + Rand);
                     Vector3 Pos = Target.transform.position + (Vector3)Offset * 2f;
-                    Bullet.Pool.Spawn(Pro, Target.transform.position, true, EDamageFromType.None, "[Star's Sephiria Mod]冰锥", Damage, 0, 0f, Player, Player.GetHostileFactionLayers(EDamageFromType.None), 0.3f, Target.transform.position, Pos, null, null, 0f, EDamageElementalType.Ice);
+                    Bullet.Pool.Spawn(Pro, Target.transform.position, true, EDamageFromType.None, "[Star's Sephiria Mod]IceSpike", Damage, 0, 0f, Player, Player.GetHostileFactionLayers(EDamageFromType.None), 0.3f, Target.transform.position, Pos, null, null, 0f, EDamageElementalType.Ice);
                 }
             }
         }

@@ -5,7 +5,7 @@ namespace SPMod.ModContent
 {
     public class Charm_IgnoreDefensiveDamage : Charm_MinHPKill, IAttackableCharm
     {
-        private readonly string DamageId = "[Star's Sephiria Mod]白蛋壳";
+        private readonly string DamageId = "[Star's Sephiria Mod]WhiteEggshell";
         public float[] MaxByLevel = [400, 800, 1200, 1600, 2000];
         public Timer CooldownTimer = new(1.5f);
         public bool UseEffect = false;
