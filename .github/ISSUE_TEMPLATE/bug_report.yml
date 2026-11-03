@@ -1,0 +1,77 @@
+  name: 🐛 Bug 报告 / Bug Report
+  description: 反馈模组问题 / Report a mod issue
+  title: "[Bug] "
+  labels: ["bug"]
+  body:
+    - type: markdown
+      attributes:
+        value: |
+          请用中文或英文填写。Please fill in Chinese or English.
+
+    - type: input
+      id: game_version
+      attributes:
+        label: 游戏版本 / Game version
+        placeholder: 例如 / e.g. 1.0.5
+      validations:
+        required: true
+
+    - type: input
+      id: mod_version
+      attributes:
+        label: 模组版本 / Mod version
+        placeholder: 例如 / e.g. 2.7.3
+      validations:
+        required: true
+
+    - type: dropdown
+      id: mode
+      attributes:
+        label: 游戏模式 / Game mode
+        options:
+          - 单人 / Singleplayer
+          - 多人联机 / Multiplayer
+      validations:
+        required: true
+
+    - type: textarea
+      id: description
+      attributes:
+        label: 问题描述 / What happened
+        placeholder: 发生了什么？/ Describe the issue.
+      validations:
+        required: true
+
+    - type: textarea
+      id: steps
+      attributes:
+        label: 复现步骤 / Steps to reproduce
+        placeholder: |
+          1. ...
+          2. ...
+          3. ...
+      validations:
+        required: true
+
+    - type: textarea
+      id: log
+      attributes:
+        label: 日志 / Log
+        description: 粘贴 Player.log 报错段落或网盘链接 / Paste the error section of Player.log or a link
+      validations:
+        required: false
+
+    - type: textarea
+      id: screenshots
+      attributes:
+        label: 截图或录像 / Screenshot or video
+      validations:
+        required: false
+
+    - type: input
+      id: other_mods
+      attributes:
+        label: 其他模组 / Other mods installed
+        placeholder: 没有就写“无” / Write "None" if none
+      validations:
+        required: false
