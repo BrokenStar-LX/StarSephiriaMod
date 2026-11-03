@@ -60,15 +60,15 @@ namespace SPMod.MonsterAI
         public static class Unit_QBoss_Patch
         {
             private static bool StompAttack = false;
-            private static readonly List<int> StompAttackType = new List<int> { };
+            private static readonly List<int> StompAttackType = [];
             private static bool MeleeAttackEffect = false;
             private static Vector3 CrackMeleeShootPos = Vector3.zero;
             private static bool GeometryProjectileUse = false;
-            private static readonly List<int> GeometryProjectileType = new List<int> { };
+            private static readonly List<int> GeometryProjectileType = [];
             private static bool CrackMeleeAttackUse = false;
-            private static readonly List<int> CrackMeleeAttackType = new List<int> { };
+            private static readonly List<int> CrackMeleeAttackType = [];
             private static bool MeleeAttackUse = false;
-            private static readonly List<int> MeleeAttackType = new List<int> { };
+            private static readonly List<int> MeleeAttackType = [];
             public static UnitAvatar? Target = null;
 
             [HarmonyPatch("Update")]
@@ -219,7 +219,7 @@ namespace SPMod.MonsterAI
                         for (int i = 0; i < 3; i++)
                         {
                             yield return new WaitForSeconds(0.3f);
-                            List<GameObject> shuffledPrefabs = new List<GameObject>(__instance.crackPrefabs);
+                            List<GameObject> shuffledPrefabs = new(__instance.crackPrefabs);
                             SpawnShuffled(__instance, shuffledPrefabs[i], Target.transform.position);
                         }
                     }
@@ -247,7 +247,7 @@ namespace SPMod.MonsterAI
             }
             private static void ShootCrackMelee(Unit_QBoss __instance, float Dis, int Stack)
             {
-                List<GameObject> shuffledPrefabs = new List<GameObject>(__instance.crackPrefabs);
+                List<GameObject> shuffledPrefabs = new(__instance.crackPrefabs);
                 Vector3 Pos = CrackMeleeShootPos;
                 float MaxAngle = 360f;
                 int Type = Random.Range(0, shuffledPrefabs.Count);
@@ -401,7 +401,7 @@ namespace SPMod.MonsterAI
                 __instance.NetworklevitationPhase = Unit_QBoss.ELevitationPhase.Rising;
 
                 levitationTimerField.SetValue(__instance, 0f);
-                RpcSetSortingOrderMethod.Invoke(__instance, new object[] { 5 });
+                RpcSetSortingOrderMethod.Invoke(__instance, [5]);
                 while (__instance.levitationPhase == Unit_QBoss.ELevitationPhase.Rising)
                 {
                     yield return null;
@@ -417,18 +417,18 @@ namespace SPMod.MonsterAI
                         {
                             travelTime *= 1f - 0.12f * Hard;
                             int Count = Hard >= 4 ? 8 : 4;
-                            Unit_QBoss.GeometryShapeData[] shapes = new Unit_QBoss.GeometryShapeData[]
-                            {
-                                new Unit_QBoss.GeometryShapeData(){  vertexCount = Count, angleOffset = 0 },
-                                new Unit_QBoss.GeometryShapeData(){  vertexCount = Count, angleOffset = 45 },
-                                new Unit_QBoss.GeometryShapeData(){  vertexCount = Count, angleOffset = 0 },
-                                new Unit_QBoss.GeometryShapeData(){  vertexCount = Count, angleOffset = 45 },
-                                new Unit_QBoss.GeometryShapeData(){  vertexCount = 8, angleOffset = 0 }
-                            };
+                            Unit_QBoss.GeometryShapeData[] shapes =
+                            [
+                                new(){  vertexCount = Count, angleOffset = 0 },
+                                new(){  vertexCount = Count, angleOffset = 45 },
+                                new(){  vertexCount = Count, angleOffset = 0 },
+                                new(){  vertexCount = Count, angleOffset = 45 },
+                                new(){  vertexCount = 8, angleOffset = 0 }
+                            ];
                             for (int s = 0; s < shapes.Length; s++)
                             {
                                 Vector2 vector = target ? target.transform.position : __instance.transform.position;
-                                SpawnGeometryShapeMethod.Invoke(__instance, new object[] { vector, shapes[s] });
+                                SpawnGeometryShapeMethod.Invoke(__instance, [vector, shapes[s]]);
                                 yield return new WaitForSeconds(travelTime + 0.5f);
                                 if (s < shapes.Length - 1)
                                 {
@@ -475,7 +475,7 @@ namespace SPMod.MonsterAI
                             {
                                 Vector2 Pos = target ? target.transform.position : __instance.transform.position;
                                 yield return new WaitForSeconds(0.05f);
-                                List<GameObject> shuffledPrefabs = new List<GameObject>(__instance.crackPrefabs);
+                                List<GameObject> shuffledPrefabs = new(__instance.crackPrefabs);
                                 int Type = Random.Range(0, shuffledPrefabs.Count);
                                 GameObject gameObject3 = Object.Instantiate(shuffledPrefabs[Type], Pos, Quaternion.identity);
                                 QBossCrack component = gameObject3.GetComponent<QBossCrack>();
@@ -483,14 +483,14 @@ namespace SPMod.MonsterAI
                                 NetworkServer.Spawn(gameObject3);
                                 if (ExAttack > 6)
                                 {
-                                    SpawnGeometryShapeMethod.Invoke(__instance, new object[]
-                                    {
+                                    SpawnGeometryShapeMethod.Invoke(__instance,
+                                    [
                                         Pos, new Unit_QBoss.GeometryShapeData()
                                         {
                                             vertexCount = 4,
                                             angleOffset = Hard >= 4 ? 45 : 0
                                         }
-                                    });
+                                    ]);
                                     ExAttack = 0;
                                 }
                                 ExAttack += 1;
@@ -545,7 +545,7 @@ namespace SPMod.MonsterAI
                     Coroutine currentPatternCoroutine = (Coroutine)currentPatternCoroutineField.GetValue(__instance);
                     if (__instance.hardPatternActivated && __instance.additionalCrackTimer.Update(Time.deltaTime))
                     {
-                        List<UnitAvatar> list = new List<UnitAvatar>();
+                        List<UnitAvatar> list = [];
                         foreach (PlayerSpawner playerSpawner in PlayerSpawner.MultiplayerList)
                         {
                             if (playerSpawner && playerSpawner.PlayerAvatar)

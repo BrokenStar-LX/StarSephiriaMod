@@ -10,16 +10,16 @@ namespace SPMod.ModContent
         private StatusInstance? EffectInstance2 = null;
         private StatusInstance? EffectInstance3 = null;
         private StatusInstance? EffectInstance4 = null;
-        public int[] AddByLevel = new int[] { 1, 1, 2, 3 };
-        private readonly Timer CheckTime = new Timer(0.5f);
+        public int[] AddByLevel = [1, 1, 2, 3];
+        private readonly Timer CheckTime = new(0.5f);
         private int Add = 0;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string Add = "+" + AddByLevel.SafeRandomAccess(LevelToIdx(level));
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Add", Add, GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Add", Add, GetPositiveColor(virtualLevelOffset)),
+            ];
         }
 
         protected override void OnEnabledEffect()

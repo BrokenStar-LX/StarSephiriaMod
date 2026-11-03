@@ -7,9 +7,9 @@ namespace SPMod.ModContent
 {
     public class Charm_HarmfulValue : Charm_StatusInstance, IAttackableCharm
     {
-        private readonly Timer CheckTime = new Timer(0.5f);
+        private readonly Timer CheckTime = new(0.5f);
         private StatusInstance? EffectInstance = null;
-        public int[] BaseValueByLevel = new int[0];
+        public int[] BaseValueByLevel = [];
         public string StatusName = "";
         public string Ending = "";
         public float StatusValue = 1f;
@@ -19,10 +19,10 @@ namespace SPMod.ModContent
         {
             float Value = GetValue(avatar, level) / FindMult;
             string text = Value.ToString() + Ending;
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Value", text.ToString(), GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Value", text.ToString(), GetPositiveColor(virtualLevelOffset)),
+            ];
         }
 
         protected override void OnEnabledEffect()

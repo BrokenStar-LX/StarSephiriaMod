@@ -10,8 +10,8 @@ namespace SPMod.ModContent
     {
         private const byte FxWindSailExplosion = 1;
         public string id = "WINDEROSION";
-        public string damageId = "Debuff_WindErosion";
-        public Timer TickTimer = new Timer(0.5f);
+        public string damageId = "[Star's Sephiria Mod]风蚀";
+        public Timer TickTimer = new(0.5f);
         public int DamageCount = 0;
         public int MaxDamageCount
         {

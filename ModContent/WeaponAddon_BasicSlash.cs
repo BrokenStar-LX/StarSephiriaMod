@@ -76,7 +76,7 @@ namespace SPMod.ModContent
                 {
                     damage.fromType = EDamageFromType.None;
                     damage.elementalType = EffectConstant.Wind;
-                    damage.id = "武器附加伤害(风)";
+                    damage.id = "[Star's Sephiria Mod]武器附加伤害(风)";
                 }
                 else damage.elementalType = instance.elementalType;
                 avatar.ApplyDamage(damage);

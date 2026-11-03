@@ -5,8 +5,8 @@ namespace SPMod.ModContent
 {
     public class Charm_MultiPlayerAddStatus : Charm_Basic
     {
-        public int[] ValueByLevel = new int[] { 1, 2, 3, 4 };
-        public int[] Value2ByLevel = new int[] { 1, 2, 3, 4 };
+        public int[] ValueByLevel = [1, 2, 3, 4];
+        public int[] Value2ByLevel = [1, 2, 3, 4];
         public int PlayerStack = 0;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
@@ -22,11 +22,11 @@ namespace SPMod.ModContent
                 text = ValueByLevel.SafeRandomAccess(0).ToString() + "%" + "→" + ValueByLevel.SafeRandomAccess(maxLevel).ToString() + "%";
                 text2 = Value2ByLevel.SafeRandomAccess(0).ToString() + "→" + Value2ByLevel.SafeRandomAccess(maxLevel).ToString();
             }
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("AllDamage", "+" + text.ToString(), GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Defense", "+" + text2.ToString(), GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("AllDamage", "+" + text.ToString(), GetPositiveColor(virtualLevelOffset)),
+                new("Defense", "+" + text2.ToString(), GetPositiveColor(virtualLevelOffset)),
+            ];
         }
 
         protected override void OnUpdate()

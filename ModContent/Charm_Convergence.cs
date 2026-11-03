@@ -5,18 +5,18 @@ namespace SPMod.ModContent
 {
     public class Charm_Convergence : Charm_CustomStatus, IAttackableCharm
     {
-        public float[] DamageByLevel = new float[] { 16, 32, 48 };
+        public float[] DamageByLevel = [16, 32, 48];
         public bool UseEffect = false;
-        public Timer CooldownTimer = new Timer(0.8f);
+        public Timer CooldownTimer = new(0.8f);
         private readonly string DamageId = "[Star's Sephiria Mod]辐合";
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             float Value = GetChance(avatar) * 100f;
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Damage", DamageByLevel.SafeRandomAccess(LevelToIdx(level)).ToString(),  GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Value", Value.ToString("#0.0") + "%", Color.yellow),
-            };
+            return
+            [
+                new("Damage", DamageByLevel.SafeRandomAccess(LevelToIdx(level)).ToString(),  GetPositiveColor(virtualLevelOffset)),
+                new("Value", Value.ToString("#0.0") + "%", Color.yellow),
+            ];
         }
         protected override void OnEnabledEffect()
         {

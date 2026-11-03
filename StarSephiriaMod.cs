@@ -24,66 +24,85 @@ using Object = UnityEngine.Object;
 
 namespace SPMod
 {
-    public class StarSephiriaMod : HorayModBase
+    public class StarSephiriaMod : WorkshopModBase
     {
-        public static Dictionary<string, int> AddPassivePoint = new Dictionary<string, int>();
-        public static Dictionary<string, int> WeaponType = new Dictionary<string, int>();
+        public static Dictionary<string, int> AddPassivePoint = [];
+        public static Dictionary<string, int> WeaponType = [];
 
-        public static Dictionary<string, string> CostumeType = new Dictionary<string, string>();
-        public static Dictionary<string, string> CostumeSkinType = new Dictionary<string, string>();
-        public static Dictionary<string, string> CostumeSkinKey = new Dictionary<string, string>();
-        public static Dictionary<string, string> CostumeSkinDate = new Dictionary<string, string>();
-        public static Dictionary<string, string> CostumeSkinIdToName = new Dictionary<string, string>();
-        public static Dictionary<string, Dictionary<string, string>> _modTranslations = new Dictionary<string, Dictionary<string, string>>();
+        public static Dictionary<string, string> CostumeType = [];
+        public static Dictionary<string, string> CostumeSkinType = [];
+        public static Dictionary<string, string> CostumeSkinKey = [];
+        public static Dictionary<string, string> CostumeSkinDate = [];
+        public static Dictionary<string, string> CostumeSkinIdToName = [];
+        public static Dictionary<string, Dictionary<string, string>> _modTranslations = [];
 
-        public static Dictionary<string, string> _displayNames = new Dictionary<string, string>();
-        public static List<string> StarTwinkle_AddDamage = new List<string>();
+        public static Dictionary<string, string> _displayNames = [];
+        public static List<string> StarTwinkle_AddDamage = [];
         public static CharacterBuff? GuardBuff = null;
-        public static Dictionary<UnitAvatar, Timer> Otter3_AddCrit = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<string, Timer> BrownRabbit2Hit = new Dictionary<string, Timer>();
-        public static Dictionary<string, float> PlayerLife = new Dictionary<string, float>();
-        public static List<string> Deer_Buff = new List<string>();
-        public static AllPlayerStatus PartyStats = new AllPlayerStatus(0, 0, 0, 0);
-        public static Dictionary<uint, Object> registered = new Dictionary<uint, Object>();
-        // 经验表
-        public static List<int> CustomExpTable = new List<int>
+        public static Dictionary<UnitAvatar, Timer> Otter3_AddCrit = [];
+        public static Dictionary<string, Timer> BrownRabbit2Hit = [];
+        public static Dictionary<string, float> PlayerLife = [];
+        public static List<string> Deer_Buff = [];
+        public static AllPlayerStatus PartyStats = new(0, 0, 0, 0);
+        public static Dictionary<uint, Object> registered = [];
+        public static HashSet<Object> ModPrefabs = [];
+        public static void RegisterModPrefab(Object? Prefab)
         {
+            if (Prefab == null) return;
+            if (Prefab is Component Component) Prefab = Component.gameObject;
+            ModPrefabs.Add(Prefab);
+        }
+        // 经验表
+        public static List<int> CustomExpTable =
+        [
             0, 800, 2600, 4000, 5700, 7400, 9400, 11600, 13800, 16000,
             18400, 20600, 23600, 26600, 29600, 32600, 35600, 38600, 42000, 45600,
             49000, 52600, 56000, 59600, 63800, 68000, 72200, 76600, 80800, 85200
-        };
+        ];
 
         protected override void OnModLoaded()
         {
             if (!_isPatched)
             {
-                LoadAllDependenciesInDirectory();
                 InitializeHarmonyAndMod();
                 InitializeCostumeSkinDate();
                 AddStatsName();
                 ModifyExpTable();
                 LoadProData();
-                ModConfig.Initialize();
+                ModConfig.Initialize(Context != null ? Context.Options : HorayModAPI.GetModOptions("stars-sephiriamod"));
                 _isPatched = true;
             }
             HorayModAPI.OnLoadWeaponDatabase += OnLoadWeaponDatabase;
             HorayModAPI.OnLoadMiracleDatabase += OnLoadMiracleDatabase;
+            HorayModAPI.OnLoadStatusDatabase += OnLoadStatusDatabase;
             HorayModAPI.OnLoadKeywordDatabase += OnLoadKeywordDatabase;
             HorayModAPI.OnLoadItemDatabase += OnLoadItemDatabase;
+            HorayModAPI.OnLoadPropDatabase += OnLoadPropDatabase;
             HorayModAPI.OnLocalizationReady += OnLocalizationInit;
             HorayModAPI.OnLoadPassiveDatabase += OnLoadPassiveDatabase;
             HorayModAPI.OnAllDatabasesReady += OnAllDatabasesReady;
+            HorayModAPI.OnPlayerAvatarSpawnedServerside += OnPlayerAvatarSpawnedServerside;
         }
 
         protected override void OnModUnloaded()
         {
             HorayModAPI.OnLoadWeaponDatabase -= OnLoadWeaponDatabase;
             HorayModAPI.OnLoadMiracleDatabase -= OnLoadMiracleDatabase;
+            HorayModAPI.OnLoadStatusDatabase -= OnLoadStatusDatabase;
             HorayModAPI.OnLoadKeywordDatabase -= OnLoadKeywordDatabase;
             HorayModAPI.OnLoadItemDatabase -= OnLoadItemDatabase;
+            HorayModAPI.OnLoadPropDatabase -= OnLoadPropDatabase;
             HorayModAPI.OnLocalizationReady -= OnLocalizationInit;
             HorayModAPI.OnLoadPassiveDatabase -= OnLoadPassiveDatabase;
             HorayModAPI.OnAllDatabasesReady -= OnAllDatabasesReady;
+            HorayModAPI.OnPlayerAvatarSpawnedServerside -= OnPlayerAvatarSpawnedServerside;
+            if (_languageSubscribed)
+            {
+                LocalizationManager.Instance.OnLanguageChanged -= OnLanguageChanged;
+                _languageSubscribed = false;
+            }
+            _harmony?.UnpatchAll(_harmony.Id);
+            _harmony = null;
             WeaponType.Clear();
             CostumeType.Clear();
             CostumeSkinType.Clear();
@@ -97,72 +116,32 @@ namespace SPMod
             StarTwinkle_AddDamage.Clear();
             Deer_Buff.Clear();
             ColdAngerTime.Clear();
-            HeatedBladeEffect.Clear();
             HeatedBladeStack.Clear();
+            ModHeatedBladeAttack.Clear();
             RosionList.Clear();
-        }
-
-        private void LoadAllDependenciesInDirectory()
-        {
-            string modDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string[] dllFiles = Directory.GetFiles(modDirectory, "*.dll");
-            Assembly[] domainAssemblies = AppDomain.CurrentDomain.GetAssemblies();
-            HashSet<string> loadedAssemblySimpleNames = new HashSet<string>(domainAssemblies.Select(a => a.GetName().Name));
-            HashSet<string> loadedAssemblyFullNames = new HashSet<string>(domainAssemblies.Select(a => a.FullName));
-            foreach (string dllFile in dllFiles)
-            {
-                string fileName = Path.GetFileName(dllFile);
-                Assembly currentExec = Assembly.GetExecutingAssembly();
-                if (fileName.Equals(Path.GetFileName(currentExec.Location), StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-                try
-                {
-                    AssemblyName dllAssemblyName = AssemblyName.GetAssemblyName(dllFile);
-                    string simpleName = dllAssemblyName.Name;
-                    string fullName = dllAssemblyName.FullName;
-                    if (loadedAssemblyFullNames.Contains(fullName))
-                    {
-                        LogInfo($"[依赖跳过] {fileName} FullName已在域中，无需加载");
-                        continue;
-                    }
-                    if (loadedAssemblySimpleNames.Contains(simpleName))
-                    {
-                        LogInfo($"[依赖跳过] {fileName} 域内已存在 {simpleName}，跳过磁盘dll");
-                        continue;
-                    }
-                    Assembly loaded = Assembly.LoadFrom(dllFile);
-                    LogInfo($"[依赖加载成功] {fileName} -> {loaded.FullName}");
-                }
-                catch (BadImageFormatException)
-                {
-                    LogInfo($"[依赖跳过] {fileName} 不是有效的.NET程序集");
-                }
-                catch (FileNotFoundException)
-                {
-                    LogError($"[依赖失败] {fileName} 文件不存在");
-                }
-                catch (Exception ex)
-                {
-                    LogError($"[依赖失败]{fileName}: {ex.Message}\n{ex.StackTrace}");
-                }
-            }
+            CharmLevelBoost.RestoreAll();
         }
 
         private static bool _isPatched = false;
+        private static Harmony? _harmony;
+        private static bool _languageSubscribed;
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void InitializeHarmonyAndMod()
         {
-            var harmony = new Harmony("com.Star.SephiriaMod");
-            harmony.PatchAll();
-            PatchPlayerInputController(harmony);
+            _harmony = new Harmony("stars-sephiriamod");
+            _harmony.PatchAll();
+            PatchPlayerInputController(_harmony);
         }
 
         private void OnLocalizationInit(HorayModLocalizationContext ctx)
         {
             LoadModTranslations(ctx);
-            LocalizationManager.Instance.OnLanguageChanged += OnLanguageChanged;
+            if (!_languageSubscribed)
+            {
+                LocalizationManager.Instance.OnLanguageChanged += OnLanguageChanged;
+                _languageSubscribed = true;
+            }
             TextFile.InitTooltipLocalization();
             ModBullet.RegisterAllToPool();
             ModFireData.RegisterAllFxToPool();
@@ -182,7 +161,7 @@ namespace SPMod
                     string[] nameParts = resourceFullName.Split('.');
                     string languageCode = nameParts[^2];
                     using Stream stream = assembly.GetManifestResourceStream(resourceFullName);
-                    using StreamReader reader = new StreamReader(stream);
+                    using StreamReader reader = new(stream);
                     string jsonContent = reader.ReadToEnd();
                     var translations = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent);
                     if (translations != null && translations.Count > 0)
@@ -217,9 +196,7 @@ namespace SPMod
         {
             GameObject[] Bullet = Resources.LoadAll<GameObject>("Bullet");
             GameObject[] Melee = Resources.LoadAll<GameObject>("MeleeCollision");
-            List<GameObject> NewPro = new List<GameObject>();
-            NewPro.AddRange(Bullet);
-            NewPro.AddRange(Melee);
+            List<GameObject> NewPro = [.. Bullet, .. Melee];
             foreach (GameObject Pro in NewPro)
             {
                 Projectile.Add(Pro.name.Replace("(Clone)", ""), Pro);
@@ -422,7 +399,7 @@ namespace SPMod
 
         private void AddStatsName()
         {
-            Dictionary<string, string> stats = new Dictionary<string, string>
+            Dictionary<string, string> stats = new()
             {
                 {"MODADDCUSTOMERINTENSITY","模组自定义属性增加"},
                 {"TABLET","启用石板"},
@@ -735,10 +712,10 @@ namespace SPMod
             }
         }
 
-        public static Dictionary<int, float> CrossBowFireTime = new Dictionary<int, float>();
-        public static Dictionary<int, float> CrossBowRoldTime = new Dictionary<int, float>();
-        public static Dictionary<int, int> CrossBowMagazineCount = new Dictionary<int, int>();
-        public static Dictionary<int, int> CrossBowMagazineCapacity = new Dictionary<int, int>();
+        public static Dictionary<int, float> CrossBowFireTime = [];
+        public static Dictionary<int, float> CrossBowRoldTime = [];
+        public static Dictionary<int, int> CrossBowMagazineCount = [];
+        public static Dictionary<int, int> CrossBowMagazineCapacity = [];
         private void AddBaseStats(WeaponEntity Weapon, int Delta)
         {
             foreach (string Stat in BaseStatsName)
@@ -782,10 +759,10 @@ namespace SPMod
                 WeaponDatabase.Modify(WeaponIDs.Compliance, Weapon =>
                 {
                     Weapon.enhanceFromId = WeaponIDs.SwarmingShadow;
-                    WeaponAddon Addon = WeaponDatabase.FindWeaponById(12).mainWeaponPrefab.GetComponent<WeaponSimple>().addons[0];
+                    WeaponAddon Addon =  WeaponDatabase.FindWeaponById(WeaponIDs.SwarmingShadow).mainWeaponPrefab.GetComponent<WeaponSimple>().addons[0];
                     WeaponAddon Addon2 = WeaponDatabase.FindWeaponById(13).mainWeaponPrefab.GetComponent<WeaponSimple>().addons[0];
                     WeaponSimple component = Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>();
-                    component.addons = new WeaponAddon[] { Addon, Addon2 };
+                    component.addons = [Addon, Addon2];
                     NewWeaponFireData Attack = component.specialAttacks[0];
                     Attack.forceFinalCombo = true;
                     Attack.attackDashAngle = component.basicComboAttacks[0].attackDashAngle;
@@ -836,21 +813,26 @@ namespace SPMod
                     Dash.attackDashSpeed = 32f;
                     Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>().dashAttacks[0] = Dash;
                 });// 黑铁戟
-                WeaponDatabase.Modify(WeaponIDs.SwarmingShadow, Weapon =>
-                {
-                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.basicAttackDamage = 0);
-                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.specialAttackDamage = 25);
-                });//聚集的阴影
                 WeaponDatabase.Modify(WeaponIDs.Negligence, Weapon => Weapon.ChangeAddon<WeaponAddonGreatsword_SuperQuick>(Addon =>
                 {
                     Addon.specialAttackDamage = 0;
                     Addon.specialAttackSpeed = 15;
                 }));//无视
+                WeaponDatabase.Modify(WeaponIDs.SwarmingShadow, Weapon =>
+                {
+                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.basicAttackDamage = 0);
+                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.specialAttackDamage = 25);
+                });//聚集的阴影
                 WeaponDatabase.Modify(WeaponIDs.SwiftRegret, Weapon =>
                 {
                     Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.basicAttackDamage = 0);
                     Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.specialAttackDamage = 25);
                 });//短暂自责
+                WeaponDatabase.Modify(WeaponIDs.ScatteredLonging, Weapon =>
+                {
+                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.basicAttackDamage = 0);
+                    Weapon.ChangeAddon<WeaponAddonGreatsword_BasicAttack>(Addon => Addon.specialAttackDamage = 25);
+                });//散落的眷恋
                 WeaponDatabase.Modify(WeaponIDs.FrostboundGreatsword, Weapon =>
                 {
                     Weapon.SetAddonStat(TextFile.FreezeDamage, -40);
@@ -1124,94 +1106,167 @@ namespace SPMod
                 });//马拉斯皮纳
                 WeaponDatabase.Modify(WeaponIDs.Viduka, Weapon => Weapon.SetAddonStat(TextFile.EnhancedChakram, 0));//比杜卡
             }
-            if (ModConfig.Instance.AddWeaponEnhancements)
-            {
-                WeaponDatabase.Modify(WeaponIDs.Minimalism, Weapon => Weapon.enhanceFromId = WeaponIDs.SteelGreatsword);
-                WeaponDatabase.Modify(WeaponIDs.BlackIronHalberd, Weapon => Weapon.enhanceFromId = -1);
-                WeaponDatabase.Modify(WeaponIDs.SafeStart, Weapon => Weapon.enhanceFromId = WeaponIDs.Dagger);
+            WeaponDatabase.Modify(WeaponIDs.Minimalism, Weapon => Weapon.enhanceFromId = WeaponIDs.SteelGreatsword);
+            WeaponDatabase.Modify(WeaponIDs.BlackIronHalberd, Weapon => Weapon.enhanceFromId = -1);
+            WeaponDatabase.Modify(WeaponIDs.SafeStart, Weapon => Weapon.enhanceFromId = WeaponIDs.Dagger);
 
-                foreach (ModWeapon Data in ModWeaponData)
-                    Data.CreateWeapon();
-            }
+            foreach (ModWeapon Data in ModWeaponData)
+                Data.CreateWeapon();
+            _ = WindDagger_Vortex.Data;//预创建涡旋投射物 prefab，保证各端 AssetId 分配顺序一致
+            _ = WindGreatSword_Tornado.Data;//预创建龙卷风伤害体 prefab，保证各端 AssetId 分配顺序一致
             Skin.GetAddAllModSkin();
+        }
+
+        public static void OnLoadPropDatabase()
+        {
+            if (GetModItem.TryGetValue("Potion_Wind", out ItemEntity? Wind)
+                && GetModItem.TryGetValue("Potion_Wind2", out ItemEntity? Wind2))
+            {
+                HashSet<int> PatchedBoxes = [];
+                foreach (PropEntity Prop in PropDatabase.GetAll())
+                {
+                    if (Prop == null || Prop.type != PropEntity.PropType.BreakableWithMP || Prop.propPrefab == null) continue;
+                    if (!Prop.propPrefab.TryGetComponent<BreakableProp>(out var Box)) continue;
+                    if (!PatchedBoxes.Add(Box.GetInstanceID())) continue;
+
+                    List<BreakableProp.DropItemData> Drops = [.. Box.droppableItems];
+                    AppendDrop(Drops, Wind);
+                    AppendDrop(Drops, Wind2);
+                    Box.droppableItems = Drops.ToArray();
+                }
+            }
+            AddWindDamageToObelisks();
+        }
+
+        private static void AddWindDamageToObelisks()
+        {
+            HashSet<int> Patched = [];
+            foreach (PropEntity Prop in PropDatabase.GetAll())
+            {
+                if (Prop == null || Prop.propPrefab == null) continue;
+                Obelisk? Stone = Prop.propPrefab.GetComponentInChildren<Obelisk>(true);
+                if (Stone == null) continue;
+                if (!Patched.Add(Stone.GetInstanceID())) continue;
+                if (Stone.stats.Any(Stat => Stat.statusID == "WIND_DAMAGE")) continue;
+
+                Obelisk.StatusGroup? Fire = null;
+                foreach (Obelisk.StatusGroup Stat in Stone.stats)
+                {
+                    if (Stat.statusID == "FIRE_DAMAGE")
+                    {
+                        Fire = Stat;
+                        break;
+                    }
+                }
+                if (Fire == null || Fire.value == null || Fire.value.Length == 0) continue;
+                Stone.stats = [.. Stone.stats, new Obelisk.StatusGroup { statusID = "WIND_DAMAGE", value = [.. Fire.value] }];
+            }
+        }
+
+        private static void AppendDrop(List<BreakableProp.DropItemData> Drops, ItemEntity? Item)
+        {
+            if (Item == null) return;
+            if (Drops.Any(Drop => Drop.entity != null && Drop.entity.id == Item.id)) return;
+            Drops.Add(new BreakableProp.DropItemData { entity = Item, quantity = 1 });
+        }
+
+        private static void AddWindDamageToRandomPotions()
+        {
+            foreach (int Id in ItemDatabase.GetAllItemID())
+            {
+                ItemEntity? Item = ItemDatabase.FindItemById(Id);
+                if (Item == null || Item.type != EItemType.Potion || Item.resourcePrefab == null) continue;
+                if (!Item.resourcePrefab.TryGetComponent<PotionEffect_RandomStatusInstance>(out var Effect)) continue;
+                if (Effect.stats.Any(Stat => Stat.statusID == "WIND_DAMAGE")) continue;
+
+                int FireValue = 0;
+                foreach (PotionEffect_StatusInstance.StatusGroup Stat in Effect.stats)
+                {
+                    if (Stat.statusID == "FIRE_DAMAGE")
+                    {
+                        FireValue = Stat.value;
+                        break;
+                    }
+                }
+                if (FireValue == 0) continue;
+                Effect.stats = [.. Effect.stats, new PotionEffect_StatusInstance.StatusGroup { statusID = "WIND_DAMAGE", value = FireValue }];
+            }
         }
 
         public static void OnLoadItemDatabase()
         {
             CreateModItems();
+            AddWindDamageToRandomPotions();
             if (ModConfig.Instance.ModifyMerchant)
             {
                 ItemDatabase.Modify(51, item => item.cost = CommonCost);
             }
             if (ModConfig.Instance.ModifyCharm)
             {
-                if (ModConfig.Instance.AddCategory)
+                //彗星
+                ItemDatabase.Modify(1011, item => item.categories = Tools.SetCategories("COMET"));
+                ItemDatabase.Modify(1011, item =>
                 {
-                    //彗星
-                    ItemDatabase.Modify(1011, item => item.categories = Tools.SetCategories("COMET"));
-                    ItemDatabase.Modify(1011, item =>
+                    item.categories = Tools.SetCategories("COMET");
+                    Charm_DashAttackDamage Effect = item.resourcePrefab.GetComponent<Charm_DashAttackDamage>();
+                    Effect.bonusByLevel = [10, 20, 30, 40];
+                }); // 风草围巾
+                ItemDatabase.Modify(1049, item => item.categories = Tools.SetCategories("COMET")); // 小太刀八云
+                ItemDatabase.Modify(1082, item => item.categories = Tools.SetCategories("COMET")); // 压迫头带
+                ItemDatabase.Modify(1093, item => item.categories = Tools.SetCategories("COMET")); // 荆棘丛
+                ItemDatabase.Modify(1149, item => item.categories = Tools.SetCategories("COMET", "WINDSONG")); // 金色斗篷
+                ItemDatabase.Modify(1279, item =>
+                {
+                    item.categories = Tools.SetCategories("COMET", "SHADOW");
+                    item.isDual = true;
+                    Charm_StatusInstance Effect = item.resourcePrefab.GetComponent<Charm_StatusInstance>();
+                    Effect.stats[1] = Tools.SetStatusGroup("EVASION", 300, 600, 900, 1200);
+                }); // 拉里德的手镯
+                //锻造
+                ItemDatabase.Modify(1010, item => item.categories = Tools.SetCategories("WEAPON")); // 盾牌术
+                ItemDatabase.Modify(1086, item => item.categories = Tools.SetCategories("WEAPON")); // 盘子
+                ItemDatabase.Modify(1147, item => item.categories = Tools.SetCategories("WEAPON")); // 彩虹羽毛
+                ItemDatabase.Modify(1156, item => item.categories = Tools.SetCategories("WEAPON")); // 玻璃锤
+                ItemDatabase.Modify(1157, item => item.categories = Tools.SetCategories("WEAPON")); // 兔子头盔
+                ItemDatabase.Modify(1218, item => item.categories = Tools.SetCategories("WEAPON")); // 香囊
+                ItemDatabase.Modify(1221, item => item.categories = Tools.SetCategories("WEAPON")); // 蓝色护腕
+                ItemDatabase.Modify(1225, item =>
+                {
+                    item.categories = Tools.SetCategories("WEAPON");
+                    if (item.resourcePrefab.TryGetComponent<Charm_StatusInstance>(out var Status))
                     {
-                        item.categories = Tools.SetCategories("COMET");
-                        Charm_DashAttackDamage Effect = item.resourcePrefab.GetComponent<Charm_DashAttackDamage>();
-                        Effect.bonusByLevel = new int[4] { 10, 20, 30, 40 };
-                    }); // 风草围巾
-                    ItemDatabase.Modify(1049, item => item.categories = Tools.SetCategories("COMET")); // 小太刀八云
-                    ItemDatabase.Modify(1082, item => item.categories = Tools.SetCategories("COMET")); // 压迫头带
-                    ItemDatabase.Modify(1093, item => item.categories = Tools.SetCategories("COMET")); // 荆棘丛
-                    ItemDatabase.Modify(1149, item => item.categories = Tools.SetCategories("COMET", "WINDSONG")); // 金色斗篷
-                    ItemDatabase.Modify(1279, item =>
+                        Status.isWeaponRelatedCharm = false;
+                    }
+                }); // 黄铜镜碎片
+                ItemDatabase.Modify(1262, item => item.categories = Tools.SetCategories("WEAPON")); // 神秘摆锤
+                ItemDatabase.Modify(1283, item =>
+                {
+                    item.categories = Tools.SetCategories("WEAPON");
+                    if (item.resourcePrefab.TryGetComponent<Charm_StatusInstance>(out var Status))
                     {
-                        item.categories = Tools.SetCategories("COMET", "SHADOW");
-                        item.isDual = true;
-                        Charm_StatusInstance Effect = item.resourcePrefab.GetComponent<Charm_StatusInstance>();
-                        Effect.stats[1] = Tools.SetStatusGroup("EVASION", 300, 600, 900, 1200);
-                    }); // 拉里德的手镯
-                    //锻造
-                    ItemDatabase.Modify(1010, item => item.categories = Tools.SetCategories("WEAPON")); // 盾牌术
-                    ItemDatabase.Modify(1086, item => item.categories = Tools.SetCategories("WEAPON")); // 盘子
-                    ItemDatabase.Modify(1147, item => item.categories = Tools.SetCategories("WEAPON")); // 彩虹羽毛
-                    ItemDatabase.Modify(1156, item => item.categories = Tools.SetCategories("WEAPON")); // 玻璃锤
-                    ItemDatabase.Modify(1157, item => item.categories = Tools.SetCategories("WEAPON")); // 兔子头盔
-                    ItemDatabase.Modify(1218, item => item.categories = Tools.SetCategories("WEAPON")); // 香囊
-                    ItemDatabase.Modify(1221, item => item.categories = Tools.SetCategories("WEAPON")); // 蓝色护腕
-                    ItemDatabase.Modify(1225, item =>
-                    {
-                        item.categories = Tools.SetCategories("WEAPON");
-                        if (item.resourcePrefab.TryGetComponent<Charm_StatusInstance>(out var Status))
-                        {
-                            Status.isWeaponRelatedCharm = false;
-                        }
-                    }); // 黄铜镜碎片
-                    ItemDatabase.Modify(1262, item => item.categories = Tools.SetCategories("WEAPON")); // 神秘摆锤
-                    ItemDatabase.Modify(1283, item =>
-                    {
-                        item.categories = Tools.SetCategories("WEAPON");
-                        if (item.resourcePrefab.TryGetComponent<Charm_StatusInstance>(out var Status))
-                        {
-                            Status.isWeaponRelatedCharm = false;
-                        }
-                    }); // 勇气护身符
-                    //命运
-                    ItemDatabase.Modify(1126, item => item.categories = Tools.SetCategories("FORTUNE")); // 金色枫叶
-                    ItemDatabase.Modify(1155, item => item.categories = Tools.SetCategories("FORTUNE")); // 四叶草
-                    ItemDatabase.Modify(1172, item => item.categories = Tools.SetCategories("FORTUNE")); // 帕拉斯的卡牌
-                    ItemDatabase.Modify(1195, item => item.categories = Tools.SetCategories("FORTUNE")); // 万花筒
-                    ItemDatabase.Modify(1300, item => item.categories = Tools.SetCategories("ALCHEMY", "FORTUNE")); // 生气的土豆
-                    //派对
-                    ItemDatabase.Modify(1140, item => item.categories = Tools.SetCategories("PARTY")); // 鼓励旗帜
-                    ItemDatabase.Modify(3031, item => item.categories = Tools.SetCategories("PARTY")); // 祝福
-                    //飓风
-                    ItemDatabase.Modify(1030, item =>
-                    {
-                        Charm_WoodenBox Effect = item.resourcePrefab.GetComponent<Charm_WoodenBox>();
-                        Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_WoodenBox") };
-                    }); // 多用途腰带
-                    ItemDatabase.Modify(1053, item =>
-                    {
-                        Charm_AddStatByDefense Effect = item.resourcePrefab.GetComponent<Charm_AddStatByDefense>();
-                        Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_AddStatByDefense") };
-                    }); // 盾牌包
-                }
+                        Status.isWeaponRelatedCharm = false;
+                    }
+                }); // 勇气护身符
+                //命运
+                ItemDatabase.Modify(1126, item => item.categories = Tools.SetCategories("FORTUNE")); // 金色枫叶
+                ItemDatabase.Modify(1155, item => item.categories = Tools.SetCategories("FORTUNE")); // 四叶草
+                ItemDatabase.Modify(1172, item => item.categories = Tools.SetCategories("FORTUNE")); // 帕拉斯的卡牌
+                ItemDatabase.Modify(1195, item => item.categories = Tools.SetCategories("FORTUNE")); // 万花筒
+                ItemDatabase.Modify(1300, item => item.categories = Tools.SetCategories("ALCHEMY", "FORTUNE")); // 生气的土豆
+                //派对
+                ItemDatabase.Modify(1140, item => item.categories = Tools.SetCategories("PARTY")); // 鼓励旗帜
+                ItemDatabase.Modify(3031, item => item.categories = Tools.SetCategories("PARTY")); // 祝福
+                //飓风
+                ItemDatabase.Modify(1030, item =>
+                {
+                    Charm_WoodenBox Effect = item.resourcePrefab.GetComponent<Charm_WoodenBox>();
+                    Effect.effectsString = [new("ModCharmEffect_WoodenBox")];
+                }); // 多用途腰带
+                ItemDatabase.Modify(1053, item =>
+                {
+                    Charm_AddStatByDefense Effect = item.resourcePrefab.GetComponent<Charm_AddStatByDefense>();
+                    Effect.effectsString = [new("ModCharmEffect_AddStatByDefense")];
+                }); // 盾牌包
                 //连击更改
                 ItemDatabase.Modify(1030, item => item.categories = Tools.SetCategories("ACADEMY")); // 多用途腰带
                 ItemDatabase.Modify(1081, item => item.categories = Tools.SetCategories("STURDY", "SHADOW")); // 标本喙
@@ -1220,13 +1275,13 @@ namespace SPMod
                 ItemDatabase.Modify(1143, item =>
                 {
                     Charm_Wings Effect = item.resourcePrefab.GetComponent<Charm_Wings>();
-                    Effect.attackSpeedUnitByLevel = new float[] { 10, 8, 8, 6, 6, 4 };
-                    Effect.stats = new StatusGroup[] { Effect.stats[0], Tools.SetStatusGroup("MOVE_SPEED", 3, 6, 9, 12, 15, 18) };
+                    Effect.attackSpeedUnitByLevel = [10, 8, 8, 6, 6, 4];
+                    Effect.stats = [Effect.stats[0], Tools.SetStatusGroup("MOVE_SPEED", 3, 6, 9, 12, 15, 18)];
                 }); // 翅膀
-                ItemDatabase.Modify(1146, item => item.categories = new List<string>()); // 如意宝珠
+                ItemDatabase.Modify(1146, item => item.categories = []); // 如意宝珠
                 ItemDatabase.Modify(1162, item => item.categories = Tools.SetCategories("ELEMENTAL")); // 诱惑的鱼饵
-                ItemDatabase.Modify(1186, item => item.categories = new List<string>()); // 纯白斗篷
-                ItemDatabase.Modify(1196, item => item.categories = new List<string>()); // 生命之触
+                ItemDatabase.Modify(1186, item => item.categories = []); // 纯白斗篷
+                ItemDatabase.Modify(1196, item => item.categories = []); // 生命之触
                 ItemDatabase.Modify(1297, item => item.categories = Tools.SetCategories("EMBER")); // 石榴石徽章
                 ItemDatabase.Modify(1298, item => item.categories = Tools.SetCategories("MAGITECH")); // 黄玉徽章
                 ItemDatabase.Modify(1299, item => item.categories = Tools.SetCategories("GLACIER")); // 钻石徽章
@@ -1234,8 +1289,8 @@ namespace SPMod
                 {
                     Charm_AddStatByAnotherStat Effect = item.resourcePrefab.GetComponent<Charm_AddStatByAnotherStat>();
                     Effect.maxLevel = 3;
-                    Effect.perBaseStatByLevel = new int[] { 5, 4, 3, 2 };
-                    Effect.stats = new StatusGroup[] { Tools.SetStatusGroup("DEBUFF_DAMAGE", 4, 8, 12, 16) };
+                    Effect.perBaseStatByLevel = [5, 4, 3, 2];
+                    Effect.stats = [Tools.SetStatusGroup("DEBUFF_DAMAGE", 4, 8, 12, 16)];
                     item.isDual = true;
                     item.categories = Tools.SetCategories("CURSE", "WINDSONG");
                     item.cannotBeReward = false;
@@ -1245,7 +1300,7 @@ namespace SPMod
                 ItemDatabase.Modify(1016, item =>
                 {
                     Charm_Reddew Effect = item.resourcePrefab.GetComponent<Charm_Reddew>();
-                    Effect.damagePercentByLevel = new float[4] { 25f, 50f, 75f, 100f };
+                    Effect.damagePercentByLevel = [25f, 50f, 75f, 100f];
                 }); // 红色露水
                 ItemDatabase.Modify(1032, item =>
                 {
@@ -1256,62 +1311,62 @@ namespace SPMod
                 {
                     Charm_MiniBallista Effect = item.resourcePrefab.GetComponent<Charm_MiniBallista>();
                     Effect.maxLevel = 2;
-                    Effect.bulletCountByLevel = new int[] { 1, 3, 5 };
-                    Effect.addCloudPercentByLevel = new int[] { 100 };
+                    Effect.bulletCountByLevel = [1, 3, 5];
+                    Effect.addCloudPercentByLevel = [100];
                 }); // 迷你弩炮
                 ItemDatabase.Modify(1093, item =>
                 {
                     Charm_DashDamage Effect = item.resourcePrefab.GetComponent<Charm_DashDamage>();
                     Effect.maxLevel = 2;
-                    Effect.physicalDashDamage = new int[3] { 50, 100, 150 };
+                    Effect.physicalDashDamage = [50, 100, 150];
                 }); // 荆棘丛
                 ItemDatabase.Modify(1087, item =>
                 {
                     Charm_IncreaseGoldDropRate Effect = item.resourcePrefab.GetComponent<Charm_IncreaseGoldDropRate>();
                     Effect.maxLevel = 2;
-                    Effect.goldDropBonusByLevel = new int[] { 20, 30, 40 };
+                    Effect.goldDropBonusByLevel = [20, 30, 40];
                 }); // 克里顿的印章
                 ItemDatabase.Modify(1101, item =>
                 {
                     Charm_FrostiumRing Effect = item.resourcePrefab.GetComponent<Charm_FrostiumRing>();
                     Effect.maxLevel = 1;
-                    Effect.damageByLevel = new int[2] { 15, 30 };
+                    Effect.damageByLevel = [15, 30];
                     Effect.cooldownTimer.time = 0.2f;
                 }); // 欧希阿蕾胡阿
                 ItemDatabase.Modify(1117, item =>
                 {
                     Charm_TuningForks Effect = item.resourcePrefab.GetComponent<Charm_TuningForks>();
-                    Effect.damagePercentByLevel = new int[] { 400, 500, 600, 700, 800 };
+                    Effect.damagePercentByLevel = [400, 500, 600, 700, 800];
                 }); // 音叉
                 ItemDatabase.Modify(1137, item =>
                 {
                     Charm_IceSpear Effect = item.resourcePrefab.GetComponent<Charm_IceSpear>();
                     Effect.maxLevel = 5;
-                    Effect.fireCountByLevel = new int[] { 1 };
-                    Effect.damagePercentByLevel = new float[] { 100, 140, 180, 220, 260, 300 };
+                    Effect.fireCountByLevel = [1];
+                    Effect.damagePercentByLevel = [100, 140, 180, 220, 260, 300];
                     Effect.defaultDamage = 40;
                 }); // 沃尔斯帕
                 ItemDatabase.Modify(1139, item =>
                 {
                     Charm_CreateBulletOnSweep Effect = item.resourcePrefab.GetComponent<Charm_CreateBulletOnSweep>();
-                    Effect.damagePercentByLevel = new float[] { 150, 300, 450 };
+                    Effect.damagePercentByLevel = [150, 300, 450];
                 }); // 冰雪藤
                 ItemDatabase.Modify(1141, item =>
                 {
                     Charm_FrostiumRing Effect = item.resourcePrefab.GetComponent<Charm_FrostiumRing>();
                     Effect.maxLevel = 1;
-                    Effect.damageByLevel = new int[2] { 15, 30 };
+                    Effect.damageByLevel = [15, 30];
                     Effect.cooldownTimer.time = 0.2f;
                 }); // 被雷击中的树枝
                 ItemDatabase.Modify(1152, item =>
                 {
                     Charm_Kunai Effect = item.resourcePrefab.GetComponent<Charm_Kunai>();
-                    Effect.throwChanceByLevel = new float[3] { 110, 220, 330 };
+                    Effect.throwChanceByLevel = [110, 220, 330];
                 }); // 苦无
                 ItemDatabase.Modify(1153, item =>
                 {
                     Charm_FlamePlantRoot Effect = item.resourcePrefab.GetComponent<Charm_FlamePlantRoot>();
-                    Effect.fireDamageRatioByLevel = new int[] { 100, 200, 300 };
+                    Effect.fireDamageRatioByLevel = [100, 200, 300];
                 }); // 火焰草根
                 ItemDatabase.Modify(1158, item => 
                 {
@@ -1328,33 +1383,38 @@ namespace SPMod
                 {
                     Charm_FrostiumRing Effect = item.resourcePrefab.GetComponent<Charm_FrostiumRing>();
                     Effect.maxLevel = 1;
-                    Effect.damageByLevel = new int[2] { 15, 30 };
+                    Effect.damageByLevel = [15, 30];
                     Effect.cooldownTimer.time = 0.2f;
                 }); // 霜冻矿戒指
                 ItemDatabase.Modify(1178, item =>
                 {
                     Charm_EchoOfTheGlacier Effect = item.resourcePrefab.GetComponent<Charm_EchoOfTheGlacier>();
-                    Effect.frostbiteTimeByLevel = new float[] { 5f, 4f, 3f, 2f };
-                    Effect.effectsString = new LocalizedString[] { Effect.effectsString[0], new LocalizedString("ModCharmEffect_EchoOfTheGlacier") };
+                    Effect.frostbiteTimeByLevel = [5f, 4f, 3f, 2f];
+                    Effect.effectsString = [Effect.effectsString[0], new("ModCharmEffect_EchoOfTheGlacier")];
                 }); // 冰川之回声
                 ItemDatabase.Modify(1196, item =>
                 {
                     Charm_Exploitation Effect = item.resourcePrefab.GetComponent<Charm_Exploitation>();
                     Effect.maxLevel = 2;
-                    Effect.healAmountByLevel = new float[] { 1, 2, 3 };
-                    Effect.bonusHealAmountByLevel = new float[] { 1, 2, 3 };
-                    Effect.stats = new StatusGroup[0] { };
+                    Effect.healAmountByLevel = [1, 2, 3];
+                    Effect.bonusHealAmountByLevel = [1, 2, 3];
+                    Effect.stats = [];
                 }); // 生命之触
                 ItemDatabase.Modify(1243, item =>
                 {
                     Charm_StatusInstance Effect = item.resourcePrefab.GetComponent<Charm_StatusInstance>();
-                    Effect.effectsString = new LocalizedString[] { new LocalizedString("ModCharmEffect_IceBurn") };
+                    Effect.effectsString = [new("ModCharmEffect_IceBurn")];
                 }); // 封印的特加斯
+                ItemDatabase.Modify(1245, item =>
+                {
+                    Charm_TheTyphoonSheetmusic Effect = item.resourcePrefab.GetComponent<Charm_TheTyphoonSheetmusic>();
+                    Effect.cloudAttackSpeedByLevel = [100];
+                }); // 乐谱《台风》
                 ItemDatabase.Modify(1268, item =>
                 {
                     Charm_FreezeNormalSlash Effect = item.resourcePrefab.GetComponent<Charm_FreezeNormalSlash>();
-                    Effect.phSlashDamageMultiplierByLevel = new float[] { 60, 120, 180 };
-                    Effect.slashDamageMultiplierByLevel = new float[] { 90, 180, 270 };
+                    Effect.phSlashDamageMultiplierByLevel = [60, 120, 180];
+                    Effect.slashDamageMultiplierByLevel = [90, 180, 270];
                 }); // 永恒的冬日
                 ItemDatabase.Modify(1277, item =>
                 {
@@ -1365,9 +1425,9 @@ namespace SPMod
                 ItemDatabase.Modify(1285, item =>
                 {
                     Charm_EvasionRestore Effect = item.resourcePrefab.GetComponent<Charm_EvasionRestore>();
-                    Effect.restoreDashCountByLevel = new int[] { 0, 1, 2, 3 };
+                    Effect.restoreDashCountByLevel = [0, 1, 2, 3];
                     Effect.maxLevel = 3;
-                    Effect.stats = new StatusGroup[1] { Tools.SetStatusGroup("EVASION", 300, 600, 900, 1200) };
+                    Effect.stats = [Tools.SetStatusGroup("EVASION", 300, 600, 900, 1200)];
                 }); // 弹力带
                 ItemDatabase.Modify(1288, item =>
                 {
@@ -1376,11 +1436,17 @@ namespace SPMod
                     Charm_GuardCounter Effect = item.resourcePrefab.GetComponent<Charm_GuardCounter>();
                     Effect.ripostelaserFxPrefab = OrigEffect.ripostelaserFxPrefab;
                 }); // 还击法杖碎片
+                ItemDatabase.Modify(1289, item =>
+                {
+                    Charm_CompassDamageUp Effect = item.resourcePrefab.GetComponent<Charm_CompassDamageUp>();
+                    Effect.damageBonusByLevel = [5, 10, 15];
+                    Effect.dependencyDamageBonusByLevel = [10,15,20];
+                }); // 北向的金色针
                 ItemDatabase.Modify(1293, item =>
                 {
                     Charm_IceBat Effect = item.resourcePrefab.GetComponent<Charm_IceBat>();
                     Effect.iceDamage = 100;
-                    Effect.attackSpeedBonusByLevel = new int[] { 60, 120, 180, 240, 300 };
+                    Effect.attackSpeedBonusByLevel = [60, 120, 180, 240, 300];
                 }); // 雪山大耳蝙蝠
                 //法术更改
                 ItemDatabase.Modify(3000, item =>
@@ -1392,14 +1458,14 @@ namespace SPMod
                     Charm_Magic Effect = item.resourcePrefab.GetComponent<Charm_Magic>();
                     Effect.maxLevel = 1;
                     Effect.skill.rarity = EItemRarity.Common;
-                    Effect.skill.cooldownTime = 0.8f;
+                    Effect.skill.cooldownTime = 0.6f;
                     ActiveSkill_Bolt Magic = Effect.skill.magicPrefab.GetComponent<ActiveSkill_Bolt>();
                     Magic.fireCount = 2;
                     Magic.damageId = "Air Bolt";
                     Magic.relatedDamage = "WindDamage";
                     Magic.elementalType = Wind;
-                    Magic.defaultDamageByLevel = new float[] { 8, 12 };
-                    Magic.damagePercentByLevel = new float[] { 16, 24 };
+                    Magic.defaultDamageByLevel = [8, 12];
+                    Magic.damagePercentByLevel = [16, 24];
                     BondingItems.Add(3000);
                 }); // 空气魔弹
                 ItemDatabase.Modify(3012, item =>
@@ -1408,8 +1474,8 @@ namespace SPMod
                     Effect.maxLevel = 4;
                     Effect.ContainedMagic.cooldownTime = 5f;
                     ActiveSkill_Arrow Magic = Effect.ContainedMagic.magicPrefab.GetComponent<ActiveSkill_Arrow>();
-                    Magic.damagePercentByLevel = new int[] { 200, 400, 600, 800, 1000 };
-                    Magic.defaultDamageByLevel = new float[] { 10, 20, 30, 40, 50 };
+                    Magic.damagePercentByLevel = [200, 400, 600, 800, 1000];
+                    Magic.defaultDamageByLevel = [10, 20, 30, 40, 50];
                 }); // 火焰箭
                 ItemDatabase.Modify(3013, item =>
                 {
@@ -1417,8 +1483,8 @@ namespace SPMod
                     Effect.maxLevel = 4;
                     Effect.ContainedMagic.ammo = 3;
                     ActiveSkill_Ball Magic = Effect.ContainedMagic.magicPrefab.GetComponent<ActiveSkill_Ball>();
-                    Magic.defaultDamageByLevel = new float[] { 16, 20, 24, 28, 32 };
-                    Magic.damagePercentByLevel = new float[] { 60, 75, 90, 105, 120 };
+                    Magic.defaultDamageByLevel = [16, 20, 24, 28, 32];
+                    Magic.damagePercentByLevel = [60, 75, 90, 105, 120];
                 }); // 火焰马戏团
                 ItemDatabase.Modify(3020, item =>
                 {
@@ -1433,9 +1499,9 @@ namespace SPMod
                     Effect.ContainedMagic.cooldownTime = 25f;
                     ActiveSkill_MeteorShower Magic = Effect.ContainedMagic.magicPrefab.GetComponent<ActiveSkill_MeteorShower>();
                     Magic.meteorFireTimer = new Timer(0.2f);
-                    Magic.numberOfMeteorsByLevel = new int[] { 24, 36, 48, 60, 72 };
-                    Magic.defaultDamageByLevel = new float[] { 8, 12, 16, 20, 24 };
-                    Magic.damagePercentByLevel = new float[] { 40, 60, 80, 100, 120 };
+                    Magic.numberOfMeteorsByLevel = [24, 36, 48, 60, 72];
+                    Magic.defaultDamageByLevel = [8, 12, 16, 20, 24];
+                    Magic.damagePercentByLevel = [40, 60, 80, 100, 120];
                 }); // 陨石雨
                 ItemDatabase.Modify(3023, item =>
                 {
@@ -1443,8 +1509,8 @@ namespace SPMod
                     Effect.maxLevel = 4;
                     Effect.ContainedMagic.cooldownTime = 12f;
                     ActiveSkill_ArrowRain Magic = Effect.ContainedMagic.magicPrefab.GetComponent<ActiveSkill_ArrowRain>();
-                    Magic.defaultDamageByLevel = new float[] { 8, 10, 12, 14, 16 };
-                    Magic.damagePercentByLevel = new float[] { 25, 50, 75, 100, 125 };
+                    Magic.defaultDamageByLevel = [8, 10, 12, 14, 16];
+                    Magic.damagePercentByLevel = [25, 50, 75, 100, 125];
                     Magic.debuffPercent = 100;
                 }); // 箭雨
                 ItemDatabase.Modify(3028, item =>
@@ -1453,16 +1519,16 @@ namespace SPMod
                     Effect.maxLevel = 4;
                     Effect.ContainedMagic.cooldownTime = 24f;
                     ActiveSkill_LightningArmor Magic = Effect.ContainedMagic.magicPrefab.GetComponent<ActiveSkill_LightningArmor>();
-                    Magic.damagesByLevel = new float[] { 2, 4, 6, 8, 10 };
-                    Magic.damagePercentByLevel = new float[] { 20, 40, 60, 80, 100 };
+                    Magic.damagesByLevel = [2, 4, 6, 8, 10];
+                    Magic.damagePercentByLevel = [20, 40, 60, 80, 100];
                     Magic.durationTimer = new Timer(16f);
                 }); // 雷霆之甲
                 ItemDatabase.Modify(3036, item =>
                 {
                     Charm_Magic Effect = item.resourcePrefab.GetComponent<Charm_Magic>();
                     ActiveSkill_Projectile Magic = Effect.ContainedMagic.magicPrefab.GetComponent<ActiveSkill_Projectile>();
-                    Magic.defaultDamageByLevel = new float[] { 8, 12, 16, 20, 24 };
-                    Magic.damagePercentByLevel = new float[] { 120, 180, 240, 300, 360 };
+                    Magic.defaultDamageByLevel = [8, 12, 16, 20, 24];
+                    Magic.damagePercentByLevel = [120, 180, 240, 300, 360];
                 }); // 雷之裁决
                 //自动加载内容
                 foreach (var entry in ModfyisItemUniqueEffect)
@@ -1514,22 +1580,16 @@ namespace SPMod
                     });
                 }
             }
-            if (ModConfig.Instance.AddItem)
-            {
-                ItemDatabase.Modify(2058, item => item.activeType = EItemActiveType.Default);
-                ItemDatabase.Modify(2059, item => item.activeType = EItemActiveType.Default);
-                ItemDatabase.Modify(2060, item => item.activeType = EItemActiveType.Default);
-            }
+            ItemDatabase.Modify(2058, item => item.activeType = EItemActiveType.Default);
+            ItemDatabase.Modify(2059, item => item.activeType = EItemActiveType.Default);
+            ItemDatabase.Modify(2060, item => item.activeType = EItemActiveType.Default);
         }
 
         public static void OnLoadMiracleDatabase()
         {
-            if (ModConfig.Instance.AddMiracle)
+            foreach (ModMiracle Data in ModMiraclesData)
             {
-                foreach (ModMiracle Data in ModMiraclesData)
-                {
-                    MiracleDatabase.Register(Data.ThisMiracle);
-                }
+                MiracleDatabase.Register(Data.ThisMiracle);
             }
             if (ModConfig.Instance.ModifyMiracle)
             {
@@ -1549,40 +1609,37 @@ namespace SPMod
                 MiracleDatabase.Modify("Elementalist", modifier =>
                 {
                     if (modifier is Miracle_StatusInstance MiracleStatus)
-                        MiracleStatus.categories = new string[1] { "ELEMENTAL" };
+                        MiracleStatus.categories = ["ELEMENTAL"];
                 });
                 MiracleDatabase.Modify("Berserker", modifier =>
                 {
                     if (modifier is Miracle_StatusInstance MiracleStatus)
-                        MiracleStatus.categories = new string[1] { "MYSTIC" };
+                        MiracleStatus.categories = ["MYSTIC"];
                 });
-                if (ModConfig.Instance.AddCategory)
+                MiracleDatabase.Modify("IntelligenceAgent", modifier =>
                 {
-                    MiracleDatabase.Modify("IntelligenceAgent", modifier =>
+                    if (modifier is Miracle_StatusInstance MiracleStatus)
+                        MiracleStatus.categories = ["COMET"];
+                });
+                MiracleDatabase.Modify("Gambler", modifier =>
+                {
+                    if (modifier is Miracle_Gambler Miracle)
                     {
-                        if (modifier is Miracle_StatusInstance MiracleStatus)
-                            MiracleStatus.categories = new string[1] { "COMET" };
-                    });
-                    MiracleDatabase.Modify("Gambler", modifier =>
+                        Miracle.dice = 7;
+                        Miracle.categories = ["FORTUNE"];
+                        Miracle.giveItem = EItemGiveType.GiveItem;
+                        Effect effect = Miracle.effects[0];
+                        Miracle.effects = [effect];
+                    }
+                });
+                MiracleDatabase.Modify("Guard", modifier =>
+                {
+                    if (modifier is Miracle_StatusInstance MiracleStatus)
                     {
-                        if (modifier is Miracle_Gambler Miracle)
-                        {
-                            Miracle.dice = 7;
-                            Miracle.categories = new string[1] { "FORTUNE" };
-                            Miracle.giveItem = EItemGiveType.GiveItem;
-                            Effect effect = Miracle.effects[0];
-                            Miracle.effects = new Effect[1] { effect };
-                        }
-                    });
-                    MiracleDatabase.Modify("Guard", modifier =>
-                    {
-                        if (modifier is Miracle_StatusInstance MiracleStatus)
-                        {
-                            MiracleStatus.categories = new string[1] { "PARTY" };
-                            MiracleStatus.statInfo = Tools.SetStatInfo("ALL_PLAYER_DEFENSE/8=Positive", "ALL_PLAYER_ALL_DAMAGE/8=Positive").ToArray();
-                        }
-                    });
-                }
+                        MiracleStatus.categories = ["PARTY"];
+                        MiracleStatus.statInfo = Tools.SetStatInfo("ALL_PLAYER_DEFENSE/8=Positive", "ALL_PLAYER_ALL_DAMAGE/8=Positive").ToArray();
+                    }
+                });
             }
         }
 
@@ -1598,11 +1655,12 @@ namespace SPMod
                 KeywordDatabase.Register(Entity);
             }
             Tools.InjectKeywordSpriteAssets();
+            ModDamageKey.RegisterAll(ModDamageKeyEntityData);
         }
 
-        private static readonly Dictionary<ulong, GameObject> Lv5 = new Dictionary<ulong, GameObject>();
-        private static readonly Dictionary<ulong, GameObject> Lv10 = new Dictionary<ulong, GameObject>();
-        private static readonly Dictionary<ulong, GameObject> Lv20 = new Dictionary<ulong, GameObject>();
+        private static readonly Dictionary<ulong, GameObject> Lv5 = [];
+        private static readonly Dictionary<ulong, GameObject> Lv10 = [];
+        private static readonly Dictionary<ulong, GameObject> Lv20 = [];
         public static void OnLoadPassiveDatabase()
         {
             foreach(PassiveEntity passive in PassiveDatabase.GetAll())
@@ -1621,21 +1679,36 @@ namespace SPMod
                     }
                     if (modifier.lv20PerkPrefab.TryGetComponent<PassiveObject_StatusInstance>(out var Status))
                     {
-                        Status.stats = new string[] { "DEFENSE_TO_ALLDAMAGE/1" };
+                        Status.stats = ["DEFENSE_TO_ALLDAMAGE/1"];
                     }
                 });//耐心(防御)
                 PassiveDatabase.Modify(8, modifier =>
                 {
-                    modifier.addStats = new string[] { "MAX_MP/2" };
+                    modifier.addStats = ["MAX_MP/2"];
                 });//智慧(MP)
                 PassiveDatabase.Modify(11, modifier =>
                 {
-                    modifier.addStats = new string[] { "EXP_DROP/1" };
+                    modifier.addStats = ["EXP_DROP/1"];
                 });//机智
             }
         }
 
-        public static Dictionary<string, string> KeyWordToStatusName = new Dictionary<string, string>();
+        public static Dictionary<string, string> KeyWordToStatusName = [];
+        public static void OnLoadStatusDatabase()
+        {
+            foreach (ModKeyWord Data in ModKeywordEntityData)
+            {
+                if (Data.Status != null)
+                    StatusDatabase.Register(Data.Status);
+            }
+        }
+
+        private static void OnPlayerAvatarSpawnedServerside(PlayerAvatar Player)
+        {
+            if (Player == null) return;
+            Player.AddCustomStatUnsafe(TextFile.WindDamage, KeywordDatabase.GetConstValue("playerDefaultElementalDamage", true));
+        }
+
         public static void OnAllDatabasesReady()
         {
             foreach (StatusEntity statusEntity in Resources.LoadAll<StatusEntity>("Status"))
@@ -1662,7 +1735,6 @@ namespace SPMod
             BrownRabbit2Hit.SafeRemove(Name);
             Deer_Buff.Remove(Name);
             ColdAngerTime.SafeRemove(Name);
-            HeatedBladeEffect.SafeRemove(Name);
             HeatedBladeStack.SafeRemove(Name);
         }
 
@@ -1687,12 +1759,9 @@ namespace SPMod
         public static void ModifiedCustomStatAdd(UnitAvatar Player, string ID, ref int Result)
         {
 
-            if (ModConfig.BossRushMode)
+            if (ID.EqualsAny(TextFile.ExtraWeaponChoices))
             {
-                if (ID.EqualsAny(TextFile.ExtraWeaponChoices))
-                {
-                    Result += 10;
-                }
+                Result += 10;
             }
 
             if (PartyStatsGetter.TryGetValue(ID, out Func<AllPlayerStatus, int> GetPartyStats))
@@ -1754,14 +1823,6 @@ namespace SPMod
                     Result += Player.GetCustomStatUnsafe(TextFile.ChargingCharmBonus);
                 }
             }//驱魔的重剑 冰霜武具冷却速度加攻击速度
-
-            if (Player.IsWeaponUseNet(WeaponIDs.RedSnakeCrush))
-            {
-                if (ID.EqualsAny(TextFile.FixedAttackSpeed))
-                {
-                    Result += Player.GetCustomStatUnsafe(TextFile.BurnSpeed).IntMult(0.5f);
-                }
-            }//红蛇碎击
 
             if (Player.IsWeaponUseNet(WeaponIDs.LightningsWrath))
             {
@@ -1865,7 +1926,7 @@ namespace SPMod
                 }
             }//荆棘棍
 
-            if (Player.IsWeaponUseNet(WeaponIDs.SwarmingShadow, WeaponIDs.SwiftRegret, WeaponIDs.Compliance))
+            if (Player.IsWeaponUseNet(WeaponIDs.SwarmingShadow, WeaponIDs.SwiftRegret, WeaponIDs.Compliance, WeaponIDs.ScatteredLonging))
             {
                 if (ID.EqualsAny(TextFile.SpecialAttackChargeSpeed))
                 {
@@ -2277,18 +2338,6 @@ namespace SPMod
                 }
             }//橙兔2 减益伤害乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit_3", false))
-            {
-                if (ID.EqualsAny(TextFile.BuffDuration))
-                {
-                    Result += Result.CustomStatMult(2f, 100);
-                }
-                if (ID.EqualsAny("FINALMP"))
-                {
-                    Result -= Result.CustomStatMult(0.4f, 100);
-                }
-            }//红圣兔3 持续时间大幅增加 最终MP乘算减少
-
             if (Tools.CostumeSkinUse(Player.Name, "DarkBrownRabbit_2", false))
             {
                 if (ID.EqualsAny("BASICATTACKDAMAGEBONUS"))
@@ -2520,7 +2569,7 @@ namespace SPMod
             {
                 case "PinkRabbit_2":
                 {
-                    Stats = new string[] { "EXTRA_ITEM_CHOICES/1", "EXP_DROP/-30" };
+                    Stats = ["EXTRA_ITEM_CHOICES/1", "EXP_DROP/-30"];
                     break;
                 }
                 case "PinkRabbit_3":
@@ -2536,13 +2585,13 @@ namespace SPMod
                 case "BrownRabbit_3":
                 {
                     Stats = Array.Empty<string>();
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1160) };
+                    Item = [ItemDatabase.FindItemById(1160)];
                     break;
                 }
                 case "MandarinRabbit_2":
                 {
-                    Stats = new string[] { "CRITICAL/-2000" };
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1183) };
+                    Stats = ["CRITICAL/-2000"];
+                    Item = [ItemDatabase.FindItemById(1183)];
                     break;
                 }
                 case "MandarinRabbit_3":
@@ -2552,80 +2601,80 @@ namespace SPMod
                 }
                 case "WhiteWolf_2":
                 {
-                    Stats = new string[] { "MOVE_SPEED/100", "DASH_RECOVERY_SPEED/-40" };
+                    Stats = ["MOVE_SPEED/100", "DASH_RECOVERY_SPEED/-40"];
                     break;
                 }
                 case "WhiteWolf_3":
                 {
-                    Stats = new string[] { "FIXED_DASH/1", "DASH_RECOVERY_SPEED/200" };
+                    Stats = ["FIXED_DASH/1", "DASH_RECOVERY_SPEED/200"];
                     break;
                 }
                 case "Skeleton_1":
                 {
-                    Stats = new string[] { "HP_CURSE/50" };
+                    Stats = ["HP_CURSE/50"];
                     Item = Array.Empty<ItemEntity>();
                     UseEffect = false;
                     break;
                 }
                 case "Skeleton_3":
                 {
-                    Stats = new string[] { "DEBUFF_DAMAGE/-20" };
+                    Stats = ["DEBUFF_DAMAGE/-20"];
                     Item = Array.Empty<ItemEntity>();
                     UseEffect = false;
                     break;
                 }
                 case "FireCat_2":
                 {
-                    Stats = new string[] { "FLAME_SWORD_DAMAGE/-50", "FLAME_SWORD_FAST_FALL/25" };
+                    Stats = ["FLAME_SWORD_DAMAGE/-50", "FLAME_SWORD_FAST_FALL/25"];
                     Item = Array.Empty<ItemEntity>();
                     break;
                 }
                 case "FireCat_3":
                 {
-                    Stats = new string[] { "FINAL_WEAPONDAMAGE/15" };
+                    Stats = ["FINAL_WEAPONDAMAGE/15"];
                     Item = Array.Empty<ItemEntity>();
                     break;
                 }
                 case "Frog_2":
                 {
                     Stats = Array.Empty<string>();
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1104) };
+                    Item = [ItemDatabase.FindItemById(1104)];
                     break;
                 }
                 case "Frog_3":
                 {
-                    Stats = new string[] { "ELECTRIC_DAMAGE/12", "ELECTRIC_QUICKNESS/5" };
+                    Stats = ["ELECTRIC_DAMAGE/12", "ELECTRIC_QUICKNESS/5"];
                     Item = Array.Empty<ItemEntity>();
                     break;
                 }
                 case "WizardRabbit_2":
                 {
-                    Stats = new string[] { "CHARM_DAMAGE_BONUS/-35" };
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1179) };
+                    Stats = ["CHARM_DAMAGE_BONUS/-35"];
+                    Item = [ItemDatabase.FindItemById(1179)];
                     break;
                 }
                 case "WizardRabbit_3":
                 {
-                    Stats = new string[] { "FINAL_WEAPONDAMAGE/15" };
+                    Stats = ["FINAL_WEAPONDAMAGE/15"];
                     Item = Array.Empty<ItemEntity>();
                     break;
                 }
                 case "Bat_2":
                 {
-                    Stats = new string[] { "HEALING_PENALTY/100" };
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1077) };
+                    Stats = ["HEALING_PENALTY/100"];
+                    Item = [ItemDatabase.FindItemById(1077)];
                     break;
                 }
                 case "Bat_3":
                 {
-                    Stats = new string[] { "HP_STEAL/5" };
+                    Stats = ["HP_STEAL/2", "HEALING_PENALTY/50"];
                     break;
                 }
                 case "Bird_2":
                 {
-                    Stats = new string[] { "DASH_RECOVERY_SPEED/-20" };
-                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("WindSpriteHairWax", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    Stats = ["DASH_RECOVERY_SPEED/-20"];
+                    if (GetModItem.TryGetValue("WindSpriteHairWax", out ItemEntity ModItem))
+                        Item = [ModItem];
                     break;
                 }
                 case "Bird_3":
@@ -2635,109 +2684,109 @@ namespace SPMod
                 }
                 case "Fox_2":
                 {
-                    Stats = new string[] { "INVENTORY_SLOT/-23" };
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(2099) };
+                    Stats = ["INVENTORY_SLOT/-23"];
+                    Item = [ItemDatabase.FindItemById(2099)];
                     break;
                 }
                 case "Fox_3":
                 {
-                    Stats = new string[] { "TABLET_ENGRAVING/1" };
+                    Stats = ["TABLET_ENGRAVING/1"];
                     break;
                 }
                 case "Luck_2":
                 {
-                    Stats = new string[] { "LUCK/10", "FINAL_WEAPONDAMAGE/-30" };
+                    Stats = ["LUCK/10", "FINAL_WEAPONDAMAGE/-30"];
                     break;
                 }
                 case "Luck_3":
                 {
                     Stats = Array.Empty<string>();
-                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("LuckyCoin", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    if (GetModItem.TryGetValue("LuckyCoin", out ItemEntity ModItem))
+                        Item = [ModItem];
                     break;
                 }
                 case "Mole_2":
                 {
-                    Stats = new string[] { "FINAL_WEAPONDAMAGE/-70" };
+                    Stats = ["FINAL_WEAPONDAMAGE/-70"];
                     Item = Array.Empty<ItemEntity>();
                     break;
                 }
                 case "Mole_3":
                 {
-                    Stats = new string[] { "CHARM_DAMAGE_BONUS/-50" };
+                    Stats = ["CHARM_DAMAGE_BONUS/-50"];
                     Item = Array.Empty<ItemEntity>();
                     break;
                 }
                 case "HolyRabbit_2":
                 {
-                    Stats = new string[] { "FINAL_DAMAGE/-20", "REVIVE_PLAYER_HASTE/40" };
+                    Stats = ["FINAL_DAMAGE/-20", "REVIVE_PLAYER_HASTE/40"];
                     Item = Array.Empty<ItemEntity>();
                     break;
                 }
                 case "HolyRabbit_3":
                 {
-                    Stats = new string[] { "HP_CURSE/50", "ALL_PLAYER_DEFENSE/20" };
+                    Stats = ["HP_CURSE/50", "ALL_PLAYER_DEFENSE/20"];
                     Item = Array.Empty<ItemEntity>();
                     break;
                 }
                 case "Ghost_2":
                 {
-                    Stats = new string[] { "MAGIC_DAMAGE_BONUS/-50" };
+                    Stats = ["MAGIC_DAMAGE_BONUS/-50"];
                     Item = Array.Empty<ItemEntity>();
                     break;
                 }
                 case "Ghost_3":
                 {
-                    Stats = new string[] { "MAGIC_DAMAGE_BONUS/-50", "MAGIC_COOLDOWN_REDUCTION/40" };
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1040) };
+                    Stats = ["MAGIC_DAMAGE_BONUS/-50", "MAGIC_COOLDOWN_REDUCTION/40"];
+                    Item = [ItemDatabase.FindItemById(1040)];
                     break;
                 }
                 case "Seren_2":
                 {
-                    Stats = new string[] { "MAX_HP/-40", "FINAL_HP/-40", "MP_STEAL/5" };
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(3020) };
+                    Stats = ["MAX_HP/-40", "FINAL_HP/-40", "MP_STEAL/5"];
+                    Item = [ItemDatabase.FindItemById(3020)];
                     break;
                 }
                 case "Seren_3":
                 {
-                    Stats = new string[] { "PLANET_ATTACK_SPEED/20", "ATTACK_SPEED/-30" };
+                    Stats = ["PLANET_ATTACK_SPEED/20", "ATTACK_SPEED/-30"];
                     Item = Array.Empty<ItemEntity>();
-                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("DeepSpaceObserver", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    if (GetModItem.TryGetValue("DeepSpaceObserver", out ItemEntity ModItem))
+                        Item = [ModItem];
                     break;
                 }
                 case "Crocodile_2":
                 {
                     Stats = Array.Empty<string>();
-                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("AlchemistsFlask", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    if (GetModItem.TryGetValue("AlchemistsFlask", out ItemEntity ModItem))
+                        Item = [ModItem];
                     break;
                 }
                 case "Crocodile_3":
                 {
-                    Stats = new string[] { "MELEE_DAMAGE/8", "BASIC_ATTACK_DAMAGE/20", "ATTACK_SPEED/20", "WEAPON_RANGE/20" };
+                    Stats = ["MELEE_DAMAGE/8", "BASIC_ATTACK_DAMAGE/20", "ATTACK_SPEED/20", "WEAPON_RANGE/20"];
                     break;
                 }
                 case "WhiteRabbit_2":
                 {
-                    Stats = new string[] { "HIGHEST_ELEMENTAL_DAMAGE/4" };
-                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("HeartofElements", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    Stats = ["HIGHEST_ELEMENTAL_DAMAGE/4"];
+                    if (GetModItem.TryGetValue("HeartofElements", out ItemEntity ModItem))
+                        Item = [ModItem];
                     break;
                 }
                 case "WhiteRabbit_3":
                 {
-                    Stats = new string[] { "FINAL_WEAPONDAMAGE/8" };
+                    Stats = ["FINAL_WEAPONDAMAGE/8"];
                     break;
                 }
                 case "RedHolyRabbit_2":
                 {
-                    Stats = new string[] { "HIGHEST_ELEMENTAL_DAMAGE/4", "MAX_MP/20", "FINAL_MP/20" };
+                    Stats = ["HIGHEST_ELEMENTAL_DAMAGE/4", "MAX_MP/20", "FINAL_MP/20"];
                     break;
                 }
                 case "RedHolyRabbit_3":
                 {
-                    Stats = Array.Empty<string>();
+                    Stats = ["MAX_HP/20"];
                     break;
                 }
                 case "DarkBrownRabbit_2":
@@ -2747,17 +2796,17 @@ namespace SPMod
                 }
                 case "DarkBrownRabbit_3":
                 {
-                    Stats = new string[] { "MELEE_DAMAGE/10", "LAST_BASIC_ATTACK_DAMAGE/20", "WEAPON_RANGE/30" };
+                    Stats = ["MELEE_DAMAGE/10", "LAST_BASIC_ATTACK_DAMAGE/20", "WEAPON_RANGE/30"];
                     break;
                 }
                 case "Deer_1":
                 {
-                    Stats = new string[] { "DIMENSION_POCKET/3", "CRITICAL/-10000" };
+                    Stats = ["DIMENSION_POCKET/3", "CRITICAL/-10000"];
                     break;
                 }
                 case "Deer_2":
                 {
-                    Stats = new string[] { "DEFENSE/-40", "EVASION/-4000" };
+                    Stats = ["DEFENSE/-40", "EVASION/-4000"];
                     break;
                 }
                 case "Deer_3":
@@ -2767,20 +2816,20 @@ namespace SPMod
                 }
                 case "Squirrel_2":
                 {
-                    Stats = new string[] { "LUCK/5", "FRUIT_COUNT/-5" };
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1195) };
+                    Stats = ["LUCK/5", "FRUIT_COUNT/-5"];
+                    Item = [ItemDatabase.FindItemById(1195)];
                     break;
                 }
                 case "Squirrel_3":
                 {
                     Stats = Array.Empty<string>();
-                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("MysteryBox", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    if (GetModItem.TryGetValue("MysteryBox", out ItemEntity ModItem))
+                        Item = [ModItem];
                     break;
                 }
                 case "Otter_2":
                 {
-                    Stats = new string[] { "MP_STEAL/5", "MP_SKILL_DAMAGE/12", "FINAL_WEAPONDAMAGE/-18", "CRITICAL_DAMAGE_RATE/30" };
+                    Stats = ["MP_STEAL/5", "MP_SKILL_DAMAGE/12", "FINAL_WEAPONDAMAGE/-18", "CRITICAL_DAMAGE_RATE/30"];
                     break;
                 }
                 case "Otter_3":
@@ -2810,15 +2859,15 @@ namespace SPMod
                 }
                 case "ForestCat_2":
                 {
-                    Stats = new string[] { "LEAF_DROP/20", "FINAL_DAMAGE/-10" };
-                    Item = new ItemEntity[] { ItemDatabase.FindItemById(1271) };
+                    Stats = ["LEAF_DROP/20", "FINAL_DAMAGE/-10"];
+                    Item = [ItemDatabase.FindItemById(1271)];
                     break;
                 }
                 case "ForestCat_3":
                 {
-                    Stats = new string[] { "NEGOTIATION/-20" };
-                    if (ModConfig.Instance.AddItem && GetModItem.TryGetValue("MidasRing", out ItemEntity ModItem))
-                        Item = new ItemEntity[] { ModItem };
+                    Stats = ["NEGOTIATION/-20"];
+                    if (GetModItem.TryGetValue("MidasRing", out ItemEntity ModItem))
+                        Item = [ModItem];
                     break;
                 }
             }

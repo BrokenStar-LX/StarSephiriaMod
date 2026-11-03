@@ -172,8 +172,8 @@ namespace SPMod.MonsterAI
         {
             private static int Oldpattern = -1;
             private static bool Start = false;
-            private static Dictionary<int, List<int>> PatternType = new Dictionary<int, List<int>>();
-            private static Dictionary<int, int> LastUsePatternType = new Dictionary<int, int>();
+            private static Dictionary<int, List<int>> PatternType = [];
+            private static Dictionary<int, int> LastUsePatternType = [];
 
             [HarmonyPatch("Awake")]
             [HarmonyPostfix]
@@ -212,12 +212,12 @@ namespace SPMod.MonsterAI
 
             private static Dictionary<int, List<int>> ReStartPatternType()
             {
-                Dictionary<int, List<int>> ReStartPattern = new Dictionary<int, List<int>>();
+                Dictionary<int, List<int>> ReStartPattern = [];
                 for (int i = 0; i < 7; i++)
                 {
                     List<int> Rand;
-                    if (Hard <= 1) Rand = new List<int>() { 1 };
-                    else Rand = new List<int>() { 1, 2, 3 };
+                    if (Hard <= 1) Rand = [1];
+                    else Rand = [1, 2, 3];
                     Rand.Shuffle();
                     ReStartPattern.Add(i, Rand);
                 }
@@ -258,7 +258,7 @@ namespace SPMod.MonsterAI
                     }
 
                     Unit_QQQBoss? qqqBoss = qqqBossField.GetValue(__instance) as Unit_QQQBoss;
-                    if (qqqBoss == null || !(obeliskSummonerTryTimerField.GetValue(__instance) is Timer obeliskTimer)) return true;
+                    if (qqqBoss == null || obeliskSummonerTryTimerField.GetValue(__instance) is not Timer obeliskTimer) return true;
 
                     if (qqqBoss.isInStun)
                     {
@@ -316,10 +316,10 @@ namespace SPMod.MonsterAI
                             if (PatternType[UsePattern].Count <= 0)
                             {
                                 List<int> Rand;
-                                if (Hard <= 1) Rand = new List<int>() { 1 };
+                                if (Hard <= 1) Rand = [1];
                                 else
                                 {
-                                    Rand = new List<int>() { 1, 2, 3 };
+                                    Rand = [1, 2, 3];
                                 }
                                 Rand.Shuffle();
                                 if (Rand.Count > 1 && LastUsePatternType[UsePattern] >= 0)
@@ -484,7 +484,7 @@ namespace SPMod.MonsterAI
         {
             private static bool TryGetRandomAlivePlayer(out PlayerAvatar? player)
             {
-                List<PlayerAvatar> list = new List<PlayerAvatar>();
+                List<PlayerAvatar> list = [];
                 foreach (PlayerSpawner playerSpawner in PlayerSpawner.MultiplayerList)
                 {
                     if (playerSpawner && playerSpawner.PlayerAvatar && !playerSpawner.PlayerAvatar.IsDead)
@@ -610,8 +610,8 @@ namespace SPMod.MonsterAI
                 {
                     if (isLastReady) break;
 
-                    List<Vector2> AllSpawnPos = new List<Vector2>();
-                    List<float> AllAngle = new List<float>();
+                    List<Vector2> AllSpawnPos = [];
+                    List<float> AllAngle = [];
                     for (float Offset = Stack % 2 == 0 ? Step * 0.5f : 0; Offset <= ZoneHalf * 2; Offset += Step)
                     {
                         AllSpawnPos.Add(Center + new Vector2(1, -1) * Offset);
@@ -644,7 +644,7 @@ namespace SPMod.MonsterAI
                 yield return new WaitForSeconds(1.5f);
                 patternTargetField.SetValue(Boss, null);
                 Boss.NetworkcurrentAction = EAnimation.None;
-                List<BulletSpawnInfo> spawnList = new List<BulletSpawnInfo>();
+                List<BulletSpawnInfo> spawnList = [];
                 Vector2 Center = GetBossZoneCenterPosition(Boss) + new Vector2(0f, 12f);
                 float ZoneHalf = 8f;
                 float AngleDownRight = new Vector2(1, 1).GetAngle();
@@ -683,13 +683,13 @@ namespace SPMod.MonsterAI
                 }
                 for (int i = 0; i < AllPos.Count; i++)
                 {
-                    RpcCreateLaserAttackWarningMethod.Invoke(Boss, new object[] { AllPos[i], AllRot[i], true });
+                    RpcCreateLaserAttackWarningMethod.Invoke(Boss, [AllPos[i], AllRot[i], true]);
                 }
                 yield return new WaitForSeconds(AttackSpeed);
                 for (int i = 0; i < AllPos.Count; i++)
                 {
-                    AttackLaserMethod.Invoke(Boss, new object[] { AllPos[i], AllRot[i] });
-                    RpcCreateLaserAttackFxMethod.Invoke(Boss, new object[] { AllPos[i], AllRot[i] });
+                    AttackLaserMethod.Invoke(Boss, [AllPos[i], AllRot[i]]);
+                    RpcCreateLaserAttackFxMethod.Invoke(Boss, [AllPos[i], AllRot[i]]);
                 }
                 yield break;
             }
@@ -702,10 +702,10 @@ namespace SPMod.MonsterAI
                     StarSephiriaMod.LogError("[UnitAI_QQQBoss][LaserAttackType3]获取反射失败");
                     yield break;
                 }
-                RpcCreateLaserAttackWarningMethod.Invoke(Boss, new object[] { Pos, Rot, true });
+                RpcCreateLaserAttackWarningMethod.Invoke(Boss, [Pos, Rot, true]);
                 yield return new WaitForSeconds(AttackSpeed);
-                AttackLaserMethod.Invoke(Boss, new object[] { Pos, Rot });
-                RpcCreateLaserAttackFxMethod.Invoke(Boss, new object[] { Pos, Rot });
+                AttackLaserMethod.Invoke(Boss, [Pos, Rot]);
+                RpcCreateLaserAttackFxMethod.Invoke(Boss, [Pos, Rot]);
             }
 
             private static void GetIssenDashEnd(Unit_QQQBoss Boss, Vector2 start, Vector2 direction, out Vector2 end)
@@ -804,18 +804,18 @@ namespace SPMod.MonsterAI
                     Vector2 vector2 = End - Vec;
                     float Angle = HorayUtility.GetAngleFromVector(vector2);
                     Vector2 center = Vector2.Lerp(Vec, End, 0.5f);
-                    RpcCreateIssenAttackWarningMethod.Invoke(Boss, new object[] { Vec, center, Angle });
+                    RpcCreateIssenAttackWarningMethod.Invoke(Boss, [Vec, center, Angle]);
                     yield return new WaitForSeconds(Boss.issenAnimationStartDelay * Speed);
                     RpcStartIssenAttackMethod.Invoke(Boss, null);
                     yield return new WaitForSeconds(Boss.issenAnimationLeadTime * Speed);
                     RpcPlayIssenAttackStartSoundMethod.Invoke(Boss, null);
-                    RpcPlayIssenAttackFxMethod.Invoke(Boss, new object[] { center, Angle });
-                    StartIssenDamageAttackMethod.Invoke(Boss, new object[] { center, Angle });
+                    RpcPlayIssenAttackFxMethod.Invoke(Boss, [center, Angle]);
+                    StartIssenDamageAttackMethod.Invoke(Boss, [center, Angle]);
                     yield return IssenDashMoveCoroutine(Boss, End, Angle);
                     float SizeY = Boss.issenAttackSize.y * 0.5f;
                     lastIssenStart = center - Dir * SizeY + Dir;
                     lastIssenEnd = center + Dir * SizeY + Dir;
-                    IEnumerator extraEnum = (IEnumerator)IssenExtraAttackCoroutineMethod.Invoke(Boss, new object[] { lastIssenStart, lastIssenEnd });
+                    IEnumerator extraEnum = (IEnumerator)IssenExtraAttackCoroutineMethod.Invoke(Boss, [lastIssenStart, lastIssenEnd]);
                     Boss.StartCoroutine(extraEnum);
                     yield return new WaitForSeconds(0.4f * Speed);
                     if (i < attackCount - 1 && Boss.issenAttackDelayBetween > 0f)
@@ -878,13 +878,13 @@ namespace SPMod.MonsterAI
                     Vector2 vector2 = End - Vec;
                     float Angle = HorayUtility.GetAngleFromVector(vector2);
                     Vector2 center = Vector2.Lerp(Vec, End, 0.5f);
-                    RpcCreateIssenAttackWarningMethod.Invoke(Boss, new object[] { Vec, center, Angle });
+                    RpcCreateIssenAttackWarningMethod.Invoke(Boss, [Vec, center, Angle]);
                     yield return new WaitForSeconds(Boss.issenAnimationStartDelay * Speed);
                     RpcStartIssenAttackMethod.Invoke(Boss, null);
                     yield return new WaitForSeconds(Boss.issenAnimationLeadTime * Speed);
                     RpcPlayIssenAttackStartSoundMethod.Invoke(Boss, null);
-                    RpcPlayIssenAttackFxMethod.Invoke(Boss, new object[] { center, Angle });
-                    StartIssenDamageAttackMethod.Invoke(Boss, new object[] { center, Angle });
+                    RpcPlayIssenAttackFxMethod.Invoke(Boss, [center, Angle]);
+                    StartIssenDamageAttackMethod.Invoke(Boss, [center, Angle]);
                     yield return IssenDashMoveCoroutine(Boss, End, Angle);
                     ShootPerimeterBulletForIssenAttack(Boss, Angle);
                     if (i < attackCount - 1 && Boss.issenAttackDelayBetween > 0f)
@@ -962,13 +962,13 @@ namespace SPMod.MonsterAI
                 Vector2 vector2 = End - Vec;
                 float Angle = HorayUtility.GetAngleFromVector(vector2);
                 Vector2 center = Vector2.Lerp(Vec, End, 0.5f);
-                RpcCreateIssenAttackWarningMethod.Invoke(Boss, new object[] { Vec, center, Angle });
+                RpcCreateIssenAttackWarningMethod.Invoke(Boss, [Vec, center, Angle]);
                 yield return new WaitForSeconds(Boss.issenAnimationStartDelay * 1.5f);
                 RpcStartIssenAttackMethod.Invoke(Boss, null);
                 yield return new WaitForSeconds(Boss.issenAnimationLeadTime * 1.5f);
                 RpcPlayIssenAttackStartSoundMethod.Invoke(Boss, null);
-                RpcPlayIssenAttackFxMethod.Invoke(Boss, new object[] { center, Angle });
-                StartIssenDamageAttackMethod.Invoke(Boss, new object[] { center, Angle });
+                RpcPlayIssenAttackFxMethod.Invoke(Boss, [center, Angle]);
+                StartIssenDamageAttackMethod.Invoke(Boss, [center, Angle]);
                 yield return IssenDashMoveCoroutine(Boss, End, Angle);
 
                 int Count = 0;
@@ -1009,13 +1009,13 @@ namespace SPMod.MonsterAI
 
                 float Wait = 0.125f + 0.125f * Boss.hp / Boss.MaxHp;
                 yield return new WaitForSeconds(Wait);
-                RpcCreateIssenAttackWarningMethod.Invoke(Boss, new object[] { Vec, center, Angle });
+                RpcCreateIssenAttackWarningMethod.Invoke(Boss, [Vec, center, Angle]);
                 yield return new WaitForSeconds(Boss.issenAnimationStartDelay - 0.05f);
                 RpcStartIssenAttackMethod.Invoke(Boss, null);
                 yield return new WaitForSeconds(Boss.issenAnimationLeadTime - 0.05f);
                 RpcPlayIssenAttackStartSoundMethod.Invoke(Boss, null);
-                RpcPlayIssenAttackFxMethod.Invoke(Boss, new object[] { center, Angle });
-                StartIssenDamageAttackMethod.Invoke(Boss, new object[] { center, Angle });
+                RpcPlayIssenAttackFxMethod.Invoke(Boss, [center, Angle]);
+                StartIssenDamageAttackMethod.Invoke(Boss, [center, Angle]);
                 yield break;
             }
 
@@ -1057,12 +1057,12 @@ namespace SPMod.MonsterAI
                 bool isLastPatternReady = (bool)isLastPatternReadyField.GetValue(Boss);
                 if (!isLastPatternReady)
                 {
-                    if (DarknessOuterDamageCoroutineMethod.Invoke(Boss, new object[] { areaCenter }) is IEnumerator darkCoroEnum)
+                    if (DarknessOuterDamageCoroutineMethod.Invoke(Boss, [areaCenter]) is IEnumerator darkCoroEnum)
                     {
                         Coroutine runCoro = Boss.StartCoroutine(darkCoroEnum);
                         darknessOuterDamageCoroutineField.SetValue(Boss, runCoro);
                     }
-                    StartDarknessMoveMethod.Invoke(Boss, new object[] { areaCenter });
+                    StartDarknessMoveMethod.Invoke(Boss, [areaCenter]);
 
                     yield return new WaitForSeconds(0.5f);
                     int Count = 0;
@@ -1124,19 +1124,19 @@ namespace SPMod.MonsterAI
                 bool isLastPatternReady = (bool)isLastPatternReadyField.GetValue(Boss);
                 if (!isLastPatternReady)
                 {
-                    if (DarknessOuterDamageCoroutineMethod.Invoke(Boss, new object[] { areaCenter }) is IEnumerator darkCoroEnum)
+                    if (DarknessOuterDamageCoroutineMethod.Invoke(Boss, [areaCenter]) is IEnumerator darkCoroEnum)
                     {
                         Coroutine runCoro = Boss.StartCoroutine(darkCoroEnum);
                         darknessOuterDamageCoroutineField.SetValue(Boss, runCoro);
                     }
-                    StartDarknessMoveMethod.Invoke(Boss, new object[] { areaCenter });
+                    StartDarknessMoveMethod.Invoke(Boss, [areaCenter]);
 
                     yield return new WaitForSeconds(0.5f);
                     int Count = 0;
                     float Speed = 0.75f + 0.25f * Boss.hp / Boss.MaxHp;
                     if (Hard >= 4) Speed *= 0.9f;
                     Vector2 Dir = (areaCenter - (Vector2)Boss.transform.position).normalized;
-                    while (Count < 66f / Speed)
+                    while (Count < 60f / Speed)
                     {
                         Boss.StartCoroutine(ShootLastPatternOneShotLaserForDarknessAttack(Boss, Dir, Count * 8f));
                         yield return new WaitForSeconds(0.1f * Speed);
@@ -1166,14 +1166,14 @@ namespace SPMod.MonsterAI
                 }
 
                 Vector2 vector = (Vector2)Boss.transform.position + Dir * 1.5f;
-                RpcCreateLastPatternOneShotLaserWarningMethod.Invoke(Boss, new object[] { vector, Rot });
+                RpcCreateLastPatternOneShotLaserWarningMethod.Invoke(Boss, [vector, Rot]);
                 yield return new WaitForSeconds(0.33f);
-                AttackLastPatternOneShotLaserMethod.Invoke(Boss, new object[] { vector, Rot });
-                RpcSpawnLastPatternOneShotLaserFxMethod.Invoke(Boss, new object[] { vector, Rot });
+                AttackLastPatternOneShotLaserMethod.Invoke(Boss, [vector, Rot]);
+                RpcSpawnLastPatternOneShotLaserFxMethod.Invoke(Boss, [vector, Rot]);
                 yield break;
             }
 
-            private static List<int> RpcCircleAttackSize = new List<int>();
+            private static List<int> RpcCircleAttackSize = [];
             [HarmonyPatch("CircleAttackCoroutine")]
             [HarmonyPrefix]
             static bool CircleAttackCoroutine_Prefix(Unit_QQQBoss __instance, ref IEnumerator __result)
@@ -1204,8 +1204,8 @@ namespace SPMod.MonsterAI
                 }
 
                 Vector2 OrigPos = GetBossZoneCenterPosition(Boss);
-                List<Vector2> Pos = new List<Vector2> { OrigPos };
-                List<int> Size = new List<int> { 0 };
+                List<Vector2> Pos = [OrigPos];
+                List<int> Size = [0];
                 for (int i = 1; i <= 4; i++)
                 {
                     float Rot = Random.Range(0f, 360f);
@@ -1216,7 +1216,7 @@ namespace SPMod.MonsterAI
                         Size.Add(Random.Range(0, Boss.circleAttackSizes.Count));
                     }
                 }
-                RpcCircleAttackSize = new List<int>();
+                RpcCircleAttackSize = [];
                 for (int i = 0; i < Size.Count; i++)
                 {
                     RpcCircleAttackSize = Size;
@@ -1229,7 +1229,7 @@ namespace SPMod.MonsterAI
                 for (int i = 0; i < Pos.Count; i++)
                 {
                     float AttackSize = Boss.circleAttackSizes.SafeRandomAccess(Size[i]);
-                    AttackDonutMethod.Invoke(Boss, new object[] { Pos[i], AttackSize / 2f });
+                    AttackDonutMethod.Invoke(Boss, [Pos[i], AttackSize / 2f]);
                     int AttackSizeFx = Mathf.Min(Boss.circleAttackFxPrefabs.Count, Size[i]);
                     Boss.RpcAttackDonutFx(Pos[i], AttackSizeFx);
                 }
@@ -1252,7 +1252,7 @@ namespace SPMod.MonsterAI
                 float Time = 5f;
                 if (obeliskPrefab == null)
                 {
-                    SpawnObeliskSummonerMethod.Invoke(Boss, new object[] { (Vector2)Boss.transform.position + new Vector2(10f, 10f), 0 });
+                    SpawnObeliskSummonerMethod.Invoke(Boss, [(Vector2)Boss.transform.position + new Vector2(10f, 10f), 0]);
                     while (Time > 0f)
                     {
                         if (obeliskPrefab != null) break;
@@ -1315,7 +1315,7 @@ namespace SPMod.MonsterAI
 
                 for (int i = 0; i < Pos.Length; i++)
                 {
-                    CreateCircleAttackWarningMethod.Invoke(Boss, new object[] { Pos[i], RpcCircleAttackSize.SafeRandomAccess(i) });
+                    CreateCircleAttackWarningMethod.Invoke(Boss, [Pos[i], RpcCircleAttackSize.SafeRandomAccess(i)]);
                 }
                 yield return new WaitForSeconds(Boss.circleAttackWarningTime);
                 circleAttackWarningCoroutineField.SetValue(Boss, null);
@@ -1378,11 +1378,11 @@ namespace SPMod.MonsterAI
                 attackOrder.Add(attackOrder[0]);
                 if (UsePatternType == 2)
                 {
-                    attackOrder = new List<int>() { 0, 0, 0, 0 };
+                    attackOrder = [0, 0, 0, 0];
                 }
                 if (UsePatternType == 3)
                 {
-                    attackOrder = new List<int>() { 0, 1, 1, 1 };
+                    attackOrder = [0, 1, 1, 1];
                 }
                 bool isLastPatternReady = (bool)isLastPatternReadyField.GetValue(Boss);
 
@@ -1418,16 +1418,16 @@ namespace SPMod.MonsterAI
                         if (attackOrder[i] == 0)
                         {
                             Vector2 fieldCenter = GetBossZoneCenterPosition(Boss);
-                            float num = (float)GetInAndOutOuterWarningTimeMethod.Invoke(Boss, new object[] { EInAndOutAttackType.RandomPos });
-                            RpcCreateInAndOutOuterWarningMethod.Invoke(Boss, new object[] { fieldCenter, attackCenter, EInAndOutAttackType.RandomPos, num });
+                            float num = (float)GetInAndOutOuterWarningTimeMethod.Invoke(Boss, [EInAndOutAttackType.RandomPos]);
+                            RpcCreateInAndOutOuterWarningMethod.Invoke(Boss, [fieldCenter, attackCenter, EInAndOutAttackType.RandomPos, num]);
                             yield return new WaitForSeconds((num + 0.25f + Time) * Speed);
-                            AttackInAndOutOuterAreaMethod.Invoke(Boss, new object[] { fieldCenter, attackCenter, EInAndOutAttackType.RandomPos });
+                            AttackInAndOutOuterAreaMethod.Invoke(Boss, [fieldCenter, attackCenter, EInAndOutAttackType.RandomPos]);
                         }
                         else
                         {
-                            RpcCreateInAndOutInnerWarningMethod.Invoke(Boss, new object[] { attackCenter });
+                            RpcCreateInAndOutInnerWarningMethod.Invoke(Boss, [attackCenter]);
                             yield return new WaitForSeconds((Boss.inAndOutInnerWarningTime + 0.25f + Time) * Speed);
-                            AttackInAndOutInnerAreaMethod.Invoke(Boss, new object[] { attackCenter });
+                            AttackInAndOutInnerAreaMethod.Invoke(Boss, [attackCenter]);
                         }
                         yield return new WaitForSeconds(Boss.inAndOutSecondAttackDelay);
                         if (UsePatternType == 2)
@@ -1506,14 +1506,14 @@ namespace SPMod.MonsterAI
 
                         FallGuysRegion(Boss, Out.ToList(), Out.Count.IntMult(0.28f * Mult));
                         yield return new WaitForSeconds(1.6f);
-                        ClearFallGuysDamageZonesMethod.Invoke(Boss, new object[] { false });
+                        ClearFallGuysDamageZonesMethod.Invoke(Boss, [false]);
                         fallGuysUsedRegionIdsField.SetValue(Boss, new HashSet<int>());
                         yield return new WaitForSeconds(0.2f);
                         isLastPatternReady = (bool)isLastPatternReadyField.GetValue(Boss);
                     }
                 }
                 yield return new WaitForSeconds(1.5f);
-                EndFallGuysAttackMethod.Invoke(Boss, new object[] { false });
+                EndFallGuysAttackMethod.Invoke(Boss, [false]);
                 if (fallGuysShieldApplied)
                 {
                     fallGuysShieldAppliedField.SetValue(Boss, false);
@@ -1526,13 +1526,13 @@ namespace SPMod.MonsterAI
                 if (fallGuysCellRegionMapField == null)
                 {
                     StarSephiriaMod.LogError("[UnitAI_QQQBoss][CreateFallGuysRegionMap]获取反射失败");
-                    OutPut = new List<(int, int)>();
+                    OutPut = [];
                     return false;
                 }
                 int[,] fallGuysCellRegionMap = (int[,])fallGuysCellRegionMapField.GetValue(Boss);
                 int height = fallGuysCellRegionMap.GetLength(0);
                 int width = fallGuysCellRegionMap.GetLength(1);
-                List<(int, int)> Map = new List<(int, int)>();
+                List<(int, int)> Map = [];
                 for (int y = 0; y < height; y++)
                 {
                     for (int x = 0; x < width; x++)
@@ -1557,7 +1557,7 @@ namespace SPMod.MonsterAI
                     Map.RemoveAt(randIdx);
                     if (Boss.TryGetFallGuysRegionId(x, y, out var Id))
                     {
-                        ActivateFallGuysRegionMethod.Invoke(Boss, new object[] { Id });
+                        ActivateFallGuysRegionMethod.Invoke(Boss, [Id]);
                     }
                 }
             }
@@ -1604,7 +1604,7 @@ namespace SPMod.MonsterAI
                     isLastPatternReady = (bool)isLastPatternReadyField.GetValue(Boss);
                 }
                 yield return new WaitForSeconds(1.5f);
-                EndFallGuysAttackMethod.Invoke(Boss, new object[] { false });
+                EndFallGuysAttackMethod.Invoke(Boss, [false]);
                 if (fallGuysShieldApplied)
                 {
                     fallGuysShieldAppliedField.SetValue(Boss, false);
@@ -1716,7 +1716,7 @@ namespace SPMod.MonsterAI
         public static class UnitAI_QQQBossObeliskSummoner_Patch
         {
             private static readonly FieldInfo? summonerField = AccessTools.Field(typeof(UnitAI_QQQBossObeliskSummoner), "summoner");
-            private static readonly HashSet<int> UseAttack = new HashSet<int>();
+            private static readonly HashSet<int> UseAttack = [];
 
             [HarmonyPatch("OnAIUpdate_FoundEnemy")]
             [HarmonyPostfix]
@@ -1758,7 +1758,7 @@ namespace SPMod.MonsterAI
         [HarmonyPatch(typeof(QQQBossBlueAttackCircle))]
         public static class QQQBossBlueAttackCircle_Patch
         {
-            [HarmonyPatch("SetTargetAndRadius", new Type[] { typeof(Transform), typeof(float), typeof(float) })]
+            [HarmonyPatch("SetTargetAndRadius", [typeof(Transform), typeof(float), typeof(float)])]
             [HarmonyPrefix]
             static void SetTargetAndRadius_Prefix(QQQBossBlueAttackCircle __instance, Transform target, ref float radius, float radiusChangeTime)
             {
@@ -1768,7 +1768,7 @@ namespace SPMod.MonsterAI
                 }
             }
 
-            [HarmonyPatch("SetTargetAndRadius", new Type[] { typeof(Vector2), typeof(float), typeof(float) })]
+            [HarmonyPatch("SetTargetAndRadius", [typeof(Vector2), typeof(float), typeof(float)])]
             [HarmonyPrefix]
             static void SetTargetAndRadius_Prefix(QQQBossBlueAttackCircle __instance, Vector2 targetPosition, ref float radius, float radiusChangeTime)
             {

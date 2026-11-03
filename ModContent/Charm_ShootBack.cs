@@ -6,7 +6,7 @@ namespace SPMod.ModContent
 {
     public class Charm_ShootBack : Charm_Active, IModCooldownReceiver
     {
-        public Timer CooldownTimer = new Timer(5f);
+        public Timer CooldownTimer = new(5f);
         public float Effect = 0.3f;
         public float EffectTimer = 0f;
         public bool UseShootBack = false;

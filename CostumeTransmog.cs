@@ -17,7 +17,7 @@ namespace SPMod
     [HarmonyPatch]
     public static class CostumeTransmog_Patch
     {
-        public static readonly Dictionary<string, string> TransmogSkin = new Dictionary<string, string>();
+        public static readonly Dictionary<string, string> TransmogSkin = [];
 
         private static readonly FieldInfo costumePanelPlayerField = AccessTools.Field(typeof(UI_CostumePanel), "playerAvatar");
         private static readonly MethodInfo updateCostumeOutfitMethod = AccessTools.Method(typeof(PlayerAvatar), "UpdateCostumeOutfit");
@@ -57,7 +57,7 @@ namespace SPMod
             if (!Player.TopdownActor || !Player.TopdownActor.body) return;
             try
             {
-                updateCostumeOutfitMethod.Invoke(Player, new object[] { Player.currentCostumeSkin });
+                updateCostumeOutfitMethod.Invoke(Player, [Player.currentCostumeSkin]);
             }
             catch (Exception ex)
             {

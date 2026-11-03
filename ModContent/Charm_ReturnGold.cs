@@ -5,7 +5,7 @@ namespace SPMod.ModContent
 {
     public class Charm_ReturnGold : Charm_Basic
     {
-        public int[] ReturnCoinByLevel = new int[] { 40 };
+        public int[] ReturnCoinByLevel = [40];
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string text;
@@ -17,10 +17,10 @@ namespace SPMod.ModContent
             {
                 text = ReturnCoinByLevel.SafeRandomAccess(0).ToString() + "%" + "→" + ReturnCoinByLevel.SafeRandomAccess(maxLevel).ToString() + "%";
             }
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Coin", text.ToString(), GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Coin", text.ToString(), GetPositiveColor(virtualLevelOffset)),
+            ];
         }
         protected override void OnEnabledEffect()
         {

@@ -9,10 +9,10 @@ namespace SPMod.ModContent
     {
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Value", "1", GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Value", "1", GetPositiveColor(virtualLevelOffset)),
+            ];
         }
         protected override void OnEnabledEffect()
         {
@@ -79,8 +79,8 @@ namespace SPMod.ModContent
             }
         }
 
-        private readonly List<int> UncommonPotion = new List<int>
-        {
+        private readonly List<int> UncommonPotion =
+        [
             1,
             34,
             40,
@@ -91,9 +91,9 @@ namespace SPMod.ModContent
             49,
             50,
             51
-        };
-        private readonly List<int> RarePotion = new List<int>
-        {
+        ];
+        private readonly List<int> RarePotion =
+        [
             28,
             29,
             30,
@@ -105,11 +105,11 @@ namespace SPMod.ModContent
             45,
             47,
             48
-        };
+        ];
 
         private static List<int> GetFixedPoolPotion(UnitAvatar Player, List<int> PotionIdPool, int Count)
         {
-            List<int> successIds = new List<int>();
+            List<int> successIds = [];
             if (!NetworkServer.active || Player == null || PotionIdPool == null || PotionIdPool.Count == 0)
                 return successIds;
 

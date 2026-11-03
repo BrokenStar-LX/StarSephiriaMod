@@ -32,7 +32,7 @@ namespace SPMod.MonsterAI
         //变种攻击判定
         private static bool MeleeAttack2 = false;
         private static bool TwisterAttack2 = false;
-        private static readonly List<Vector3> TwisterPos = new List<Vector3>();
+        private static readonly List<Vector3> TwisterPos = [];
         static LizardDemon()
         {
             try
@@ -55,7 +55,7 @@ namespace SPMod.MonsterAI
                 currentTwisterSwordSphereCountField = AccessTools.Field(type, "currentTwisterSwordSphereCount");
                 isRunningHeadSmashAnimationField = AccessTools.Field(type, "isRunningHeadSmashAnimation");
                 spawnedSwordSphereListField = AccessTools.Field(type, "spawnedSwordSphereList");
-                rpcHeadSmashMethod = AccessTools.Method(type, "RpcHeadSmash", new Type[] { typeof(bool), typeof(Vector3) });
+                rpcHeadSmashMethod = AccessTools.Method(type, "RpcHeadSmash", [typeof(bool), typeof(Vector3)]);
                 StarSephiriaMod.LogInfoBoss("[Unit_LizardDemon]初始化反射");
             }
             catch (Exception ex)
@@ -69,7 +69,7 @@ namespace SPMod.MonsterAI
         {
             private static float TSSTime = -1f;
             private static int SwordCount = -1;
-            public static Timer ShootShockwave = new Timer(1f);
+            public static Timer ShootShockwave = new(1f);
 
             [HarmonyPatch("Update")]
             [HarmonyPostfix]
@@ -153,7 +153,7 @@ namespace SPMod.MonsterAI
                     StarSephiriaMod.LogError("[Unit_LizardDemon][HeadSmashEndDashCoroutine]获取反射失败");
                     yield break;
                 }
-                if (!(spawnedSwordSphereListField.GetValue(__instance) is List<SwordSphere> spawnedSwordSphereList))
+                if (spawnedSwordSphereListField.GetValue(__instance) is not List<SwordSphere> spawnedSwordSphereList)
                 {
                     StarSephiriaMod.LogError("[Unit_LizardDemon][headSmashEndDashCoroutine]反射类型错误");
                     yield break;
@@ -161,11 +161,11 @@ namespace SPMod.MonsterAI
 
                 int attackCount = 3;
                 __instance.NetworkheadSmashTargetPosition = __instance.CurrentLookingPosition;
-                rpcHeadSmashMethod.Invoke(__instance, new object[]
-                {
+                rpcHeadSmashMethod.Invoke(__instance,
+                [
                     __instance.currentAction == Unit_LizardDemon.EAnimation.HeadSmash_Double,
                     (Vector3)__instance.headSmashTargetPosition
-                });
+                ]);
                 bool isRunningHeadSmashAnimation = (bool)isRunningHeadSmashAnimationField.GetValue(__instance);
                 while (!isRunningHeadSmashAnimation)
                 {
@@ -214,11 +214,11 @@ namespace SPMod.MonsterAI
                     __instance.ForceAimToPosition(__instance.AimedPosition);
                     yield return new WaitForSeconds(0.3f);
                     __instance.NetworkheadSmashTargetPosition = __instance.CurrentLookingPosition;
-                    rpcHeadSmashMethod.Invoke(__instance, new object[]
-                    {
+                    rpcHeadSmashMethod.Invoke(__instance,
+                    [
                         __instance.currentAction == Unit_LizardDemon.EAnimation.HeadSmash_Double,
                         (Vector3)__instance.headSmashTargetPosition
-                    });
+                    ]);
                     attackCount--;
                     isRunningHeadSmashAnimation = (bool)isRunningHeadSmashAnimationField.GetValue(__instance);
                     bool falg = false;
@@ -383,7 +383,7 @@ namespace SPMod.MonsterAI
                         return true;
                     }
 
-                    if (!(spawnedSwordSphereListField.GetValue(__instance) is List<SwordSphere> spawnedSwordSphereList))
+                    if (spawnedSwordSphereListField.GetValue(__instance) is not List<SwordSphere> spawnedSwordSphereList)
                     {
                         StarSephiriaMod.LogError("[Unit_LizardDemon][CreateSwordSphere]获取反射失败");
                         return true;
@@ -504,7 +504,7 @@ namespace SPMod.MonsterAI
                                     Vector3 bossZoneBottomLeft = __instance.Environment.BossZoneBottomLeft;
                                     Vector3 bossZoneTopRight = __instance.Environment.BossZoneTopRight;
                                     Vector3 bossZoneCenter = __instance.Environment.BossZoneCenter;
-                                    List<int> list = new List<int>();
+                                    List<int> list = [];
                                     {
                                         Vector2 vector = __instance.CurrentTarget.transform.position;
                                         bool flag = vector.y > bossZoneCenter.y;
@@ -524,7 +524,7 @@ namespace SPMod.MonsterAI
                                     list.Add(0);
 
                                     int V = list[Random.Range(0, list.Count)];
-                                    List<BoxCollider2D> list2 = new List<BoxCollider2D>();
+                                    List<BoxCollider2D> list2 = [];
                                     if (V > 1)
                                     {
                                         list2.AddRange(bossEnvironment_LizardDemon.areaAttackPatterns_Hard[V - 2].GetComponentsInChildren<BoxCollider2D>());

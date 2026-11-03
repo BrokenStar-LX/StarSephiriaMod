@@ -7,8 +7,8 @@ namespace SPMod.ModContent
     public class Charm_ActivelyRetaliate : Charm_StatusInstance, IAttackableCharm
     {
         private readonly string DamageId = "[Star's Sephiria Mod]影武者";
-        public float[] MultByLevel = new float[] { 45, 90, 135, 180 };
-        public Timer CooldownTimer = new Timer(0.2f);
+        public float[] MultByLevel = [45, 90, 135, 180];
+        public Timer CooldownTimer = new(0.2f);
         public float DamageMult = 1f;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
@@ -16,11 +16,11 @@ namespace SPMod.ModContent
             string text2 = "0";
             if (IsEffectEnabled)
                 text2 = CalculateDamage(this).ToString("#0");
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Mult", text + "%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Damage", text2,  EffectConstant.WeaponColor),
-            };
+            return
+            [
+                new("Mult", text + "%", GetPositiveColor(virtualLevelOffset)),
+                new("Damage", text2,  EffectConstant.WeaponColor),
+            ];
         }
         protected override void OnEnabledEffect()
         {

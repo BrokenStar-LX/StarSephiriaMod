@@ -183,6 +183,6 @@ namespace SPMod.Tool
         }
         private float XOffset = 0;
         private float YOffset = 0;
-        private readonly List<string> No = new List<string>();
+        private readonly List<string> No = [];
     }
 }

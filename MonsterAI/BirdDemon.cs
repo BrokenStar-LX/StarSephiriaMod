@@ -43,7 +43,7 @@ namespace SPMod.MonsterAI
                 meleeAttackDirectionVerticalField = AccessTools.Field(type, "meleeAttackDirectionVertical");
                 meleeAttackZoneBottomLeftField = AccessTools.Field(type, "meleeAttackZoneBottomLeft");
                 meleeAttackZoneTopRightField = AccessTools.Field(type, "meleeAttackZoneTopRight");
-                createMeleeAttackMethod = AccessTools.Method(type, "CreateMeleeAttack", new Type[] { typeof(Vector2), typeof(Vector2) });
+                createMeleeAttackMethod = AccessTools.Method(type, "CreateMeleeAttack", [typeof(Vector2), typeof(Vector2)]);
                 StarSephiriaMod.LogInfoBoss("[Unit_BirdDemon]初始化反射");
             }
             catch (Exception ex)
@@ -126,7 +126,7 @@ namespace SPMod.MonsterAI
                     {
                         vector.x = (meleeAttackZoneBottomLeft.x + meleeAttackZoneTopRight.x) / 2f;
                     }
-                    Vector2 vector2 = new Vector2(1f, 1f);
+                    Vector2 vector2 = new(1f, 1f);
                     if (meleeAttackDirectionVertical)
                     {
                         vector2.y = meleeAttackZoneTopRight.y - meleeAttackZoneBottomLeft.y;
@@ -146,12 +146,12 @@ namespace SPMod.MonsterAI
                     }
                     if (i == 0)
                     {
-                        createMeleeAttackMethod?.Invoke(__instance, new object[] { vector, vector2 });
+                        createMeleeAttackMethod?.Invoke(__instance, [vector, vector2]);
                     }
                     else
                     {
-                        createMeleeAttackMethod?.Invoke(__instance, new object[] { vector + vector3 * i, vector2 });
-                        createMeleeAttackMethod?.Invoke(__instance, new object[] { vector - vector3 * i, vector2 });
+                        createMeleeAttackMethod?.Invoke(__instance, [vector + vector3 * i, vector2]);
+                        createMeleeAttackMethod?.Invoke(__instance, [vector - vector3 * i, vector2]);
                     }
                 }
                 yield break;
@@ -169,7 +169,7 @@ namespace SPMod.MonsterAI
                 StompAttackCoroutine = __instance.StartCoroutine(CustomCreateStompAttack(__instance));
             }
 
-            public static List<Bullet> HomingBullet = new List<Bullet>();
+            public static List<Bullet> HomingBullet = [];
             static IEnumerator CustomCreateStompAttack(Unit_BirdDemon __instance)
             {
                 if (!Tools.GetPro("AskardHomingBullet", out GameObject? Bullt)) yield break;

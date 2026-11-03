@@ -81,6 +81,10 @@ namespace SPMod.Tool
         public const int TheEmberforged = 1122;                     // 余烬巨剑
         public const int RedSnakeCrush = 1123;                      // 红蛇碎击
         public const int SolisCineris = 1124;                       // 索利斯·西涅里斯
+        public const int ScatteredLonging = 1125;                   // 散落的眷恋
+
+        public const int WindGreatSword = ModWeaponId + 1100;       // 罡风
+        public const int Tornado = ModWeaponId + 1101;              // 龙卷风
 
         // 匕首系列
         public const int Dagger = 20;                               // 短剑
@@ -290,6 +294,51 @@ namespace SPMod.Tool
                 return false;
 
             return true;
+        }
+
+        // 固定参数重载：避免热路径（Update/LateUpdate）每次调用都分配 params 数组。
+        public static bool IsWeapon(this UnitAvatar Player, int A, int B)
+        {
+            if (!ModConfig.Instance.EnableWeaponModifier || !NetworkServer.active)
+                return false;
+
+            if (!StarSephiriaMod.WeaponType.TryGetValue(Player.Name, out int PlayerWeaponId))
+                return false;
+
+            return PlayerWeaponId == A || PlayerWeaponId == B;
+        }
+
+        public static bool IsWeapon(this UnitAvatar Player, int A, int B, int C)
+        {
+            if (!ModConfig.Instance.EnableWeaponModifier || !NetworkServer.active)
+                return false;
+
+            if (!StarSephiriaMod.WeaponType.TryGetValue(Player.Name, out int PlayerWeaponId))
+                return false;
+
+            return PlayerWeaponId == A || PlayerWeaponId == B || PlayerWeaponId == C;
+        }
+
+        public static bool IsWeapon(this UnitAvatar Player, int A, int B, int C, int D)
+        {
+            if (!ModConfig.Instance.EnableWeaponModifier || !NetworkServer.active)
+                return false;
+
+            if (!StarSephiriaMod.WeaponType.TryGetValue(Player.Name, out int PlayerWeaponId))
+                return false;
+
+            return PlayerWeaponId == A || PlayerWeaponId == B || PlayerWeaponId == C || PlayerWeaponId == D;
+        }
+
+        public static bool IsWeapon(this UnitAvatar Player, int A, int B, int C, int D, int E)
+        {
+            if (!ModConfig.Instance.EnableWeaponModifier || !NetworkServer.active)
+                return false;
+
+            if (!StarSephiriaMod.WeaponType.TryGetValue(Player.Name, out int PlayerWeaponId))
+                return false;
+
+            return PlayerWeaponId == A || PlayerWeaponId == B || PlayerWeaponId == C || PlayerWeaponId == D || PlayerWeaponId == E;
         }
 
         public static bool IsWeapon(this UnitAvatar Player, params int[] Weapon)

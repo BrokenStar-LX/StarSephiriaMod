@@ -4,7 +4,7 @@ namespace SPMod.ModContent
 {
     public class Charm_FlameSwordAutoAttack : Charm_StatusInstance
     {
-        public int[] AttoAttackLuckByLevel = new int[] { 10, 20, 30, 40, 50 };
+        public int[] AttoAttackLuckByLevel = [10, 20, 30, 40, 50];
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string text;
@@ -16,10 +16,10 @@ namespace SPMod.ModContent
             {
                 text = AttoAttackLuckByLevel.SafeRandomAccess(0).ToString() + "%" + "→" + AttoAttackLuckByLevel.SafeRandomAccess(maxLevel).ToString() + "%";
             }
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("LUCK", text.ToString(), GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("LUCK", text.ToString(), GetPositiveColor(virtualLevelOffset)),
+            ];
         }
 
         protected override void OnEnabledEffect()

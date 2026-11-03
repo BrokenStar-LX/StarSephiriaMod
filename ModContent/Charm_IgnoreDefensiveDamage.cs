@@ -6,8 +6,8 @@ namespace SPMod.ModContent
     public class Charm_IgnoreDefensiveDamage : Charm_MinHPKill, IAttackableCharm
     {
         private readonly string DamageId = "[Star's Sephiria Mod]白蛋壳";
-        public float[] MaxByLevel = new float[] { 400, 800, 1200, 1600, 2000 };
-        public Timer CooldownTimer = new Timer(1.5f);
+        public float[] MaxByLevel = [400, 800, 1200, 1600, 2000];
+        public Timer CooldownTimer = new(1.5f);
         public bool UseEffect = false;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
@@ -15,11 +15,11 @@ namespace SPMod.ModContent
             string text2 = "0";
             if (IsEffectEnabled)
                 text2 = CalculateDamage(this).ToString("#0");
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Mult", text + "%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Damage", text2,  EffectConstant.WeaponColor),
-            };
+            return
+            [
+                new("Mult", text + "%", GetPositiveColor(virtualLevelOffset)),
+                new("Damage", text2,  EffectConstant.WeaponColor),
+            ];
         }
         protected override void OnEnabledEffect()
         {
@@ -31,14 +31,14 @@ namespace SPMod.ModContent
                     killFxPrefab = CharmEffect.killFxPrefab;
             }
             NetworkAvatar.OnAttackUnit += AddDamage;
-            minHPPercentByLevel = new float[] { -999f };
+            minHPPercentByLevel = [-999f];
         }
 
         protected override void OnDisabledEffect()
         {
             base.OnDisabledEffect();
             NetworkAvatar.OnAttackUnit -= AddDamage;
-            minHPPercentByLevel = new float[] { -999f };
+            minHPPercentByLevel = [-999f];
         }
 
         protected override void OnUpdate()

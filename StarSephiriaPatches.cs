@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Text;
 using TMPro;
 using Unity.Mathematics;
@@ -31,7 +32,7 @@ using Random = System.Random;
 namespace SPMod
 {
     [HarmonyPatch]
-    public static class StarSephiriaPatches
+    public static partial class StarSephiriaPatches
     {
         public static readonly FieldInfo OnEvadeField = AccessTools.Field(typeof(UnitAvatar), "OnEvade");
         public static readonly FieldInfo OnCounterField = AccessTools.Field(typeof(UnitAvatar), "OnCounter");
@@ -45,42 +46,41 @@ namespace SPMod
 
         public static bool CustomStatsMessage = false;
         public static bool DisplayCustomStats = false;
-        public static Dictionary<string, string> DisplayCustomStatsValue = new Dictionary<string, string>();
+        public static Dictionary<string, string> DisplayCustomStatsValue = [];
         public static bool ItemMessage = false;
         public static bool MonsterMessage = false;
-        private static readonly Dictionary<UnitAvatar, float> AttackTimers = new Dictionary<UnitAvatar, float>();
-        private static readonly Dictionary<string, Timer> BatTime = new Dictionary<string, Timer>();
-        public static List<string> DefeatBoss = new List<string> { };
-        public static List<(string, float, int, int)> Monster = new List<(string, float, int, int)> { };
-        public static Dictionary<string, GameObject> Projectile = new Dictionary<string, GameObject>();
-        public static Dictionary<string, bool> UseCostomEffect = new Dictionary<string, bool>();
-        public static Dictionary<string, int> GoldObtained = new Dictionary<string, int>();
-        public static Dictionary<string, float> ColdAngerTime = new Dictionary<string, float>();
-        public static Dictionary<string, float> HeatedBladeEffect = new Dictionary<string, float>();
-        public static Dictionary<string, int> HeatedBladeStack = new Dictionary<string, int>();
-        public static Dictionary<UnitAvatar, Timer> SolisImberEffect = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, int> SolisIubarEffect = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, int> SolisIubarAttackSpeed = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, Timer> Br2RecoveryLife = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, float> RosionTime = new Dictionary<UnitAvatar, float>();
-        public static List<PlayerAvatar> HolyRabbit2List = new List<PlayerAvatar>();
-        public static HashSet<UnitAvatar> GrippingFearBuff = new HashSet<UnitAvatar>();
-        public static List<string> DefenseToAllDamage = new List<string>();
+        private static readonly Dictionary<UnitAvatar, float> AttackTimers = [];
+        public static List<string> DefeatBoss = [];
+        public static List<(string, float, int, int)> Monster = [];
+        public static Dictionary<string, GameObject> Projectile = [];
+        public static Dictionary<string, bool> UseCostomEffect = [];
+        public static Dictionary<string, int> GoldObtained = [];
+        public static Dictionary<string, float> ColdAngerTime = [];
+        public static Dictionary<string, int> HeatedBladeStack = [];
+        public static Dictionary<UnitAvatar, Timer> SolisImberEffect = [];
+        public static Dictionary<UnitAvatar, int> SolisIubarEffect = [];
+        public static Dictionary<UnitAvatar, int> SolisIubarAttackSpeed = [];
+        public static Dictionary<UnitAvatar, Timer> Br2RecoveryLife = [];
+        public static Dictionary<UnitAvatar, float> RosionTime = [];
+        public static List<PlayerAvatar> HolyRabbit2List = [];
+        public static HashSet<UnitAvatar> GrippingFearBuff = [];
+        public static List<string> DefenseToAllDamage = [];
         public static int UpCharmStack = 0;
-        public static Dictionary<UnitAvatar, float> RecordQQBossDamage = new Dictionary<UnitAvatar, float>();
-        public static Dictionary<UnitAvatar, float> UseQQBossDamage = new Dictionary<UnitAvatar, float>();
-        public static Dictionary<UnitAvatar, PollutedBloodData> PollutedBloodRecovery = new Dictionary<UnitAvatar, PollutedBloodData>();
-        public static Dictionary<UnitAvatar, CountingTimer> EvilGuardianEffect = new Dictionary<UnitAvatar, CountingTimer>();
-        public static Dictionary<UnitAvatar, Counter> GuardDeBuff = new Dictionary<UnitAvatar, Counter>();
-        public static Dictionary<UnitAvatar, NoHitRecord> NoHitCount = new Dictionary<UnitAvatar, NoHitRecord>();
-        public static Dictionary<UnitAvatar, Timer> StrikeBackTime = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, int> PurpleJacketStack = new Dictionary<UnitAvatar, int>();
-        public static HashSet<UnitAvatar> RosionList = new HashSet<UnitAvatar>();
+        public static Dictionary<UnitAvatar, float> RecordQQBossDamage = [];
+        public static Dictionary<UnitAvatar, float> UseQQBossDamage = [];
+        public static Dictionary<UnitAvatar, PollutedBloodData> PollutedBloodRecovery = [];
+        public static Dictionary<UnitAvatar, CountingTimer> EvilGuardianEffect = [];
+        public static Dictionary<UnitAvatar, Counter> GuardDeBuff = [];
+        public static Dictionary<UnitAvatar, NoHitRecord> NoHitCount = [];
+        public static Dictionary<UnitAvatar, Timer> StrikeBackTime = [];
+        public static Dictionary<UnitAvatar, int> PurpleJacketStack = [];
+        public static HashSet<UnitAvatar> RosionList = [];
 
-        public static List<CloudAttackData> ModCloudAttack = new List<CloudAttackData>();
+        public static List<CloudAttackData> ModCloudAttack = [];
+        public static List<HeatedBladeAttackData> ModHeatedBladeAttack = [];
 
         public static bool UseDPS = false;
-        public static Dictionary<PlayerAvatar, DPSRecord> DPSData = new Dictionary<PlayerAvatar, DPSRecord>();
+        public static Dictionary<PlayerAvatar, DPSRecord> DPSData = [];
 
         public static event Action? OnUpdateHighestElemental = null;
 
@@ -92,11 +92,11 @@ namespace SPMod
             public static FieldInfo guardStartTimerField = AccessTools.Field(typeof(UnitAvatar), "guardStartTimer");
             public static FieldInfo perfectGuardLatencyBonusField = AccessTools.Field(typeof(UnitAvatar), "perfectGuardLatencyBonus");
 
-            private static readonly List<string> NoNpcER = new List<string>()
-            {
+            private static readonly List<string> NoNpcER =
+            [
                 "SlimeOrange",
                 "SlimeBlue"
-            };
+            ];
 
             [HarmonyPatch("get_MaxHp")]
             [HarmonyPostfix]
@@ -147,32 +147,12 @@ namespace SPMod
                 {
                     if (DeBuff.GetMatchDebuffType(Player, typeof(CharacterDebuff_Burn)))
                     {
-                        if (Player.IsWeapon(WeaponIDs.HeatedBlade))
+                        if (Player.IsWeapon(WeaponIDs.HeatedBlade) && DeBuff.Target != null)
                         {
-                            if (!HeatedBladeEffect.TryGetValue(Player.Name, out float Mult) && Mult <= 0f) return;
-                            if (CharmPatch.Charm_FlamePlantRoot_Patch.FlamePlant == null) return;
-                            if (HeatedBladeStack.ContainsKey(Player.Name))
-                            {
-                                HeatedBladeStack[Player.Name] += 1;
-                                if (HeatedBladeStack[Player.Name] >= 5)
-                                {
-                                    GameObject Bullt = CharmPatch.Charm_FlamePlantRoot_Patch.FlamePlant;
-                                    string Id = CharmPatch.Charm_FlamePlantRoot_Patch.DamageId;
-                                    Vector3 Pos = DeBuff.Target.transform.position;
-                                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.BurnDamage) * 0.01f;
-                                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
-                                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
-                                    if (Player.GetCustomStatUnsafe(TextFile.BurnEvo) > 0)
-                                        Mult *= 28f / 18f;
-                                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
-
-                                    Bullet.Pool.Spawn(Bullt, Pos, true, EDamageFromType.None, Id, Mult * 0.75f, 0, 0f, Player, Player.GetHostileFactionLayers(EDamageFromType.None), 10, Pos, Pos + Vector3.down, null, null, 0f, EDamageElementalType.Fire, true);
-                                    HeatedBladeStack[Player.Name] -= 5;
-                                    HeatedBladeEffect[Player.Name] = 0f;
-                                }
-                            }
-                            else HeatedBladeStack[Player.Name] = 1;
+                            float Now = Time.time;
+                            ModHeatedBladeAttack.RemoveAll(A => Now - A.Time > 3f);
+                            if (ModHeatedBladeAttack.Count >= 128) ModHeatedBladeAttack.RemoveAt(0);
+                            ModHeatedBladeAttack.Add(new HeatedBladeAttackData(Player, DeBuff.Target, Now));
                         }
                     }
                     if (DeBuff.GetMatchDebuffType(Player, typeof(CharacterDebuff_Electric)))
@@ -332,9 +312,19 @@ namespace SPMod
                         float Mult = Player.currentMoney / 400f;
                         Damage.damage *= 1f + Mult * 0.01f;
                     }
+                    if (Tools.CostumeSkinUse(Player.Name, "Bat_3"))
+                    {
+                        float Mult = Player.GetCustomStatUnsafe(TextFile.HpSteal) * 5f;
+                        Damage.damage *= 1f + Mult * 0.01f;
+                    }
+                    if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit_3"))
+                    {
+                        float Mult = (Tools.GetMaxLife(Player) - Player.hp) / 5f;
+                        Damage.damage *= 1f + Mult * 0.01f;
+                    }
                     if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit_3"))
                     {
-                        Damage.damage *= 0.8f;
+                        Damage.damage *= 0.85f;
                     }
                     if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit_2"))
                     {
@@ -481,7 +471,7 @@ namespace SPMod
                     if (damage.origin is UnitAvatar NPC)
                     {
                         bool falg = (Type == "Guard" || Type == "Evade");
-                        if(ModConfig.HardMode >= 4)
+                        if (ModConfig.HardMode >= 4)
                         {
                             if (Type == "SpecialEvade" && UnityEngine.Random.Range(0, 100) < 33)
                                 falg = true;
@@ -568,7 +558,7 @@ namespace SPMod
                         Br2RecoveryLife.Add(__instance, new Timer(0.4f));
                     else if (Br2RecoveryLife[__instance].Update(Time.deltaTime))
                     {
-                        if((int)invulnerableCountField.GetValue(__instance) <= 0)
+                        if ((int)invulnerableCountField.GetValue(__instance) <= 0)
                         {
                             float Mult = 0.2f;
                             if (Hard >= 4) Mult *= 1.6f;
@@ -606,20 +596,17 @@ namespace SPMod
                         }
                         if (TName == "WeaselKnight")
                         {
-                            if (ModConfig.Instance.AddItem)
+                            foreach (ModItem Data in ModItemEntityData)
                             {
-                                foreach (ModItem Data in ModItemEntityData)
+                                ItemEntity? ModItem = Data.Item;
+                                if (ModItem == null) continue;
+                                switch (ModItem.name)
                                 {
-                                    ItemEntity? ModItem = Data.Item;
-                                    if (ModItem == null) continue;
-                                    switch (ModItem.name)
-                                    {
-                                        case "ModItemEntity_RedDogSymbolA":
-                                        case "ModItemEntity_RedDogSymbolB":
-                                        case "ModItemEntity_RedDogSymbolC":
-                                            __instance.Inventory.AddItem(new ItemMetadata(ItemDatabase.GenerateInstanceID(new Random(__instance.randomID)), ItemDatabase.FindItemById(ModItem.id), 1));
-                                            break;
-                                    }
+                                    case "ModItemEntity_RedDogSymbolA":
+                                    case "ModItemEntity_RedDogSymbolB":
+                                    case "ModItemEntity_RedDogSymbolC":
+                                        __instance.Inventory.AddItem(new ItemMetadata(ItemDatabase.GenerateInstanceID(new Random(__instance.randomID)), ItemDatabase.FindItemById(ModItem.id), 1));
+                                        break;
                                 }
                             }
                         }
@@ -836,7 +823,7 @@ namespace SPMod
                 return true;
             }
 
-            [HarmonyPatch("Heal", new Type[] { typeof(float), typeof(bool), typeof(bool) })]
+            [HarmonyPatch("Heal", [typeof(float), typeof(bool), typeof(bool)])]
             [HarmonyPrefix]
             public static bool Heal_Prefix(UnitAvatar __instance, float amount, bool allowOverHeal, bool ignorePenalty)
             {
@@ -847,7 +834,7 @@ namespace SPMod
                 return true;
             }
 
-            [HarmonyPatch("HealPercent", new Type[] { typeof(float), typeof(bool), typeof(bool) })]
+            [HarmonyPatch("HealPercent", [typeof(float), typeof(bool), typeof(bool)])]
             [HarmonyPrefix]
             public static bool HealPercent_Prefix(UnitAvatar __instance, float percent, bool preventOverHeal, bool ignorePenalty)
             {
@@ -892,7 +879,7 @@ namespace SPMod
                 string TargetName = __instance.name.Replace("(Clone)", "");
                 if (__instance.monsterType == EMonsterType.Boss && !DefeatBoss.Contains(TargetName))
                 {
-                    if(TargetName == "RootDemonPart_Point" || TargetName == "RootDemonPart_Laser" || TargetName == "RootDemonPart_Line")
+                    if (TargetName == "RootDemonPart_Point" || TargetName == "RootDemonPart_Laser" || TargetName == "RootDemonPart_Line")
                     {
                         DefeatBoss.Add(TargetName);
                         return;
@@ -934,9 +921,7 @@ namespace SPMod
                         DungeonManager CurrenDungeon = DungeonManager.Instance;
                         if (CurrenDungeon != null)
                         {
-                            DungeonPatchs.eachStageHeadsField.SetValue(CurrenDungeon, new Dictionary<string, FloorData>());
-                            CurrenDungeon.generatedFloors.Clear();
-                            CurrenDungeon.sortedStages.Clear();
+                            DungeonPatchs.ResetStageData(CurrenDungeon);
                             CurrenDungeon.LoadStageAndMove("Moleland");
                         }
                     }
@@ -1055,7 +1040,7 @@ namespace SPMod
             [HarmonyPrefix]
             public static bool RefreshElementalBonus(UnitAvatar __instance)
             {
-                if (ModConfig.Instance.ModifyCharm || ModConfig.Instance.AddItem)
+                if (ModConfig.Instance.ModifyCharm)
                 {
                     int AddElemental = __instance.highestElementalBonus + StarSephiriaMod.PartyStats.ElementalDamage;
                     if (AddElemental >= 0)
@@ -1081,15 +1066,12 @@ namespace SPMod
         public static IEnumerator DeleteUnintentionalItems(PlayerAvatar Player, List<int>? StartItemId = null)
         {
             yield return new WaitForSeconds(0.5f);
-            if (ModConfig.Instance.AddItem)
+            foreach (PlayerSpawner Spawner in PlayerSpawner.MultiplayerList)
             {
-                foreach (PlayerSpawner Spawner in PlayerSpawner.MultiplayerList)
+                if (Spawner.PlayerAvatar == Player)
                 {
-                    if (Spawner.PlayerAvatar == Player)
-                    {
-                        foreach (int Item in DisableCharm) Spawner.unlockedCharms.Remove(Item);
-                        break;
-                    }
+                    foreach (int Item in DisableCharm) Spawner.unlockedCharms.Remove(Item);
+                    break;
                 }
             }
             if (ModConfig.Instance.EnableCostumeModifier)
@@ -1140,21 +1122,25 @@ namespace SPMod
             [HarmonyPostfix]
             static void Update_Postfix(DamageDummy __instance)
             {
-                if (__instance.isServer) __instance.HealPercent(100f);
+                if (__instance.isServer && __instance.hp < __instance.MaxHp) __instance.HealPercent(100f);
                 __instance.stunImmunity = 1;
 
                 if (!ModConfig.Instance.ModifyDummyDamage) return;
-                if (!AttackTimers.ContainsKey(__instance)) AttackTimers.Add(__instance, 0f);
+                if (!AttackTimers.TryGetValue(__instance, out float Remaining))
+                {
+                    AttackTimers[__instance] = 0f;
+                }
+                else if (Remaining <= 0f)
+                {
+                    CheckCollision(__instance);
+                    AttackTimers[__instance] = 1f;
+                }
                 else
                 {
-                    if (AttackTimers[__instance] <= 0f)
-                    {
-                        CheckCollision(__instance);
-                        AttackTimers[__instance] = 1f;
-                    }
-                    else AttackTimers[__instance] -= Time.deltaTime;
+                    AttackTimers[__instance] = Remaining - Time.deltaTime;
                 }
             }
+
             private static void CheckCollision(DamageDummy Dummy)
             {
                 Collider2D[] hits = Physics2D.OverlapCircleAll((Vector2)Dummy.transform.position, 2f);
@@ -1204,13 +1190,6 @@ namespace SPMod
         [HarmonyPatch(typeof(PlayerAvatar))]
         public static class PlayerAvatar_Patches
         {
-            [HarmonyPatch("OnStartServer")]
-            [HarmonyPostfix]
-            static void OnStartServer_Postfix(PlayerAvatar __instance)
-            {
-                __instance.AddCustomStatUnsafe(TextFile.WindDamage, KeywordDatabase.GetConstValue("playerDefaultElementalDamage", true));
-            }
-
             [HarmonyPatch("Update")]
             [HarmonyPostfix]
             static void Update_Postfix(PlayerAvatar __instance)
@@ -1247,7 +1226,7 @@ namespace SPMod
                             }
                             foreach (GameObject Pro in Projectile.Values)
                             {
-                                if(Pro.TryGetComponent<Bullet>(out var bullet))
+                                if (Pro.TryGetComponent<Bullet>(out var bullet))
                                     StarSephiriaMod.LogInfo($"—弹幕名称：{bullet.name}");
                                 else
                                     StarSephiriaMod.LogInfo($"—弹幕名称(本体)：{Pro.name}");
@@ -1268,7 +1247,7 @@ namespace SPMod
                                 {
                                     foreach (Charm_Basic comps in itemEntity.resourcePrefab.GetComponents<Component>().OfType<Charm_Basic>())
                                     {
-                                        if(comps is Charm_Magic Magic)
+                                        if (comps is Charm_Magic Magic)
                                             A += $" 魔法名称：{Magic.ContainedMagic.magicPrefab.GetComponent<ActiveSkill>().GetType().Name}";
                                         else
                                             A += $" 效果名称：{comps.GetType().Name}";
@@ -1342,7 +1321,11 @@ namespace SPMod
 
                 if (__instance.isInDungeon <= 0)
                 {
-                    DungeonPatchs.NumberofReincarnations = 0;
+                    DungeonManager? Dungeon = DungeonManager.Instance;
+                    bool AlreadyInDungeon = Dungeon != null && Dungeon.dungeonEnvironment.TryGetValue("IsInDungeon", out int InDungeonValue) && InDungeonValue != 0;
+                    if (!AlreadyInDungeon)
+                        DungeonPatchs.NumberofReincarnations = 0;
+
                     GoldObtained[__instance.Name] = __instance.currentMoney;
                 }
 
@@ -1356,7 +1339,7 @@ namespace SPMod
 
                 if (ModConfig.HardMode >= 3 && __instance.isInDungeon > 0)
                 {
-                    if(RosionList.Add(__instance))
+                    if (RosionList.Add(__instance))
                     {
                         __instance.CreateEffectHUD("Rosion", "CurrentRosion");
                     }
@@ -1389,17 +1372,6 @@ namespace SPMod
                             __instance.StartCoroutine(Cloud.UpdateCloudAttack(DarkCloud));
                             Cloud.StartAttack = true;
                         }
-                    }
-                }
-
-                if (Tools.CostumeSkinUse(__instance.Name, "Bat_3"))
-                {
-                    if (!BatTime.ContainsKey(__instance.Name))
-                        BatTime.Add(__instance.Name, new Timer(0.2f));
-                    else if (BatTime[__instance.Name].Update(Time.deltaTime))
-                    {
-                        if (__instance.hp > __instance.MaxHp * 0.5f && !__instance.IsInBattle)
-                            __instance.Networkhp = __instance.hp - 1f;
                     }
                 }
 
@@ -1516,7 +1488,7 @@ namespace SPMod
                 __instance.InactivateGuard();
             }
 
-            private static readonly List<PlayerAvatar> UseHolyRabbitEffect = new List<PlayerAvatar>();
+            private static readonly List<PlayerAvatar> UseHolyRabbitEffect = [];
 
             [HarmonyPatch("ReviveAnotherPlayer")]
             [HarmonyPostfix]
@@ -1549,7 +1521,7 @@ namespace SPMod
             private static IEnumerator HolyRabbitEffect(PlayerAvatar Player)
             {
                 if (!Player.isServer) yield break;
-                for(int i = 0; i < 25; i++)
+                for (int i = 0; i < 25; i++)
                 {
                     yield return new WaitForSeconds(0.4f);
                     Player.Heal(1);
@@ -1630,7 +1602,7 @@ namespace SPMod
                         ItemEntity[] item = costumeEntity.startingItems;
                         bool UseEffect = true;
                         StarSephiriaMod.ModifiedCostume(__instance.Name, ref stats, ref item, ref UseEffect);
-                        foreach(string UseStats in stats)
+                        foreach (string UseStats in stats)
                         {
                             StarSephiriaMod.LogInfo($"—服装属性：{UseStats}");
                             StatusInstance statusInstance = StatusDatabase.CreateStatusEntity(UseStats);
@@ -1642,12 +1614,12 @@ namespace SPMod
                             }
                         }
 
-                        List<int> NewStartingItem = new List<int>();
+                        List<int> NewStartingItem = [];
                         foreach (ItemEntity itemEntity in item)
                         {
                             if (itemEntity && NewStartingItem.Count <= 0)
                             {
-                                ItemMetadata itemMetadata = new ItemMetadata(-1, itemEntity.id, 1);
+                                ItemMetadata itemMetadata = new(-1, itemEntity.id, 1);
                                 int itemInstanceId = __instance.Inventory.AddStartingItem(itemMetadata, __instance.spawner.currentPlayerIdx);
                                 StarSephiriaMod.LogInfo($"—服装初始物品：{itemEntity.Name} ID:{itemEntity.id} 序列号:{itemInstanceId} ");
                                 NewStartingItem.Add(itemInstanceId);
@@ -1756,7 +1728,7 @@ namespace SPMod
                 {
                     totalDamage += kvp.Value;
                 }
-                if(totalDamage > 0f)
+                if (totalDamage > 0f)
                 {
                     float Down = 0;
                     if (UseQQBossDamage.TryGetValue(__instance, out float Value))
@@ -1870,7 +1842,6 @@ namespace SPMod
                     int CurrenHitCount = __instance.GetCustomStatUnsafe(TextFile.CurrentRosion) - Target.CurrenHit;
                     string Text = $"Hit Count：{CurrenHitCount}!";
                     if (CurrenHitCount == 0 &&
-                        ModConfig.Instance.AddItem &&
                         ModConfig.Instance.ModifyCharm &&
                         ModConfig.Instance.EnableWeaponModifier &&
                         ModConfig.Instance.EnableCostumeModifier)
@@ -1900,7 +1871,7 @@ namespace SPMod
                     AddPassivePoint += 30;
                 }
                 int Hard = ModConfig.HardMode;
-                if(Hard > 0)
+                if (Hard > 0)
                 {
                     AddPassivePoint += Hard * 5;
                 }
@@ -1950,10 +1921,6 @@ namespace SPMod
                     if (__instance.hp > PBD.CurrentHP)
                     {
                         float Max = __instance.MaxHp * 0.5f;
-                        if (Tools.CostumeSkinUse(__instance.Name, "Bat_3"))
-                        {
-                            Max = (__instance.maxHp + __instance.finalMaxHp * __instance.maxHp / 100f) * 0.5f;
-                        }
                         if (PBD.RecoveryHP < Max)
                         {
                             PBD.RecoveryHP += __instance.hp - PBD.CurrentHP;
@@ -1974,7 +1941,7 @@ namespace SPMod
                         }
                         else PBD.NoHPUp = true;
                     }
-                    else if(__instance.hp < PBD.CurrentHP)
+                    else if (__instance.hp < PBD.CurrentHP)
                     {
                         PBD.CurrentHP = __instance.hp;
                         if (PBD.CurrentHP < 1) PBD.CurrentHP = 1;
@@ -1982,12 +1949,12 @@ namespace SPMod
                 }
             }
 
-            private static readonly List<string> DeerAddStats = new List<string>()
-            {
+            private static readonly List<string> DeerAddStats =
+            [
                 "DIMENSION_POCKET/3",
                 "MAX_DIMENSION_POCKET/3"
-            };
-            private static readonly List<StatusInstance> DeerStatsList = new List<StatusInstance>();
+            ];
+            private static readonly List<StatusInstance> DeerStatsList = [];
             private static void UpdateMaxDimensionPocket(PlayerAvatar __instance)
             {
                 if (__instance.isInDungeon > 0)
@@ -2002,7 +1969,7 @@ namespace SPMod
 
                 if (Tools.CostumeSkinUse(__instance.Name, "Deer_1", false))
                 {
-                    if(!StarSephiriaMod.Deer_Buff.Contains(__instance.Name))
+                    if (!StarSephiriaMod.Deer_Buff.Contains(__instance.Name))
                         StarSephiriaMod.Deer_Buff.Add(__instance.Name);
                 }
                 else if (StarSephiriaMod.Deer_Buff.Count > 0)
@@ -2010,7 +1977,7 @@ namespace SPMod
                     if (__instance.GetCustomStatUnsafe(TextFile.MaxDimensionPocket) < 3)
                     {
                         List<StatusInstance> costumeStats = (List<StatusInstance>)costumeStatsField.GetValue(__instance);
-                        foreach(string Stats in DeerAddStats)
+                        foreach (string Stats in DeerAddStats)
                         {
                             StatusInstance UseStat = StatusDatabase.CreateStatusEntity(Stats);
                             if (!costumeStats.Contains(UseStat))
@@ -2024,7 +1991,7 @@ namespace SPMod
                         costumeStatsField.SetValue(__instance, costumeStats);
                     }
                 }//鹿1 所有玩家许愿池数量增加
-                else if(__instance.GetCustomStatUnsafe(TextFile.MaxDimensionPocket) > 0)
+                else if (__instance.GetCustomStatUnsafe(TextFile.MaxDimensionPocket) > 0)
                 {
                     List<StatusInstance> costumeStats = (List<StatusInstance>)costumeStatsField.GetValue(__instance);
                     foreach (StatusInstance Stats in costumeStats)
@@ -2122,591 +2089,36 @@ namespace SPMod
             }
         }
 
-        public static List<int> BondingItems = new List<int>();
-        [HarmonyPatch(typeof(UI_DimensionPocketPanel))]
-        public static class UI_DimensionPocketPanel_Patch
+        [HarmonyPatch(typeof(UnitAI_BossBasic))]
+        public static class UnitAI_BossBasic_TargetSync_Patch
         {
-            [HarmonyPatch("Open")]
-            [HarmonyPrefix]
-            static void Open_Postfix(UI_DimensionPocketPanel __instance, PlayerAvatar playerAvatar, ref int cachedDimensionPocketStorage, List<ItemMetadata> cachedDimensionPocketItem)
+            private sealed class SyncState
             {
-                List<ItemMetadata> cachedItems = cachedDimensionPocketItem;
-                foreach (int itemId in BondingItems)
-                {
-                    var Item = ItemDatabase.FindItemById(itemId);
-                    if (Item == null) continue;
-                    if (Item.cannotBeReward) Item.cannotBeReward = false;
-                    if (Item.activeType == EItemActiveType.Hidden) Item.activeType = EItemActiveType.Default;
-
-                    bool exists = false;
-                    foreach (ItemMetadata item in cachedItems)
-                    {
-                        if (item.entityID == itemId)
-                        {
-                            exists = true;
-                            StarSephiriaMod.LogError($"许愿池中已有：{Item.Name}");
-                            break;
-                        }
-                    }
-                    if (!exists)
-                    {
-                        int Stack = 3;
-                        if (Item.rarity == EItemRarity.Uncommon) Stack = 4;
-                        else if (Item.rarity == EItemRarity.Rare) Stack = 5;
-                        else if (Item.rarity == EItemRarity.Legend) Stack = 6;
-                        if (cachedDimensionPocketStorage >= Stack)
-                            cachedDimensionPocketItem.Add(new ItemMetadata(-1, itemId, 1));
-                    }
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(UI_ShopPanel))]
-        public static class UI_ShopPanel_Patch
-        {
-            private static readonly MethodInfo UpdateReplenishmentIconMethod = AccessTools.Method(typeof(UI_ShopPanel), "UpdateReplenishmentIcon");
-
-            [HarmonyPatch("DoReplenishment")]
-            [HarmonyPrefix]
-            static bool DoReplenishment_Prefix(UI_ShopPanel __instance)
-            {
-                if (!ModConfig.Instance.ModifyMerchant || UpdateReplenishmentIconMethod == null)
-                {
-                    return true;
-                }
-
-                if (GameCamera.Instance.Observer != __instance.BuyerCharacter ||
-                    UIManager.Instance.GetElement<UI_NewItemPicker>().CurrentAny ||
-                    UIManager.Instance.GetElement<UI_NewItemPicker_Controller>().CurrentAny)
-                {
-                    return false;
-                }
-
-                UnitAI_NewBasic component = __instance.ShopCharacter.GetComponent<UnitAI_NewBasic>();
-                if (!component)
-                {
-                    return false;
-                }
-
-                if (component.replenishments.Count > 0)
-                {
-                    bool flag = true;
-                    foreach (UnitAI_NewBasic.ReplenishmentItem replenishment in component.replenishments)
-                    {
-                        if (!replenishment.purchased)
-                        {
-                            flag = false;
-                            break;
-                        }
-                    }
-
-                    if (flag)
-                    {
-                        UIManager.Instance.GetElement<UI_SystemMessage>().Open(__instance.allReplenishmentPurchasedText.ToString(), 3f);
-                        __instance.notEnoughSapphireSoundEvent.Play();
-                        return false;
-                    }
-                }
-
-                int Use = 0;
-                if (component.replenishmentTryCount >= 5) Use = int.MaxValue;
-                if (GameCamera.Instance.Observer.TryGetComponent<PlayerLocalDataStorage>(out var component2) && GameCamera.Instance.Observer.TryGetComponent<PlayerSpawner>(out var _))
-                {
-                    if (component2.GetSapphire() >= Use)
-                    {
-                        __instance.replenishmentFlash.transform.SetAsLastSibling();
-                        __instance.replenishmentFlash.gameObject.SetActive(value: true);
-                        __instance.replenishmentFlash.ResetAnimation();
-                        __instance.rerollSoundEvent.Play();
-                        UIManager.Instance.GetElement<UI_FlashScreen>().Flash(new Color(0f, 0.765f, 1f, 0.12f), 0.1f, EFlashScreenTImeType.UNSCALED);
-                        component.AddReplenishmentItemsClientside(2, 1);
-                        UpdateReplenishmentIconMethod.Invoke(__instance, null);
-                    }
-                    else
-                    {
-                        UIManager.Instance.GetElement<UI_SystemMessage>().Open(__instance.notEnoughSapphireText.ToString(), 3f);
-                        __instance.notEnoughSapphireSoundEvent.Play();
-                    }
-                }
-                return false;
+                public uint TargetNetId;
+                public bool HasValue;
+                public float NextSend;
             }
 
-            [HarmonyPatch("UpdateReplenishmentCost")]
-            [HarmonyPrefix]
-            static bool UpdateReplenishmentCost_Prefix(UI_ShopPanel __instance)
-            {
-                if (!ModConfig.Instance.ModifyMerchant)
-                {
-                    return true;
-                }
-                UnitAI_NewBasic component = __instance.ShopCharacter.GetComponent<UnitAI_NewBasic>();
-                if (!component)
-                {
-                    return false;
-                }
-                string Use = (5 - component.replenishmentTryCount).ToString();
-                __instance.replenishmentCostText.text = Use;
-                return false;
-            }
-        }
+            private static readonly ConditionalWeakTable<UnitAI_BossBasic, SyncState> States = new();
 
-        [HarmonyPatch(typeof(UI_StatsPanel))]
-        public static class UI_StatsPanel_Patch
-        {
-            [HarmonyPatch("Connect")]
+            [HarmonyPatch("Update")]
             [HarmonyPostfix]
-            static void Connect_Postfix(UI_StatsPanel __instance, GameObject playerObject)
+            static void Update_Postfix(UnitAI_BossBasic __instance)
             {
-                if (playerObject.TryGetComponent<AvatarStatsHooker>(out AvatarStatsHooker Hooker))
-                {
-                    UI_StatusTooltipOpener? Exists = __instance.statElements.FirstOrDefault(x => x.statHookID == TextFile.WindDamage);
-                    if (Exists != null) { Exists.SetAvatar(Hooker); return; }
-                    UI_StatusTooltipOpener? Template = __instance.statElements.FirstOrDefault(x => x.statHookID == "LIGHTNING_DAMAGE");
-                    if (Template == null) return;
+                if (!NetworkServer.active || __instance == null || __instance.Avatar == null) return;
 
-                    GameObject Clone = Object.Instantiate(Template.gameObject, Template.transform.parent);
-                    Clone.name = "StatRow_WindDamage";
-                    Clone.transform.SetSiblingIndex(Template.transform.GetSiblingIndex() + 1);
+                uint TargetNetId = __instance.CurrentTarget != null ? __instance.CurrentTarget.netId : 0u;
+                SyncState State = States.GetOrCreateValue(__instance);
 
-                    if (Clone.transform is RectTransform CloneRect)
-                    {
-                        List<RectTransform> Group = new List<RectTransform> { CloneRect };
-                        foreach (UI_StatusTooltipOpener Row in __instance.statElements)
-                        {
-                            if (Row.transform.parent != Template.transform.parent) continue;
-                            if (!ElementHooks.Contains(Row.statHookID)) continue;
-                            if (!(Row.transform is RectTransform RowRect)) continue;
-                            if (Group.Contains(RowRect)) continue; // 面板里同一行可能在数组中出现两次
-                            Group.Add(RowRect);
-                        }
-                        Group.Sort((A, B) => A.GetSiblingIndex().CompareTo(B.GetSiblingIndex()));
-                        if (Group.Count > 1)
-                        {
-                            Vector2 First = Group[0].anchoredPosition;
-                            Vector2 Last = Group[^1].anchoredPosition;
-                            Vector2 Dir = (Last - First).normalized;
-                            bool Horizontal = Mathf.Abs(Last.x - First.x) >= Mathf.Abs(Last.y - First.y);
-                            float Extent = Group.Max(R => Horizontal ? R.rect.width : R.rect.height);
+                // 目标变化时立即发；没变化时每秒补发一次，保证后加入的客机也能拿到当前目标。
+                bool Changed = !State.HasValue || State.TargetNetId != TargetNetId;
+                bool Heartbeat = TargetNetId != 0 && Time.unscaledTime >= State.NextSend;
+                if (!Changed && !Heartbeat) return;
 
-                            Vector2 Center = (First + Last) * 0.5f;
-                            float HalfSpan = (Last - First).magnitude * 0.5f;
-                            if (Template.transform.parent is RectTransform Container)
-                            {
-                                float ContainerSize = Horizontal ? Container.rect.width : Container.rect.height;
-                                if (ContainerSize > 0f) HalfSpan = Mathf.Max((ContainerSize - Extent) * 0.5f, 0f);
-                            }
-                            float Step = HalfSpan * 2f / (Group.Count - 1);
-                            for (int i = 0; i < Group.Count; i++)
-                                Group[i].anchoredPosition = Center + Dir * (-HalfSpan + Step * i);
-                        }
-                    }
-
-                    UI_StatusTooltipOpener Opener = Clone.GetComponent<UI_StatusTooltipOpener>();
-                    Opener.statHookID = TextFile.WindDamage;
-                    Opener.statKeyword = $"WindDamage";
-                    KeywordEntity WindKeyword = KeywordDatabase.GetEntity($"WindDamage");
-                    KeywordEntity? LightningKeyword = KeywordDatabase.GetEntity("LightningDamage");
-                    Sprite? LightIcon = LightningKeyword?.keywordImage;
-                    Image[] Icons = Opener.GetComponentsInChildren<Image>(true);
-                    Image? Icon = Icons.FirstOrDefault(I => I.sprite != null && I.sprite == LightIcon) ?? Icons.FirstOrDefault(I => I.sprite != null);
-                    if (Icon != null && WindKeyword != null && WindKeyword.keywordImage != null) Icon.sprite = WindKeyword.keywordImage;
-
-                    Opener.applySignColor = false;
-                    Opener.statusValueText.color = EffectConstant.WindColor;
-
-                    __instance.statElements = __instance.statElements.Append(Opener).ToArray();
-                    Opener.SetAvatar(Hooker);
-                }
-            }
-
-            static readonly string[] ElementHooks = { "PHYSICAL_DAMAGE", "FIRE_DAMAGE", "ICE_DAMAGE", "LIGHTNING_DAMAGE" };
-        }
-
-        [HarmonyPatch(typeof(UI_StatusTooltipOpener))]
-        public static class UI_StatusTooltipOpener_Patch
-        {
-            public static FieldInfo hookerField = AccessTools.Field(typeof(UI_StatusTooltipOpener), "hooker");
-
-            [HarmonyPatch("GetKeywords")]
-            [HarmonyPrefix]
-            static bool GetKeywords(UI_StatusTooltipOpener __instance, ref Loc.KeywordValue[] __result)
-            {
-                if (hookerField != null)
-                {
-                    AvatarStatsHooker hooker = (AvatarStatsHooker)hookerField.GetValue(__instance);
-                    if (hooker != null)
-                    {
-                        if (__instance.statHookID == TextFile.WindDamage)
-                        {
-                            __result = new Loc.KeywordValue[]
-                            {
-                                new Loc.KeywordValue("BASE", hooker.HookStat(TextFile.WindDamage + "_BASE", out _, out _)),
-                                new Loc.KeywordValue("AMP", hooker.HookStat(TextFile.WindDamage + "_AMP", out _, out _)),
-                            };
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }
-        }
-
-        [HarmonyPatch(typeof(UI_CostumePanel))]
-        public static class UI_CostumePanel_Patch
-        {
-            private static readonly FieldInfo PlayerField = AccessTools.Field(typeof(UI_CostumePanel), "playerAvatar");
-            private static readonly FieldInfo startingItemIconsField = AccessTools.Field(typeof(UI_CostumePanel), "startingItemIcons");
-
-            [HarmonyPatch("UpdateData")]
-            [HarmonyPostfix]
-            static void UpdateData_Postfix(UI_CostumePanel __instance, CostumeEntity costume)
-            {
-                if (!ModConfig.Instance.EnableCostumeModifier) return;
-                try
-                {
-                    if (PlayerField == null || startingItemIconsField == null)
-                    {
-                        StarSephiriaMod.LogError("[UI_CostumePanel][UpdateData]反射获取失败");
-                        return;
-                    }
-                    PlayerAvatar Player = (PlayerAvatar)PlayerField.GetValue(__instance);
-                    List<UI_ItemIcon> startingItemIcons = (List<UI_ItemIcon>)startingItemIconsField.GetValue(__instance);
-
-                    bool Unlocked = costume && (costume.costumeType == ECostumeUnlockType.Default
-                        || costume.costumeType == ECostumeUnlockType.Dungreed
-                        || CostumeDatabase.IsUnlocked(costume.id)
-                        || (ScreenFader.Instance && ScreenFader.Instance.IsTestMode));
-                    StringBuilder stringBuilder = new StringBuilder();
-                    if (Unlocked && costume != null)
-                    {
-                        string FlavorText = costume.aFlavorText.ToString();
-                        bool UseModText = false;
-                        TextFile.LoadText();
-                        if (StarSephiriaMod.CostumeType.TryGetValue(Player.Name, out string useCostume) && useCostume == costume.id)
-                        {
-                            StarSephiriaMod.CostumeSkinType.TryGetValue(Player.Name, out string skin);
-                            string Name = "";
-                            if (!string.IsNullOrEmpty(skin) && StarSephiriaMod.CostumeSkinIdToName.TryGetValue(skin, out string FoundName))
-                                Name = FoundName;
-                            if (TextFile.CostumeTextMap.TryGetValue(Name, out string Effect))
-                            {
-                                FlavorText = Effect;
-                                UseModText = true;
-                            }
-                        }
-                        if (UseModText)
-                        {
-                            string[] stats = costume.stats;
-                            ItemEntity[] item = costume.startingItems;
-                            bool UseEffect = true;
-                            StarSephiriaMod.ModifiedCostume(Player.Name, ref stats, ref item, ref UseEffect);
-                            foreach (UI_ItemIcon ui_ItemIcon in startingItemIcons)
-                            {
-                                if (ui_ItemIcon)
-                                {
-                                    Object.Destroy(ui_ItemIcon.gameObject);
-                                }
-                            }
-                            startingItemIcons.Clear();
-
-                            bool flag2 = false;
-                            foreach (ItemEntity itemEntity in item)
-                            {
-                                UI_ItemIcon ui_ItemIcon2 = Object.Instantiate<UI_ItemIcon>(__instance.startingItemIcon, __instance.startingItemContentsZone);
-                                ui_ItemIcon2.SetItem(new ItemMetadata(-1, itemEntity.id, 1), null);
-                                startingItemIcons.Add(ui_ItemIcon2);
-                                flag2 = true;
-                            }
-                            __instance.startingItem.gameObject.SetActive(flag2);
-                            __instance.tooltipEffectText.text = FlavorText;
-                        }
-                    }
-                    else
-                    {
-                        __instance.startingItem.gameObject.SetActive(false);
-                    }
-                    if (Unlocked && costume != null && ModConfig.Instance.EnableCostumeTransmog)
-                    {
-                        string Hint = Tools.GetLocalization("Instruction_TransmogHint");
-                        if (!string.IsNullOrEmpty(Hint))
-                        {
-                            __instance.tooltipEffectText.text = __instance.tooltipEffectText.text.TrimEnd()
-                                + "\n- <indent=10>" + Hint + "</indent>";
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    StarSephiriaMod.LogError($"[UI_CostumePanel][UpdateData]错误{ex}");
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(UI_PresetPanel))]
-        public static class UI_PresetPanel_Patch
-        {
-            private static readonly FieldInfo costumeStartingItemIconsField = AccessTools.Field(typeof(UI_PresetPanel), "costumeStartingItemIcons");
-
-            [HarmonyPatch("UpdateCostumeInfo")]
-            [HarmonyPostfix]
-            static void UpdateCostumeInfo_Postfix(UI_PresetPanel __instance, string forwardKey)
-            {
-                if (!ModConfig.Instance.EnableCostumeModifier) return;
-
-                if (costumeStartingItemIconsField == null)
-                {
-                    StarSephiriaMod.LogError("[UpdateCostumeInfo][UI_PresetPanel]反射获取失败");
-                    return;
-                }
-
-                List<UI_ItemIcon> StartingItemIcons = (List<UI_ItemIcon>)costumeStartingItemIconsField.GetValue(__instance);
-
-                string @string = SaveManager.Current.GetString(forwardKey + "PlayerCostume", "PinkRabbit");
-                CostumeEntity CostumeEntity = CostumeDatabase.FindCostumeByID(@string);
-                string string2 = SaveManager.Current.GetString(forwardKey + "PlayerCostume_CurrentSkin_" + @string, "");
-                CostumeSkinEntity CostumeSkin = CostumeDatabase.GetCostumeSkinByID(string2);
-                if (string.IsNullOrWhiteSpace(string2))
-                {
-                    CostumeSkinEntity FindCostume = CostumeDatabase.FindDefaultCostumeSkin(@string);
-                    if (FindCostume) CostumeSkin = FindCostume;
-                }
-
-                bool Unlocked = CostumeEntity && (CostumeEntity.costumeType == ECostumeUnlockType.Default
-                || CostumeEntity.costumeType == ECostumeUnlockType.Dungreed
-                || CostumeDatabase.IsUnlocked(CostumeEntity.id)
-                || (ScreenFader.Instance && ScreenFader.Instance.IsTestMode));
-                StringBuilder stringBuilder = new StringBuilder();
-                if (Unlocked && CostumeEntity != null)
-                {
-                    string FlavorText = CostumeEntity.aFlavorText.ToString();
-                    bool UseModText = false;
-                    TextFile.LoadText();
-                    string Name = "";
-                    if (CostumeSkin != null)
-                    {
-                        string SkinKey = CostumeSkin.skinID.ToSafeString();
-                        if (!string.IsNullOrEmpty(SkinKey) && StarSephiriaMod.CostumeSkinIdToName.TryGetValue(SkinKey, out string FoundName))
-                            Name = FoundName;
-                    }
-                    if (TextFile.CostumeTextMap.TryGetValue(Name, out string Effect))
-                    {
-                        FlavorText = Effect;
-                        UseModText = true;
-                    }
-                    if (UseModText)
-                    {
-                        string[] stats = CostumeEntity.stats;
-                        ItemEntity[] item = CostumeEntity.startingItems;
-                        bool UseEffect = true;
-                        StarSephiriaMod.LoadModCostumeEffect(Name, ref stats, ref item, ref UseEffect);
-                        foreach (UI_ItemIcon ui_ItemIcon in StartingItemIcons)
-                        {
-                            if (ui_ItemIcon)
-                            {
-                                Object.Destroy(ui_ItemIcon.gameObject);
-                            }
-                        }
-                        StartingItemIcons.Clear();
-
-                        bool flag2 = false;
-                        foreach (ItemEntity itemEntity in item)
-                        {
-                            UI_ItemIcon ui_ItemIcon2 = Object.Instantiate<UI_ItemIcon>(__instance.costumeStartingItemIcon, __instance.costumeStartingItemContentsZone);
-                            ui_ItemIcon2.SetItem(new ItemMetadata(-1, itemEntity.id, 1), null);
-                            StartingItemIcons.Add(ui_ItemIcon2);
-                            flag2 = true;
-                        }
-                        __instance.costumeStartingItem.gameObject.SetActive(flag2);
-                        __instance.costumeEffectText.text = FlavorText;
-                    }
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(UI_WeaponEnhancementButton))]
-        public static class UI_WeaponEnhancementButton_Patch
-        {
-            [HarmonyPatch("SetWeaponMethod")]
-            [HarmonyPostfix]
-            static void SetWeaponMethod_Postfix(UI_WeaponEnhancementButton __instance, UI_WeaponEnhancementPanel panel, WeaponSimple currentWeapon, EnhancementMetadata enhancementMetadata)
-            {
-                try
-                {
-                    TextFile.LoadText();
-                    if (TextFile.WeaponTextMap.TryGetValue(enhancementMetadata.enhanced.id, out var value) && ModConfig.Instance.EnableWeaponModifier && value.Item1 != "")
-                    {
-                        __instance.effectText.text = value.Item1;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    StarSephiriaMod.LogError($"[UI_WeaponEnhancementButton][SetWeaponMethod]错误{ex}");
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(UI_WeaponTooltip))]
-        public static class UI_WeaponTooltip_Patch
-        {
-            private static readonly FieldInfo openKeywordsCoroutineField = AccessTools.Field(typeof(UI_WeaponTooltip), "openKeywordsCoroutine");
-            private static readonly MethodInfo openKeywordsCoroutineMethod = AccessTools.Method(typeof(UI_WeaponTooltip), "OpenKeywordsCoroutine");
-            private static GameObject? HardLevel = null;
-            private static TextMeshProUGUI? HardLevelText = null;
-
-            [HarmonyPatch("Open")]
-            [HarmonyPostfix]
-            static void Open_Postfix(UI_WeaponTooltip __instance, IUITooltipOpener target, RectTransform attached, Vector2 offset, ITooltip data)
-            {
-                if (!ModConfig.Instance.EnableWeaponModifier) return;
-                if (openKeywordsCoroutineField == null || openKeywordsCoroutineMethod == null)
-                {
-                    StarSephiriaMod.LogError("[UI_WeaponTooltip][Open]反射获取失败");
-                    return;
-                }
-                Coroutine coroutine = (Coroutine)openKeywordsCoroutineField.GetValue(__instance);
-                IEnumerator result = (IEnumerator)openKeywordsCoroutineMethod.Invoke(__instance, null);
-
-                WeaponEntity? weaponEntity = null;
-                WeaponAddon[]? array2 = null;
-                WeaponSimple? weaponSimple = data as WeaponSimple;
-                if (weaponSimple != null)
-                {
-                    weaponEntity = WeaponDatabase.FindWeaponById(weaponSimple.entityId);
-                    array2 = weaponSimple.addons;
-                }
-                else
-                {
-                    WeaponEntity? weaponEntity2 = data as WeaponEntity;
-                    if (weaponEntity2 != null)
-                    {
-                        weaponEntity = weaponEntity2;
-                        if (weaponEntity.mainWeaponPrefab != null)
-                        {
-                            WeaponSimple component = weaponEntity.mainWeaponPrefab.GetComponent<WeaponSimple>();
-                            if (component != null) array2 = component.addons;
-                        }
-                    }
-                }
-                if (weaponEntity != null && array2 != null)
-                {
-                    bool falg = false;
-                    int Stack = 1;
-                    string[] ModifyWeaponToopTip = new string[2] { "", "" };
-                    TextFile.LoadText();
-                    WeaponEntity Orig = weaponEntity;
-                    while (TextFile.WeaponTextMap.TryGetValue(weaponEntity.id, out var value))
-                    {
-                        falg = true;
-                        ModifyWeaponToopTip[Stack] = value.Item1;
-                        weaponEntity = WeaponDatabase.FindWeaponById(value.Item2);
-                        Stack -= 1;
-                        if (Stack < 0) break;
-                        continue;
-                    }
-                    if (!TextFile.WeaponTextMap.TryGetValue(weaponEntity.id, out _) && array2.Length <= 1 && ModifyWeaponToopTip[0] == "" && ModifyWeaponToopTip[1] != "")
-                    {
-                        ModifyWeaponToopTip[0] = ModifyWeaponToopTip[1];
-                    }
-                    if (falg)
-                    {
-                        Stack = 0;
-                        int NoTooptip = 0;
-                        foreach (WeaponAddon weaponAddon in array2)
-                        {
-                            if (NoTooptip > 1)
-                            {
-                                continue;
-                            }
-                            if (ModifyWeaponToopTip[Stack] != "")
-                            {
-                                __instance.upgradeTextBoxes[Stack].SetText(ModifyWeaponToopTip[Stack]);
-                                Stack = 1;
-                                NoTooptip += 1;
-                                continue;
-                            }
-                            __instance.upgradeTextBoxes[Stack].SetText(weaponAddon.GetEffectText());
-                            Stack = 1;
-                            NoTooptip += 1;
-                        }
-                    }
-                    if (coroutine != null)
-                    {
-                        __instance.StopCoroutine(coroutine);
-                        openKeywordsCoroutineField.SetValue(__instance, null);
-                    }
-                    if (!__instance.attachedWorldTarget)
-                    {
-                        openKeywordsCoroutineField.SetValue(__instance, __instance.StartCoroutine(result));
-                    }
-
-                    if (HardLevel == null)
-                    {
-                        Sprite? Icon = Tools.LoadModSprite("HardIcon");
-                        if(Icon != null)
-                        {
-                            int Value = SaveManager.Current.GetInt("[Star's Sephiria Mod]HardModePoint_Weapon_" + Orig.id, 0);
-                            if (Value > 0)
-                            {
-                                HardLevel = CreateIconTextGroup(__instance.weaponNameText, Value.ToString(), Icon);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        int Value = SaveManager.Current.GetInt("[Star's Sephiria Mod]HardModePoint_Weapon_" + Orig.id, 0);
-                        if (Value > 0 && HardLevelText != null)
-                        {
-                            HardLevelText.text = Value.ToString();
-                            Color TextColor = Color.Lerp(Color.white, Color.gold, Mathf.Clamp(Value, 0, 99) * 0.01f);
-                            if (Value >= 100) TextColor = Color.red;
-                            HardLevelText.color = TextColor;
-                            HardLevel.SetActive(true);
-                        }
-                        else HardLevel.SetActive(false);
-                    }
-                }
-            }
-
-            public static GameObject CreateIconTextGroup(TextMeshProUGUI originalText, string leftContent, Sprite iconSprite, float iconSize = 24, float gapIconText = 4, float gapTextOrigin = 5)
-            {
-                RectTransform originRt = originalText.rectTransform;
-                GameObject container = new GameObject("IconTextGroup");
-                container.transform.SetParent(originRt.parent, false);
-                RectTransform containerRt = container.AddComponent<RectTransform>();
-                containerRt.anchorMin = originRt.anchorMin;
-                containerRt.anchorMax = originRt.anchorMax;
-                containerRt.pivot = originRt.pivot;
-                containerRt.anchoredPosition = originRt.anchoredPosition;
-
-                HorizontalLayoutGroup hlg = container.AddComponent<HorizontalLayoutGroup>();
-                hlg.spacing = gapIconText;
-                hlg.childForceExpandWidth = false;
-                hlg.childForceExpandHeight = false;
-                hlg.childControlWidth = true;
-                hlg.childControlHeight = true;
-
-                GameObject iconObj = new GameObject("Icon");
-                iconObj.transform.SetParent(container.transform, false);
-                Image icon = iconObj.AddComponent<Image>();
-                icon.sprite = iconSprite;
-                icon.preserveAspect = true;
-                RectTransform iconRt = icon.rectTransform;
-                iconRt.sizeDelta = new Vector2(iconSize, iconSize);
-
-                GameObject textObj = new GameObject("LeftText");
-                textObj.transform.SetParent(container.transform, false);
-                TextMeshProUGUI leftTMP = textObj.AddComponent<TextMeshProUGUI>();
-                leftTMP.font = originalText.font;
-                leftTMP.fontSize = originalText.fontSize;
-                leftTMP.color = originalText.color;
-                leftTMP.text = leftContent;
-                leftTMP.alignment = TextAlignmentOptions.Midline;
-                HardLevelText = leftTMP;
-
-                originalText.ForceMeshUpdate();
-                leftTMP.ForceMeshUpdate();
-                containerRt.anchoredPosition = new Vector2(originRt.anchoredPosition.x - gapTextOrigin, originRt.anchoredPosition.y);
-                return container;
+                State.HasValue = true;
+                State.TargetNetId = TargetNetId;
+                State.NextSend = Time.unscaledTime + 1f;
+                ModNetwork.SendBossTarget(__instance.netId, TargetNetId);
             }
         }
 
@@ -2726,7 +2138,7 @@ namespace SPMod
             {
                 if (!__instance.isServer) return;
                 if (__instance.cooldownInfos.Count <= __state) return;
-                if (!(__instance.debuffPrefab is CharacterDebuff_WindErosion)) return;
+                if (__instance.debuffPrefab is not CharacterDebuff_WindErosion) return;
 
                 UnitAvatar Player = __instance.Networkavatar;
                 if (!Player.IsWeapon(WeaponIDs.Vortex)) return;
@@ -2764,7 +2176,7 @@ namespace SPMod
                 {
                     __instance.minCooldownTime = 0.125f / (1f + Player.GetCustomStatUnsafe(TextFile.AttackSpeed));
                 }
-             }
+            }
 
             [HarmonyPatch("AddSwordServer")]
             [HarmonyPostfix]
@@ -2839,7 +2251,7 @@ namespace SPMod
                         }
                         else
                         {
-                            LegacyofTheIllusionistAttackData NewAttack = new LegacyofTheIllusionistAttackData(10, 0.8f)
+                            LegacyofTheIllusionistAttackData NewAttack = new(10, 0.8f)
                             {
                                 AttackStack = CastCount,
                                 AttackSpeed = Speed,
@@ -2850,7 +2262,7 @@ namespace SPMod
                     }//幻术师的遗产
                     if (Player.IsWeapon(WeaponIDs.Successor))
                     {
-                        if(skill is ActiveSkill_Bolt Bolt)
+                        if (skill is ActiveSkill_Bolt Bolt)
                         {
                             float CharmDamage = 1f + skill.Charm.RequestCharmDamageBonusOnRoot() * 0.01f;
                             WeaponPatch.SuccessorEffect[Player] = new SuccessorBoltData(Bolt, CharmDamage, __instance.GetMultipleCastCount());
@@ -2861,9 +2273,9 @@ namespace SPMod
                         bool Add = true;
                         float Mana = skill.Charm.GetCost(Player, skill.Charm.CurrentLevelToIdx());
                         List<ShieldData> curShieldDatas = ((SyncList<ShieldData>)curShieldDatasField.GetValue(Player)).ToList();
-                        foreach(ShieldData ShieldDatas in curShieldDatas)
+                        foreach (ShieldData ShieldDatas in curShieldDatas)
                         {
-                            if(ShieldDatas.key == "Seren2Shield")
+                            if (ShieldDatas.key == "Seren2Shield")
                             {
                                 float Value = 5 + Player.MaxMp * 0.05f;
                                 if (ShieldDatas.shield < Value)
@@ -2889,7 +2301,7 @@ namespace SPMod
             [HarmonyPrefix]
             static bool HasStat_Prefix(AvatarStatsHooker __instance, string id, ref bool __result)
             {
-                if(__instance.TryGetComponent<UnitAvatar>(out UnitAvatar Player))
+                if (__instance.TryGetComponent<UnitAvatar>(out UnitAvatar Player))
                 {
                     if (id == TextFile.WindDamage)
                     {
@@ -2942,60 +2354,6 @@ namespace SPMod
                     }
                 }
                 return true;
-            }
-        }
-
-        [HarmonyPatch(typeof(KeywordDatabase))]
-        public static class KeywordDatabase_Patch
-        {
-            private static readonly FieldInfo constField = AccessTools.Field(typeof(KeywordDatabase), "constValueDictionary");
-            private static readonly FieldInfo floatField = AccessTools.Field(typeof(KeywordDatabase), "constFloatValueDictionary");
-
-            [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            static void Initialize_Postfix()
-            {
-
-                if (constField == null || floatField == null)
-                {
-                    StarSephiriaMod.LogError($"[KeywordDatabase][Initialize]反射常量数据失败");
-                    return;
-                }
-
-                Dictionary<string, int> ConstValueDictionary = (Dictionary<string, int>)constField.GetValue(null);
-                Dictionary<string, float> ConstFloatValueDictionary = (Dictionary<string, float>)floatField.GetValue(null);
-
-                foreach (var kvp in ConstValueDictionary)
-                {
-                    StarSephiriaMod.LogInfoProjectile($"[整型常量] {kvp.Key} = {kvp.Value}");
-                }
-                foreach (var kvp in ConstFloatValueDictionary)
-                {
-                    StarSephiriaMod.LogInfoProjectile($"[浮点常量] {kvp.Key} = {kvp.Value}");
-                }
-                if (ModConfig.Instance.EnableWeaponModifier)
-                {
-                    ConstValueDictionary["DIMENSIONPOCKETLIMIT"] = 24;//许愿池硬上限
-                    ConstValueDictionary["CHARGEDSWEEPTIME"] = 1;//恐惧高涨冷却
-                    ConstValueDictionary["KATANAECLIPSEDAMAGEBONUSBYCONSUMESWORDCOUNT"] = 8;//日食武器伤害加成
-                    ConstValueDictionary["KATANACONSUMESWORDCOUNTLIMIT"] = 99;//日食最多消耗剑数量
-                    ConstValueDictionary["SOLISMISSIODECREASEMOVESPEEDONGUARD"] = 0;//索利斯使命举盾减速
-                    ConstValueDictionary["GREATSWORDMONEYWHIRLWINDCOST"] = 10;//叶爆消耗叶子
-                    ConstValueDictionary["CROSSBOWC4BOMBEXPLOSIONDEFAULTDAMAGE"] = 40;//藤壶基础伤害
-                    ConstValueDictionary["CROSSBOWC4BOMBEXPLOSIONDEFENSEPERCENT"] = 200;//藤壶伤害倍率
-                    ConstValueDictionary["KATANASHEATHHARDENINGMAXCOUNT"] = 20;//破甲最大层数
-                    ConstValueDictionary["KATANASHEATHHARDENINGTIMER_DIV10"] = 6;//破甲最大层数
-                }
-                if (ModConfig.Instance.ModifyCharm)
-                {
-                    ConstValueDictionary["GOLDHANDMAX"] = 40;//谈判4加成上限
-                }
-                if (ModConfig.Instance.ModifyMerchant)
-                {
-                    ConstValueDictionary["MAXWITCHHATITEMS"] = 8;//女巫出售物品数量
-                }
-                constField.SetValue(null, ConstValueDictionary);
-                floatField.SetValue(null, ConstFloatValueDictionary);
             }
         }
 
@@ -3062,15 +2420,12 @@ namespace SPMod
                     {
                         if (__instance.type != Sephirite.Type.TABLET && __instance.type != Sephirite.Type.TABLET_BOSS)
                         {
-                            if (ModConfig.Instance.AddItem)
+                            if (Tools.CostumeSkinUse(Player.Name, "Squirrel_3", false))
                             {
-                                if (Tools.CostumeSkinUse(Player.Name, "Squirrel_3", false))
+                                if (GetModItem.TryGetValue("MysteryBox_Random", out ItemEntity ModItem))
                                 {
-                                    if (GetModItem.TryGetValue("MysteryBox_Random", out ItemEntity ModItem))
-                                    {
-                                        Random random = new System.Random(__instance.CurrentSeed + 1000);
-                                        __instance.rewards.Add(new SephiriteRewardMetadata(ItemDatabase.GenerateInstanceID(random), ModItem.id));
-                                    }
+                                    Random random = new(__instance.CurrentSeed + 1000);
+                                    __instance.rewards.Add(new SephiriteRewardMetadata(ItemDatabase.GenerateInstanceID(random), ModItem.id));
                                 }
                             }
                         }
@@ -3081,7 +2436,7 @@ namespace SPMod
                             {
                                 if (Tools.CostumeSkinUse(Player.Name, "Crocodile_2", false))
                                 {
-                                    Dictionary<EItemRarity, WeightedItemSelector> StoneList = new Dictionary<EItemRarity, WeightedItemSelector>();
+                                    Dictionary<EItemRarity, WeightedItemSelector> StoneList = [];
                                     foreach (int All in Spawner.unlockedStoneTablets)
                                     {
                                         ItemEntity Item = ItemDatabase.FindItemById(All);
@@ -3097,7 +2452,7 @@ namespace SPMod
                                     }
                                     if (StoneList.Count > 0)
                                     {
-                                        Random random = new Random(__instance.CurrentSeed + 1999);
+                                        Random random = new(__instance.CurrentSeed + 1999);
                                         EItemRarity key = Sephirite.RarityDice(__instance.type, random, Player.GetCustomStatUnsafe(TextFile.Luck) * 0.01f);
                                         WeightedItem TargetItem = StoneList[key].GetRandom(random);
                                         __instance.rewards.Add(new SephiriteRewardMetadata(ItemDatabase.GenerateInstanceID(random), TargetItem.item.id));
@@ -3110,7 +2465,7 @@ namespace SPMod
                 }
 
                 int i = 0;
-                while(__instance.appearedItems.Count > __instance.appearLimit)
+                while (__instance.appearedItems.Count > __instance.appearLimit)
                 {
                     __instance.appearedItems.Dequeue();
 
@@ -3127,7 +2482,7 @@ namespace SPMod
             [HarmonyPrefix]
             static bool AddStorage_Prefix(GridInventory __instance, ref short add)
             {
-                if(__instance.UnitAvatar is PlayerAvatar Player)
+                if (__instance.UnitAvatar is PlayerAvatar Player)
                 {
                     if (Tools.CostumeSkinUse(Player.Name, "Fox_3", false))
                     {
@@ -3162,304 +2517,12 @@ namespace SPMod
             static void CurrentStoneTabletsCount_Postfix(GridInventory __instance, ref int __result)
             {
                 int Stack = __instance.stoneTablets.Count;
-                foreach(StoneTablet tablet in __instance.stoneTablets.Values)
+                foreach (StoneTablet tablet in __instance.stoneTablets.Values)
                 {
                     if (tablet.entityID == 2101)
                         Stack += 1;
                 }
                 __result = Stack;
-            }
-        }
-
-        [HarmonyPatch(typeof(ItemDatabase))]
-        public static class ItemDatabase_Patch
-        {
-            private static readonly FieldInfo? itemIDListField = AccessTools.Field(typeof(ItemDatabase), "itemIDList");
-            private static readonly FieldInfo? itemDictionaryField = AccessTools.Field(typeof(ItemDatabase), "itemDictionary");
-            private static readonly FieldInfo? itemCategoriesField = AccessTools.Field(typeof(ItemDatabase), "itemCategories");
-            private static readonly FieldInfo? allWitchHatItemsField = AccessTools.Field(typeof(ItemDatabase), "allWitchHatItems");
-
-            [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            public static void Initialize_Postfix()
-            {
-                if (itemIDListField == null || itemDictionaryField == null || itemCategoriesField == null || allWitchHatItemsField == null) return;
-                {
-                    List<ItemEntity> allWitchHatItems = (List<ItemEntity>)allWitchHatItemsField.GetValue(null);
-                    List<int> itemIDList = (List<int>)itemIDListField.GetValue(null);
-                    Dictionary<int, ItemEntity> itemDictionary = (Dictionary<int, ItemEntity>)itemDictionaryField.GetValue(null);
-                    Dictionary<string, ItemCategoryEntity> itemCategories = (Dictionary<string, ItemCategoryEntity>)itemCategoriesField.GetValue(null);
-                    if (ModConfig.Instance.AddCategory)
-                    {
-                        foreach (ItemCategoryEntity Data in ModItemCategoryData)
-                        {
-                            itemCategories[Data.id] = Data;
-                        }
-                        foreach (int DisableId in DisableCharm)
-                        {
-                            itemDictionary[DisableId].activeType = EItemActiveType.Hidden;
-                        }
-                    }
-                    if (ModConfig.Instance.ModifyCharm)
-                    {
-                        foreach (ItemCategoryEntity itemCategoryEntity in itemCategories.Values)
-                        {
-                            if (itemCategoryEntity.id == "DARKCLOUD")
-                            {
-                                if (itemCategoryEntity.comboEffectPrefab.GetComponent<ComboEffect_DarkCloud>() is ComboEffect_DarkCloud DarkCloud)
-                                {
-                                    DarkCloud.defaultRestorePercent = 10;
-                                    DarkCloud.addStatByCombo = new ComboEffectBase.ComboStat[]
-                                    {
-                                        new ComboEffectBase.ComboStat(){ comboCount = 4, status = new string[] { "MIN_DARK_CLOUD/25" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 6, status = new string[] { "MIN_DARK_CLOUD/25" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 8, status = new string[] { "MIN_DARK_CLOUD/25" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 10, status = new string[] { "DARK_CLOUD_MULTISHOT/2" } },
-                                    };
-                                }
-                            }
-                            else if (itemCategoryEntity.id == "LAKE")
-                            {
-                                if (itemCategoryEntity.comboEffectPrefab.GetComponent<ComboEffectBase>() is ComboEffectBase Lake)
-                                {
-                                    Lake.addStatByCombo = new ComboEffectBase.ComboStat[]
-                                    {
-                                        new ComboEffectBase.ComboStat(){ comboCount = 2, status = new string[] { "MAX_MP/10", "MP_REGEN/10" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 4, status = new string[] { "MAX_MP/15", "MP_REGEN/20" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 6, status = new string[] { "MAX_MP/20", "MP_SKILL_DAMAGE/5" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 8, status = new string[] { "MAX_MP/25", "MP_SKILL_DAMAGE/10" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 10, status = new string[] { "MAX_MP/30", "MP_SKILL_DAMAGE/20" } },
-                                    };
-                                }
-                            }
-                            else if (itemCategoryEntity.id == "PARTY")
-                            {
-                                if (itemCategoryEntity.comboEffectPrefab.GetComponent<ComboEffectBase>() is ComboEffectBase PARTY)
-                                {
-                                    PARTY.addStatByCombo = new ComboEffectBase.ComboStat[]
-                                    {
-                                        new ComboEffectBase.ComboStat(){ comboCount = 2, status = new string[] { "ALL_PLAYER_DEFENSE/8" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 4, status = new string[] { "ALL_PLAYER_ALL_DAMAGE/8" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 6, status = new string[] { "ALL_PLAYER_ELEMENTAL_DAMAGE/8" } }
-                                    };
-                                }
-                            }
-                            else if (itemCategoryEntity.id == "SHADOW")
-                            {
-                                if (itemCategoryEntity.comboEffectPrefab.GetComponent<ComboEffectBase>() is ComboEffectBase SHADOW)
-                                {
-                                    SHADOW.addStatByCombo = new ComboEffectBase.ComboStat[]
-                                    {
-                                        new ComboEffectBase.ComboStat(){ comboCount = 2, status = new string[] { "EVASION/600" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 4, status = new string[] { "EVASION/700" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 6, status = new string[] { "EVASION/800" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 8, status = new string[] { "EVASION/1000" } },
-                                        new ComboEffectBase.ComboStat(){ comboCount = 10, status = new string[] { "EVASION/1200", "IGNORE_DEFENSE/5" } },
-                                    };
-                                }
-                            }
-                            else if (itemCategoryEntity.id == "ELEMENTAL")
-                            {
-                                if (itemCategoryEntity.comboEffectPrefab.GetComponent<ComboEffectBase>() is ComboEffectBase ELEMENTAL)
-                                {
-                                    foreach(ComboEffectBase.ComboStat stat in ELEMENTAL.addStatByCombo)
-                                    {
-                                        if (stat.replaceEffectText)
-                                        {
-                                            stat.status = new string[]
-                                            {
-                                                "PHYSICAL_DAMAGE_AMP/10",
-                                                "FIRE_DAMAGE_AMP/10",
-                                                "ICE_DAMAGE_AMP/10",
-                                                "LIGHTNING_DAMAGE_AMP/10",
-                                                "WIND_DAMAGE_AMP/10",
-                                            };
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    List<int> DisplayItems = new List<int>()
-                    {
-                        1305
-                    };
-                    foreach (ItemEntity itemEntity in Resources.LoadAll<ItemEntity>("Item"))
-                    {
-                        if (itemIDList.Contains(itemEntity.id))
-                        {
-                            if (itemEntity.isDual && itemEntity.activeType != EItemActiveType.Hidden) BondingItems.Add(itemEntity.id);
-                            else if (DisplayItems.Contains(itemEntity.id) && !BondingItems.Contains(itemEntity.id))
-                            {
-                                if (itemEntity.cannotBeReward) itemEntity.cannotBeReward = false;
-                                if (itemEntity.activeType == EItemActiveType.Hidden) itemEntity.activeType = EItemActiveType.Default;
-                                BondingItems.Add(itemEntity.id);
-                            }
-                        }
-                        if (itemIDList.Contains(itemEntity.id) || ModConfig.Instance.AddCategory && DisableCharm.Contains(itemEntity.id))
-                        {
-                            continue;
-                        }
-                        if (ModConfig.Instance.DisplayDisabledItems || ModConfig.Instance.AddItem && DisplayItems.Contains(itemEntity.id))
-                        {
-                            if (!itemIDList.Contains(itemEntity.id)) itemIDList.Add(itemEntity.id);
-                            if (!itemDictionary.ContainsKey(itemEntity.id)) itemDictionary.Add(itemEntity.id, itemEntity);
-                        }
-                    }
-                    if (ModConfig.Instance.DisableUniqueEffects)
-                    {
-                        foreach (ItemEntity item in itemDictionary.Values.Where(i => i.type == EItemType.Charm && i.resourcePrefab != null))
-                        {
-                            Charm_Basic charmBasic = item.resourcePrefab.GetComponent<Charm_Basic>();
-                            if (charmBasic != null)
-                            {
-                                charmBasic.isUniqueEffect = false;
-                            }
-                        }
-                    }
-                    if (ModConfig.Instance.AddItem)
-                    {
-                        int LastId = 0;
-                        foreach (ItemEntity AllItem in itemDictionary.Values)
-                        {
-                            if (LastId < AllItem.id)
-                                LastId = AllItem.id;
-                        }
-                        foreach (ModItem Data in ModItemEntityData)
-                        {
-                            ItemEntity? ModItem = Data.Item;
-                            if (ModItem == null) continue;
-
-                            int NewId = LastId + 1000;
-                            while (itemDictionary.ContainsKey(NewId)) NewId++;
-                            LastId = NewId - 1000 + 1;
-
-                            try
-                            {
-                                ModItem.id = NewId;
-                                if (ModItem.type == EItemType.Potion && itemDictionary.TryGetValue(40, out ItemEntity PotionTemplate))
-                                    ModItem.iconInWorld = PotionTemplate.iconInWorld;
-                                else if (itemDictionary.TryGetValue(1000, out ItemEntity WorldTemplate))
-                                    ModItem.iconInWorld = WorldTemplate.iconInWorld;
-                                string GetName = ModItem.name.Replace("ModItemEntity_", "");
-                                if (!GetModItem.ContainsKey(GetName)) GetModItem.Add(GetName, ModItem);
-                                if (Data.IsWitchItem) allWitchHatItems.Add(ModItem);
-                                Data.ItemEffect?.Invoke(ModItem);
-                                if (ModConfig.Instance.DisableUniqueEffects)
-                                {
-                                    if (ModItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Basic))
-                                    {
-                                        Basic.isUniqueEffect = false;
-                                    }
-                                }
-                                ItemDatabase.Register(ModItem);
-                                if (ModItem.isDual && !BondingItems.Contains(ModItem.id))
-                                    BondingItems.Add(ModItem.id);
-                            }
-                            catch (Exception ex)
-                            {
-                                StarSephiriaMod.LogError($"[StarSephiria]物品注册失败{ModItem.name}: {ex}");
-                            }
-                        }
-                    }
-
-                    itemCategoriesField.SetValue(null, itemCategories);
-                    itemIDListField.SetValue(null, itemIDList);
-                    itemDictionaryField.SetValue(null, itemDictionary);
-                    allWitchHatItemsField.SetValue(null, allWitchHatItems);
-                }
-            }
-
-            [HarmonyPatch("GetRandomRarity")]
-            [HarmonyPostfix]
-            static void GetRandomRarity_Postfix(Random seed, float uncommon, float rare, float legend, ref EItemRarity __result)
-            {
-                if (!ModConfig.Instance.MonochromeMode_TABLET && (CurrentSephiriteType == Sephirite.Type.TABLET_BOSS || CurrentSephiriteType == Sephirite.Type.TABLET)) return;
-
-                int Value = ModConfig.Instance.MonochromeMode;
-                if (Value > 0)
-                {
-                    switch (Value)
-                    {
-                        case 1:
-                            __result = EItemRarity.Common;
-                            break;
-                        case 2:
-                            __result = EItemRarity.Uncommon;
-                            break;
-                        case 3:
-                            __result = EItemRarity.Rare;
-                            break;
-                        case 4:
-                            __result = EItemRarity.Legend;
-                            break;
-                    }
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(SocialIDDatabase))]
-        public static class SocialIDDatabase_Patch
-        {
-            [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            public static void Initialize_Postfix()
-            {
-                if (ModConfig.Instance.AddItem)
-                {
-                    SocialIDEntity social = SocialIDDatabase.FindByName("Traveler_Mercenary_WeaselKnight");
-                    if (social)
-                    {
-                        foreach (ModItem Data in ModItemEntityData)
-                        {
-                            ItemEntity? ModItem = Data.Item;
-                            if (ModItem == null) continue;
-                            switch (ModItem.name)
-                            {
-                                case "ModItemEntity_RedDogSymbolA":
-                                case "ModItemEntity_RedDogSymbolB":
-                                case "ModItemEntity_RedDogSymbolC":
-                                    Charm_LeadNPC Effect = ModItem.resourcePrefab.GetComponent<Charm_LeadNPC>();
-                                    Effect.npcSocialID = SocialIDDatabase.FindByName("Traveler_Mercenary_WeaselKnight");
-                                    break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(HardModeDatebase))]
-        public static class HardModeDatebase_Patch
-        {
-            [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            public static void Initialize_Postfix()
-            {
-                foreach (HardModeShardEntity shard in HardModeDatebase.GetAll())
-                {
-                    StarSephiriaMod.LogInfoProjectile($"困难模式条目：{shard.Name} ID：{shard.shardKey}");
-                }
-                foreach (HardModeShardEntity shard in ModHardModeShard)
-                {
-                    if (ModConfig.Instance.Ultimate)
-                    {
-                        if (shard.shardKey == "[Star's Sephiria Mod]HardMode")
-                        {
-                            shard.shardMaxLevel = 4;
-                            shard.effectPerLevel = new int[] { 1, 2, 3, 4 };
-                            shard.stepIncreasePerLevel = new int[] { 10, 10, 10, 1 };
-                        }
-                    }
-                    HardModeDatebase.data[shard.shardKey] = shard;
-                }
-                if (HardModeDatebase.data.TryGetValue("DIZZINESS", out HardModeShardEntity Dizziness))
-                {
-                    Dizziness.shardMaxLevel = 3;
-                    Dizziness.effectPerLevel = new int[] { 1, 2, 3 };
-                    Dizziness.stepIncreasePerLevel = new int[] { 2, 2, 2 };
-                }
             }
         }
 
@@ -3484,171 +2547,27 @@ namespace SPMod
             }
         }
 
-        [HarmonyPatch(typeof(MiracleDatabase))]
-        public static class MiracleDatabase_Patch
+        public static List<int> BondingItems = [];
+        [HarmonyPatch(typeof(HardModeShardEntity))]
+        public static class HardModeShardEntity_Patch
         {
-            [HarmonyPatch("Initialize")]
+            private const string HardModeShardKey = "[Star's Sephiria Mod]HardMode";
+
+            [HarmonyPatch("GetConvertedDescription")]
             [HarmonyPostfix]
-            public static void Initialize_Postfix(MiracleDatabase __instance)
+            static void GetConvertedDescription_Postfix(HardModeShardEntity __instance, int level, ref string __result)
             {
-                try
-                {
-                    if (ModConfig.Instance.DisplayDisabledItems)
-                    {
-                        GameObject[] array = Resources.LoadAll<GameObject>("Miracle");
-                        for (int i = 0; i < array.Length; i++)
-                        {
-                            Miracle component = array[i].GetComponent<Miracle>();
-                            if (component && !component.isEnabled)
-                            {
-                                RegisterInternalMethod.Invoke(null, new object[] { component });
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    StarSephiriaMod.LogError($"[MiracleDatabase]添加隐藏奇迹失败: {ex.Message}\n{ex.StackTrace}");
-                }
-            }
-        }
+                if (__instance == null || __instance.shardKey != HardModeShardKey) return;
 
-        [HarmonyPatch(typeof(StatusDatabase))]
-        public static class StatusDatabase_Patch
-        {
-            private static readonly FieldInfo statTypesField = AccessTools.Field(typeof(StatusDatabase), "statTypes");
-            private static readonly FieldInfo entityDictionaryField = AccessTools.Field(typeof(StatusDatabase), "entityDictionary");
-            private static readonly FieldInfo isCustomStatField = AccessTools.Field(typeof(StatusDatabase), "isCustomStat");
+                int Level = Mathf.Clamp(level, 0, 4);
+                string Key = "ModHardModeShard_HardMode_Description";
+                if (Level > 0) Key += $"_{Level}";
+                string Text = Tools.GetLocalization(Key);
+                if (string.IsNullOrEmpty(Text) || Text == Key) return;
 
-            [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            public static void Initialize_Postfix()
-            {
-                Dictionary<string, StatusEntity> entityDictionary = (Dictionary<string, StatusEntity>)entityDictionaryField.GetValue(null);
-                Dictionary<string, Type> statTypes = (Dictionary<string, Type>)statTypesField.GetValue(null);
-                Dictionary<string, bool> isCustomStat = (Dictionary<string, bool>)isCustomStatField.GetValue(null);
-                foreach (ModKeyWord Data in ModKeywordEntityData)
-                {
-                    if (Data.Status != null)
-                    {
-                        isCustomStat[Data.Status.id] = true;
-                        entityDictionary.Add(Data.Status.id, Data.Status);
-                        statTypes.Add(Data.Status.id, typeof(StatusInstance_Custom));
-                    }
-                }
-                entityDictionaryField.SetValue(null, entityDictionary);
-                statTypesField.SetValue(null, statTypes);
-                isCustomStatField.SetValue(null, isCustomStat);
-            }
-        }
-
-        [HarmonyPatch(typeof(WeaponDatabase))]
-        public static class WeaponDatabase_Patch
-        {
-            private static FieldInfo? weaponDictionaryField = null;
-
-            [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            public static void Initialize_Postfix()
-            {
-                if (!ModConfig.Instance.DisplayDisabledItems) return;
-                try
-                {
-                    if (weaponDictionaryField == null)
-                    {
-                        weaponDictionaryField = AccessTools.Field(typeof(WeaponDatabase), "weaponDictionary");
-                    }
-
-                    Dictionary<int, WeaponEntity> weaponDictionary = (Dictionary<int, WeaponEntity>)weaponDictionaryField.GetValue(null);
-                    foreach (WeaponEntity weaponEntity in Resources.LoadAll<WeaponEntity>("Weapon"))
-                    {
-                        if (!weaponEntity.enabled)
-                        {
-                            weaponDictionary.Add(weaponEntity.id, weaponEntity);
-                        }
-                    }
-                    weaponDictionaryField.SetValue(null, weaponDictionary);
-                }
-                catch (Exception ex)
-                {
-                    StarSephiriaMod.LogError($"[WeaponDatabase]添加隐藏武器失败: {ex.Message}\n{ex.StackTrace}");
-                }
-            }
-
-            [HarmonyPatch("GetDefaultWeapons")]
-            [HarmonyPostfix]
-            public static void GetDefaultWeapons_Postfix(ref List<WeaponEntity> __result)
-            {
-                if (ModConfig.Instance.ModifyRandomWeaponOnStart)
-                {
-                    List<WeaponEntity> UseRandmon = new List<WeaponEntity>();
-                    foreach (WeaponEntity Weapon in WeaponDatabase.GetAll())
-                    {
-                        if (Weapon.isDefaultWeapon) continue;
-                        var EnhancementsList = WeaponDatabase.GetWeaponEnhancements(Weapon.id);
-                        if (EnhancementsList?.Count > 0)
-                        {
-                            foreach (EnhancementMetadata metadata in EnhancementsList)
-                            {
-                                UseRandmon.Add(metadata.enhanced);
-                            }
-                        }
-                    }
-                    __result = UseRandmon;
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(EffectHUDDatabase))]
-        public static class EffectHUDDatabase_Patch
-        {
-            private static readonly FieldInfo? effectHUDDictionaryField = AccessTools.Field(typeof(EffectHUDDatabase), "effectHUDDictionary");
-
-            [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            public static void Initialize_Postfix()
-            {
-                if (effectHUDDictionaryField == null) return;
-                Dictionary<string, EffectHUDEntity> effectHUDDictionary = (Dictionary<string, EffectHUDEntity>)effectHUDDictionaryField.GetValue(null);
-                GameObject? Orig = null;
-                foreach (EffectHUDEntity Entity in effectHUDDictionary.Values)
-                {
-                    if (Entity.hudPrefab.TryGetComponent<UI_EffectHUD_Stack>(out var Target) && Target != null)
-                    {
-                        Orig = Entity.hudPrefab;
-                        break;
-                    }
-                }
-                if (Orig != null)
-                {
-                    foreach(ModEffectHUD Effect in ModEffectHUDData)
-                    {
-                        GameObject NewHud = Object.Instantiate(Orig);
-                        Effect.SetEffectHUD(NewHud);
-                        effectHUDDictionary[Effect.Name.ToUpperInvariant()] = Effect.EndCreate(NewHud);
-                    }
-                }
-                effectHUDDictionaryField.SetValue(null, effectHUDDictionary);
-            }
-        }
-
-        [HarmonyPatch(typeof(UnitDatabase))]
-        public static class UnitDatabase_Patch
-        {
-            private static readonly FieldInfo? debuffEntitiesField = AccessTools.Field(typeof(UnitDatabase), "debuffEntities");
-
-            [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            public static void Initialize_Postfix()
-            {
-                if (debuffEntitiesField == null) return;
-                Dictionary<string, CharacterDebuff> DeBuffList = (Dictionary<string, CharacterDebuff>)debuffEntitiesField.GetValue(null);
-                foreach (ModCharacterDebuff Entity in ModDeBuffData)
-                {
-                    CharacterDebuff? Target = Entity.Prefab;
-                    if (Target != null) DeBuffList[Target.ID] = Target;
-                }
-                debuffEntitiesField.SetValue(null, DeBuffList);
+                string Effect = (Level <= 0 || Level > __instance.effectPerLevel.Length)
+                    ? "-" : "<color=yellow>" + __instance.effectPerLevel[Level - 1] + "</color>";
+                __result = Loc.Convert(Text, "EFFECT", Effect);
             }
         }
 
@@ -3659,35 +2578,29 @@ namespace SPMod
             [HarmonyPostfix]
             public static void OnStartServer_Postfix(PlayerSpawner __instance)
             {
-                if (ModConfig.Instance.AddCategory)
+                foreach (int DisableId in DisableCharm)
                 {
-                    foreach (int DisableId in DisableCharm)
-                    {
-                        __instance.unlockedCharms.Remove(DisableId);
-                    }
+                    __instance.unlockedCharms.Remove(DisableId);
                 }
-                if (ModConfig.Instance.AddItem)
+                foreach (ModItem Data in ModItemEntityData)
                 {
-                    foreach (ModItem Data in ModItemEntityData)
+                    ItemEntity? ModItem = Data.Item;
+                    if (ModItem == null) continue;
+                    if (ModItem.activeType == EItemActiveType.Hidden) continue;
+                    switch (ModItem.type)
                     {
-                        ItemEntity? ModItem = Data.Item;
-                        if (ModItem == null) continue;
-                        if (ModItem.activeType == EItemActiveType.Hidden) continue;
-                        switch (ModItem.type)
-                        {
-                            case EItemType.Potion:
-                                if (!__instance.unlockedPotions.Contains(ModItem.id))
-                                    __instance.unlockedPotions.Add(ModItem.id);
-                                break;
-                            case EItemType.StoneTablet:
-                                if (!__instance.unlockedStoneTablets.Contains(ModItem.id))
-                                    __instance.unlockedStoneTablets.Add(ModItem.id);
-                                break;
-                            default:
-                                if (!__instance.unlockedCharms.Contains(ModItem.id))
-                                    __instance.unlockedCharms.Add(ModItem.id);
-                                break;
-                        }
+                        case EItemType.Potion:
+                            if (!__instance.unlockedPotions.Contains(ModItem.id))
+                                __instance.unlockedPotions.Add(ModItem.id);
+                            break;
+                        case EItemType.StoneTablet:
+                            if (!__instance.unlockedStoneTablets.Contains(ModItem.id))
+                                __instance.unlockedStoneTablets.Add(ModItem.id);
+                            break;
+                        default:
+                            if (!__instance.unlockedCharms.Contains(ModItem.id))
+                                __instance.unlockedCharms.Add(ModItem.id);
+                            break;
                     }
                 }
                 if (ModConfig.Instance.ModifyCharm)
@@ -3883,9 +2796,9 @@ namespace SPMod
                     {
                         damage.elementalType = EDamageElementalType.Chaos;
                         damage.SetCustomColor(true, EffectConstant.PlasmaCrystalColor);
-                        RpcChimFxMethod_Plasma?.Invoke(UnitDatabase.GetDebuff("PLASMA"), new object[] { Player.netId, (Vector2)vector });
+                        RpcChimFxMethod_Plasma?.Invoke(UnitDatabase.GetDebuff("PLASMA"), [Player.netId, (Vector2)vector]);
                     }
-                    else RpcChimFxMethod_Electric?.Invoke(CombatManager.Instance.electricDebuffPrefab, new object[] { Player.netId, (Vector2)vector });
+                    else RpcChimFxMethod_Electric?.Invoke(CombatManager.Instance.electricDebuffPrefab, [Player.netId, (Vector2)vector]);
 
                     __instance.NetworkTarget.ApplyDamage(damage);
                     if (__instance.NetworkTarget.StartStun(__instance.BuffDuration))
@@ -3912,7 +2825,7 @@ namespace SPMod
                         WeaponPatch.FrozenSmeltEffect[Player] = 20;
                 }
             }
-            if (Player.IsWeaponUseNet(WeaponIDs.GlacialBlade)) 
+            if (Player.IsWeaponUseNet(WeaponIDs.GlacialBlade))
             {
                 float Time = 3f * (1f + Player.GetCustomStatUnsafe("BUFFDURATION") * 0.01f);
                 WeaponPatch.GlacialBladeEffect[Player] = new Timer(Time, true, true);
@@ -3938,60 +2851,6 @@ namespace SPMod
             }
         }
 
-        [HarmonyPatch(typeof(UI_PlayerHP))]
-        public static class UI_PlayerHP_Patch
-        {
-            [HarmonyPatch("Connect")]
-            [HarmonyPostfix]
-            static void Connect_Postfix(UI_PlayerHP __instance, GameObject playerObject)
-            {
-                PlayerAvatar Player = playerObject.GetComponent<PlayerAvatar>();
-
-                GameObject textObj = new GameObject("CustomText");
-                GameObject textObj3 = new GameObject("CustomText3");
-                textObj.transform.SetParent(__instance.transform);
-                textObj3.transform.SetParent(__instance.transform);
-                // 查找或创建新的文本组件
-                TextMeshProUGUI? customText = textObj.AddComponent<TextMeshProUGUI>();
-                TextMeshProUGUI? customText3 = textObj3.AddComponent<TextMeshProUGUI>();
-
-                // 设置样式
-                customText.font = customText3.font = __instance.pingText.font;
-                customText.fontSize = 16;
-                customText.color = Color.cyan;
-                customText.alignment = TextAlignmentOptions.TopLeft;
-                // 设置位置
-                RectTransform rect = textObj.GetComponent<RectTransform>();
-                RectTransform rect3 = textObj3.GetComponent<RectTransform>();
-                rect.sizeDelta = new Vector2(200, 50);
-                rect.anchorMin = rect3.anchorMin = new Vector2(1, 1);
-                rect.anchorMax = rect3.anchorMax = new Vector2(1, 1);
-                rect.pivot = rect3.pivot = new Vector2(1, 1);
-
-                rect3.sizeDelta = new Vector2(400, 100);
-                customText3.color = Color.white;
-                customText3.fontSize = 18;
-                customText3.alignment = TextAlignmentOptions.TopLeft;
-
-                // 存储引用供后续使用
-                CustomTextController ModText = __instance.gameObject.AddComponent<CustomTextController>();
-                ModText.CustomText = customText;
-                ModText.CustomText3 = customText3;
-                ModText.Player = Player;
-            }
-        }
-
-        [HarmonyPatch(typeof(UI_ScrollToSelectionForInventory))]
-        public static class UI_ScrollToSelectionForInventory_Patch
-        {
-            [HarmonyPatch("UpdateVerticalScrollPosition")]
-            [HarmonyPrefix]
-            static bool UpdateVerticalScrollPosition_Prefix(UI_ScrollToSelectionForInventory __instance, RectTransform selection)
-            {
-                return false;
-            }
-        }
-
         [HarmonyPatch(typeof(NetworkClient))]
         public static class NetworkClient_Patch
         {
@@ -4007,147 +2866,6 @@ namespace SPMod
                         __result = true;
                     }
                 }
-            }
-        }
-
-        [HarmonyPatch(typeof(UI_HardModePanel))]
-        public static class UI_HardModePanel_Patch
-        {
-            [HarmonyPatch("Awake")]
-            [HarmonyPostfix]
-            static void Awake_Postfix(UI_HardModePanel __instance)
-            {
-                GameObject template = __instance.shardLevelIcons[0];
-                Transform parent = template.transform.parent;
-                GameObject[] newIcons = new GameObject[10];
-                __instance.shardLevelIcons.CopyTo(newIcons, 0);
-                for (int i = __instance.shardLevelIcons.Length; i < 10; i++)
-                {
-                    GameObject newIcon = Object.Instantiate(template, parent);
-                    newIcon.name = "ShardLevelIcon_" + i;
-                    RectTransform rt = newIcon.GetComponent<RectTransform>();
-                    rt.anchoredPosition = new Vector2(i * 20f, 0f);
-                    newIcon.SetActive(false);
-                    newIcons[i] = newIcon;
-                }
-                __instance.shardLevelIcons = newIcons;
-            }
-        }
-
-        [HarmonyPatch(typeof(UI_BossHPBar))]
-        public static class UI_BossHPBar_Patch
-        {
-            private static readonly FieldInfo bossAvatarField = AccessTools.Field(typeof(UI_BossHPBar), "bossAvatar");
-            private static readonly FieldInfo bossAIField = AccessTools.Field(typeof(UI_BossHPBar), "bossAI");
-            public static TextMeshProUGUI? LifeText;
-            public static GameObject? HPValueText;
-            public static float OldLife = -1;
-            public static float ExMaxLife = 0;
-
-            [HarmonyPatch("OnOpened")]
-            [HarmonyPostfix]
-            private static void OnOpened_Postfix(UI_BossHPBar __instance)
-            {
-                if (__instance == null || __instance.barImage == null) return;
-
-                if (LifeText == null)
-                {
-                    HPValueText = new GameObject("HPValueText", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(Canvas));
-                    HPValueText.transform.SetParent(__instance.barImage.transform, false);
-                    HPValueText.transform.SetAsLastSibling();
-                    Canvas canvas = HPValueText.GetComponent<Canvas>();
-                    canvas.overrideSorting = true;
-                    canvas.sortingOrder = 9999;
-                    LifeText = HPValueText.GetComponent<TextMeshProUGUI>();
-                    if (__instance.nameText != null)
-                    {
-                        LifeText.font = __instance.nameText.font;
-                        LifeText.fontSharedMaterial = __instance.nameText.fontSharedMaterial;
-                    }
-
-                    LifeText.fontSize = 10;
-                    LifeText.color = Color.white;
-                    LifeText.outlineColor = Color.black;
-                    LifeText.outlineWidth = 0.15f;
-                    LifeText.alignment = TextAlignmentOptions.Center;
-
-                    RectTransform rect = LifeText.rectTransform;
-                    rect.anchorMin = new Vector2(0.5f, 0.5f);
-                    rect.anchorMax = new Vector2(0.5f, 0.5f);
-                    rect.pivot = new Vector2(0.5f, 0.5f);
-                    rect.anchoredPosition = Vector2.zero;
-                    rect.sizeDelta = new Vector2(200, 24);
-                }
-            }
-
-            [HarmonyPatch("Update")]
-            [HarmonyPostfix]
-            static void Update_Postfix(UI_BossHPBar __instance)
-            {
-                if (bossAvatarField == null || bossAIField == null)
-                {
-                    StarSephiriaMod.LogError("[UI_BossHPBar][UpdateHP]报错");
-                    return;
-                }
-
-                UnitAI_BossBasic bossAI = (UnitAI_BossBasic)bossAIField.GetValue(__instance);
-                if (bossAI != null)
-                {
-                    __instance.nameText.text = KeywordDatabase.Convert(bossAI.Avatar.Name, false, false);
-                    if (bossAI.CurrentTarget != null)
-                    {
-                        __instance.nameText.text += " -> " + bossAI.CurrentTarget.Name;
-                    }
-                }
-
-                UnitAvatar bossAvatar = (UnitAvatar)bossAvatarField.GetValue(__instance);
-                if (bossAvatar != null)
-                {
-                    bool falg = false;
-                    if (bossAvatar.name.Replace("(Clone)", "") == "MadArmadillo")
-                    {
-                        if (Unit_ArmadilloGolem_Patch.Golem != null)
-                        {
-                            bossAvatar = Unit_ArmadilloGolem_Patch.Golem;
-                            falg = true;
-                        }
-                    }
-                    if (LifeText != null)
-                    {
-                        if (ExMaxLife <= 0)
-                        {
-                            ExMaxLife = bossAvatar.MaxHp;
-                        }
-                        else if (bossAvatar.hp > OldLife && OldLife > 0)
-                        {
-                            ExMaxLife += bossAvatar.hp - OldLife;
-                        }
-                        OldLife = bossAvatar.hp;
-                        string NewLine = falg ? "\n" : "";
-                        LifeText.text = NewLine + $"{GetHpToString(bossAvatar.hp)} / {GetHpToString(bossAvatar.MaxHp)}";
-                        if (ExMaxLife > bossAvatar.MaxHp)
-                        {
-                            LifeText.text += $" ({GetHpToString(ExMaxLife)})";
-                        }
-                    }
-                }
-            }
-
-            private static string GetHpToString(float Value)
-            {
-                if (Value < 100000000)
-                    return Value.ToString("#0");
-                return Value.ToString("E2");
-            }
-
-            [HarmonyPatch("OnClosed")]
-            [HarmonyPostfix]
-            private static void OnClosed_Postfix(UI_BossHPBar __instance)
-            {
-                LifeText = null;
-                HPValueText = null;
-                ExMaxLife = 0;
-                OldLife = -1;
             }
         }
 
@@ -4191,84 +2909,76 @@ namespace SPMod
             }
         }
 
-        [HarmonyPatch(typeof(LocalizedString))]
-        public static class LocalizedString_Patch
-        {
-            public static string GetMod(string Key)
-            {
-                string Text = Tools.GetLocalization(Key);
-                if (Text == null) return "";
-
-                Text = KeywordDatabase.Convert(KeywordDatabase.Convert(Text));
-                return Text;
-            }
-
-            [HarmonyPatch("ToString")]
-            [HarmonyPostfix]
-            static void ToString_Postfix(LocalizedString __instance, ref string __result)
-            {
-                string ModText = GetMod(__result);
-                if (ModText != "")
-                    __result = ModText;
-            }
-        }
-
         [HarmonyPatch(typeof(ScreenFader))]
         public static class ScreenFader_Patch
         {
             private static readonly PropertyInfo? TestField = AccessTools.Property(typeof(ScreenFader), "IsTestMode");
+            private static ScreenFader? LastFader;
+            private static bool LastTestMode;
 
             [HarmonyPatch("Update")]
             [HarmonyPostfix]
             static void Update_Postfix(ScreenFader __instance)
             {
-                TestField?.SetValue(__instance, ModConfig.Instance.IsTestMode);
+                if (!ModConfig.Instance.IsTestMode) return;
+                bool TestMode = ModConfig.Instance.IsTestMode;
+                if (LastFader == __instance && LastTestMode) return;
+                LastFader = __instance;
+                LastTestMode = true;
+                TestField?.SetValue(__instance, true);
             }
         }
 
         [HarmonyPatch(typeof(Object))]
         public static class Object_Patch
         {
+            private static bool IsModPrefab(Object Original)
+            {
+                if (Original == null) return false;
+                if (Original is Component Component) Original = Component.gameObject;
+                return StarSephiriaMod.ModPrefabs.Contains(Original);
+            }
+
             [HarmonyPatch("Internal_InstantiateSingle")]
             [HarmonyPostfix]
             static void Internal_InstantiateSingle_Postfix(ref Object __result, Object data, Vector3 pos, Quaternion rot)
             {
-                __result = TryPatch(__result);
+                if (IsModPrefab(data)) __result = TryPatch(__result);
             }
 
-            [HarmonyPatch("Internal_CloneSingle", new Type[] { typeof(Object) })]
+            [HarmonyPatch("Internal_CloneSingle", [typeof(Object)])]
             [HarmonyPostfix]
             static void Internal_CloneSingle_Postfix(ref Object __result, Object data)
             {
-                __result = TryPatch(__result);
+                if (IsModPrefab(data)) __result = TryPatch(__result);
             }
 
-            [HarmonyPatch("Instantiate", new Type[] { typeof(Object), typeof(Vector3), typeof(Quaternion), typeof(Transform) })]
+            [HarmonyPatch("Instantiate", [typeof(Object), typeof(Vector3), typeof(Quaternion), typeof(Transform)])]
             [HarmonyPostfix]
             static void Instantiate_Postfix(ref Object __result, Object original, Vector3 position, Quaternion rotation, Transform parent)
             {
-                __result = TryPatch(__result);
+                if (IsModPrefab(original)) __result = TryPatch(__result);
             }
 
-            [HarmonyPatch("Instantiate", new Type[] { typeof(Object), typeof(Vector3), typeof(Quaternion) })]
+            [HarmonyPatch("Instantiate", [typeof(Object), typeof(Vector3), typeof(Quaternion)])]
             [HarmonyPostfix]
             static void Instantiate_Postfix(ref Object __result, Object original, Vector3 position, Quaternion rotation)
             {
-                __result = TryPatch(__result);
+                if (IsModPrefab(original)) __result = TryPatch(__result);
             }
 
-            [HarmonyPatch("Instantiate", new Type[] { typeof(Object), typeof(Transform), typeof(bool) })]
+            [HarmonyPatch("Instantiate", [typeof(Object), typeof(Transform), typeof(bool)])]
             [HarmonyPostfix]
             static void Instantiate_Postfix(ref Object __result, Object original, Transform parent, bool instantiateInWorldSpace)
             {
-                __result = TryPatch(__result);
+                if (IsModPrefab(original)) __result = TryPatch(__result);
             }
 
-            [HarmonyPatch("Instantiate", new Type[] { typeof(Object), typeof(Transform) })]
+            [HarmonyPatch("Instantiate", [typeof(Object), typeof(Transform)])]
             [HarmonyPostfix]
             static void Instantiate_Postfix(ref Object __result, Object original, Transform parent)
             {
-                __result = TryPatch(__result);
+                if (IsModPrefab(original)) __result = TryPatch(__result);
             }
 
             public static Object TryPatch(Object clone)
@@ -4344,10 +3054,10 @@ namespace SPMod
 
                 StatusInstance Status = StatusDatabase.CreateStatusEntity("WIND_DAMAGE", __instance.potionEffectValue);
                 Loc.KeywordValue[] Keywords =
-                {
-                    new Loc.KeywordValue("STAT", Status.ToNameString(color: false, sprite: false)),
-                    new Loc.KeywordValue("VALUE", Status.ToValueString())
-                };
+                [
+                    new("STAT", Status.ToNameString(color: false, sprite: false)),
+                    new("VALUE", Status.ToValueString())
+                ];
                 GameLogWriter.Instance.WriteLog(Loc.Convert(__instance.statLogString.ToString(), Keywords).Trim(), Color.white);
                 UIManager.Pool.Spawn<UI_DamageParticle>(pos + UnityEngine.Random.insideUnitCircle)
                     .SetDamage(Status.ToSimpleString(reverse: true).Trim(), Color.white);
@@ -4355,16 +3065,59 @@ namespace SPMod
             }
         }
 
+        [HarmonyPatch(typeof(SalvageRewardCatalog))]
+        public static class SalvageRewardCatalog_Patch
+        {
+            [HarmonyPatch("GetPool")]
+            [HarmonyPostfix]
+            static void GetPool_Postfix(EItemRarity __0, ref IReadOnlyList<SalvageReward> __result)
+            {
+                if (__0 != EItemRarity.Common && __0 != EItemRarity.Uncommon && __0 != EItemRarity.Rare) return;
+                if (__result == null || __result.Count == 0) return;
+                if (__result.Any(Reward => Reward.StatusID == "WIND_DAMAGE")) return;
+
+                int FireValue = 0;
+                foreach (SalvageReward Reward in __result)
+                {
+                    if (Reward.StatusID == "FIRE_DAMAGE")
+                    {
+                        FireValue = Reward.Value;
+                        break;
+                    }
+                }
+                if (FireValue == 0) return;
+
+                List<SalvageReward> Pool = [.. __result];
+                Pool.Add(new SalvageReward("WIND_DAMAGE", FireValue));
+                __result = Pool;
+            }
+        }
+
         [HarmonyPatch(typeof(SpriteFx_Simple))]
         public static class SpriteFx_Simple_Patch
         {
+            private sealed class VisibilityHolder
+            {
+                public ModFxVisibility? Value;
+                public bool Resolved;
+            }
+
+            // 弱引用缓存：FX 池每次存档重建，用 ConditionalWeakTable 避免旧实例泄漏。
+            private static readonly ConditionalWeakTable<SpriteFx_Simple, VisibilityHolder> VisibilityCache = new();
+
             [HarmonyPatch("SetColor")]
             [HarmonyPostfix]
             static void SetColor_Postfix(SpriteFx_Simple __instance, Color color)
             {
                 if (__instance == null) return;
-                ModFxVisibility? Vis = __instance.GetComponent<ModFxVisibility>();
-                Vis?.SetBaseColor(color);
+
+                VisibilityHolder Holder = VisibilityCache.GetOrCreateValue(__instance);
+                if (!Holder.Resolved)
+                {
+                    Holder.Value = __instance.GetComponent<ModFxVisibility>();
+                    Holder.Resolved = true;
+                }
+                Holder.Value?.SetBaseColor(color);
             }
         }
     }

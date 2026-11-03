@@ -8,8 +8,8 @@ namespace SPMod.ModContent
 {
     public class Charm_SilentStrike : Charm_Active, IAttackableCharm, IModCastStateReceiver
     {
-        public float[] MultByLevel = new float[] { 1000, 2000, 3000, 4000, 5000 };
-        public Timer CooldownTimer = new Timer(12f);
+        public float[] MultByLevel = [1000, 2000, 3000, 4000, 5000];
+        public Timer CooldownTimer = new(12f);
         public bool StartEffect = false;
         public GameObject? Shoot = null;
         public NewWeaponFireData? EffectData = null;
@@ -30,11 +30,11 @@ namespace SPMod.ModContent
             string text = "0";
             if (IsEffectEnabled)
                 text = CalculateDamage(this).ToString("#0");
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Damage", text, EffectConstant.WeaponColor),
-                new Loc.KeywordValue("Mult", MultByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Damage", text, EffectConstant.WeaponColor),
+                new("Mult", MultByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
+            ];
         }
         public override float GetCooldownTime(out bool changeByLevel, int level, int virtualLevelOffset)
         {

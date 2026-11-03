@@ -58,7 +58,7 @@ namespace SPMod.MonsterAI
                 centerPointField = AccessTools.Field(type, "centerPoint");
                 askardEnvironmentField = AccessTools.Field(type, "askardEnvironment");
                 askardField = AccessTools.Field(type, "askard");
-                startFastMoveFarawayMethod = AccessTools.Method(type, "StartFastMove_Faraway", new Type[] { typeof(Vector3), typeof(Action) });
+                startFastMoveFarawayMethod = AccessTools.Method(type, "StartFastMove_Faraway", [typeof(Vector3), typeof(Action)]);
                 StarSephiriaMod.LogInfoBoss("[UnitAI_Askard_Chapter2]初始化反射");
             }
             catch (Exception ex)
@@ -88,7 +88,7 @@ namespace SPMod.MonsterAI
             }
 
             private static int RShoot = 0;
-            private static readonly List<int> NoShoot = new List<int>() { };
+            private static readonly List<int> NoShoot = [];
             static IEnumerator CustomDarkness(Unit_Askard_Chapter2 instance, bool phaseStartMode)
             {
                 if (bloodyRainCoroutineField == null || curGlitchTentacleField == null || darknessPlayerPreventField == null || tentacleListField == null || isHoveringField == null || currentActionProperty == null || forceEndFastMoveMethod == null)
@@ -148,7 +148,7 @@ namespace SPMod.MonsterAI
                 instance.RpcStartDarkness();
                 yield return new WaitForSeconds(0.5f);
 
-                List<AskardTentacle> tentacleList = tentacleListField?.GetValue(instance) as List<AskardTentacle> ?? new List<AskardTentacle>();
+                List<AskardTentacle> tentacleList = tentacleListField?.GetValue(instance) as List<AskardTentacle> ?? [];
                 foreach (AskardTentacle askardTentacle in tentacleList)
                 {
                     askardTentacle?.BreakForce();
@@ -495,11 +495,11 @@ namespace SPMod.MonsterAI
                                     askard.StartTentacle_Point(__instance.CurrentTarget.transform);
                                     break;
                                 case 1:
-                                    startFastMoveFarawayMethod.Invoke(__instance, new object[]
-                                    {
+                                    startFastMoveFarawayMethod.Invoke(__instance,
+                                    [
                                         __instance.CurrentTarget.transform.position,
                                         (Action)delegate { askard.StartTentacle_Line(__instance.CurrentTarget.transform); }
-                                    });
+                                    ]);
                                     break;
                                 case 2:
                                     askard.StartTentacle_Fill(__instance.CurrentTarget.transform);

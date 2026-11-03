@@ -41,10 +41,10 @@ namespace SPMod.ModContent
 
         public override Loc.KeywordValue[] BuildKeywords()
         {
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Value", (Bonus * 100f).ToString("#0") + "%", Color.green)
-            };
+            return
+            [
+                new("Value", (Bonus * 100f).ToString("#0") + "%", Color.green)
+            ];
         }
     }
 }

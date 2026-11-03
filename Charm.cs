@@ -2,6 +2,7 @@
 using Mirror;
 using SPMod.ModContent;
 using SPMod.Tool;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -9,23 +10,25 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using static SPMod.WeaponPatch;
 using static UnityEngine.UI.GridLayoutGroup;
+using HeatedBladeAttackData = SPMod.Tool.ModuleComponents.HeatedBladeAttackData;
+using Random = UnityEngine.Random;
 
 namespace SPMod
 {
     [HarmonyPatch]
     public static class CharmPatch
     {
-        public static ItemPosition[] Directions = new ItemPosition[]
-        {
-            new ItemPosition(-1, 0),
-            new ItemPosition(1, 0),
-            new ItemPosition(0, -1),
-            new ItemPosition(0, 1),
-            new ItemPosition(-1, -1),
-            new ItemPosition(1, -1),
-            new ItemPosition(-1, 1),
-            new ItemPosition(1, 1)
-        };
+        public static ItemPosition[] Directions =
+        [
+            new(-1, 0),
+            new(1, 0),
+            new(0, -1),
+            new(0, 1),
+            new(-1, -1),
+            new(1, -1),
+            new(-1, 1),
+            new(1, 1)
+        ];
 
         public static float FrostRelicAddMult(UnitAvatar avatar, float Mult = 1f)
         {
@@ -74,7 +77,7 @@ namespace SPMod
         [HarmonyPatch(typeof(Charm_IceHammer))]
         public static class Charm_IceHammer_Patch
         {
-            private static Dictionary<UnitAvatar, Charm_IceHammer> IceHammerEffect = new Dictionary<UnitAvatar, Charm_IceHammer>();
+            private static Dictionary<UnitAvatar, Charm_IceHammer> IceHammerEffect = [];
 
             [HarmonyPatch("OnEnabledEffect")]
             [HarmonyPostfix]
@@ -121,7 +124,7 @@ namespace SPMod
         [HarmonyPatch(typeof(Charm_AirSlash))]
         public static class Charm_AirSlash_Patch
         {
-            private static readonly float[] DamageToLevel = new float[] { 20f, 40f, 60f, 80f, 100f, 120f, 140f };
+            private static readonly float[] DamageToLevel = [20f, 40f, 60f, 80f, 100f, 120f, 140f];
 
             [HarmonyPatch("GetDamage")]
             [HarmonyPostfix]
@@ -279,9 +282,12 @@ namespace SPMod
                     if (Tools.CostumeSkinUse(Player.Name, "Turtle_2", false))
                     {
                         ItemEntity itemEntity = ItemDatabase.FindItemById(__instance.Item.EntityID);
-                        int Add = 5;
+                        int Add = 0;
                         switch (itemEntity.rarity)
                         {
+                            case EItemRarity.Common:
+                                Add = 5;
+                                break;
                             case EItemRarity.Uncommon:
                                 Add = 10;
                                 break;
@@ -292,16 +298,11 @@ namespace SPMod
                                 Add = 40;
                                 break;
                         }
-                        __result += Add;
+                        if (Add > 0) __result += Add;
                     }//乌龟2
-                    if (Tools.CostumeSkinUse(Player.Name, "Turtle_3", false))
-                    {
-                        if (__result > 0) __result += Mathf.Min(70, __result);
-                        if (__result > 210) __result = 210;
-                    }
                     if (Tools.CostumeSkinUse(Player.Name, "Bird_3", false))
                     {
-                        if (__instance is Charm_Active && !(__instance is Charm_SpearofZeus))
+                        if (__instance is Charm_Active && __instance is not Charm_SpearofZeus)
                             __result += Player.GetCustomStatUnsafe(TextFile.DashAttackDamageBonus).IntMult(0.8f);
                     }//老鹰3
                 }
@@ -340,6 +341,57 @@ namespace SPMod
                         }
                     }//鹿3
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(Charm_CompassDamageUp))]
+        public static class Charm_CompassDamageUp_Patch
+        {
+            [HarmonyPatch("OnRequestCharmDamageBonus")]
+            [HarmonyPostfix]
+            static void OnRequestCharmDamageBonus_Postfix(Charm_CompassDamageUp __instance, Charm_Basic rootCharm, ref CharmDamageBonusContext context, ref int __result)
+            {
+                if (__instance == null || rootCharm == null) return;
+
+                UnitAvatar? Player = __instance.NetworkAvatar;
+                if (Player == null || !Tools.CostumeSkinUse(Player.Name, "Turtle_3", false)) return;
+                if (__result <= 0) return;
+
+                int Index = GetNeedleIndex(__instance, rootCharm);
+                if (Index > 4)
+                    __result = 0;
+                else if (Index <= 2)
+                    __result *= 2;
+            }
+
+            private static int GetNeedleIndex(Charm_CompassDamageUp Needle, Charm_Basic Root)
+            {
+                GridInventory? Inv = Needle.Inventory;
+                if (Inv == null) return 1;
+
+                int Index = 1;
+                Charm_Basic? Current = Needle;
+                for (int Step = 0; Step < 32 && Current != null && Current != Root; Step++)
+                {
+                    if (Current is not Charm_Compass Compass || Compass.parentOffsets == null) break;
+
+                    Charm_Basic? Parent = null;
+                    foreach (Vector2Int Offset in Compass.parentOffsets)
+                    {
+                        ItemPosition Pos = new(Current.xIdx + Offset.x, Current.yIdx + Offset.y);
+                        Charm_Basic? Candidate = Inv.FindItem(Pos)?.Charm;
+                        if (Candidate != null && Candidate != Current)
+                        {
+                            Parent = Candidate;
+                            break;
+                        }
+                    }
+
+                    if (Parent == null) break;
+                    if (Parent is Charm_CompassDamageUp) Index++;
+                    Current = Parent;
+                }
+                return Index;
             }
         }
 
@@ -394,39 +446,32 @@ namespace SPMod
             [HarmonyPrefix]
             static bool SummonDueFromVictim_Prefix(Charm_Reddew __instance, UnitAvatar unit, DamageInstance damage)
             {
-                if (ModConfig.Instance.AddCategory)
-                {
-                    if (chanceField == null || RpcCreateFxMethod == null) return true;
+                if (chanceField == null || RpcCreateFxMethod == null) return true;
 
-                    bool chance = (bool)chanceField.GetValue(__instance);
-                    if (__instance.NetworkAvatar.IsDead || !damage.IsCriticalOrExecutionAttack || !chance || damage.id == __instance.damageId) return false;
-                    chanceField.SetValue(__instance, false);
-                    RpcCreateFxMethod.Invoke(__instance, new object[] { (Vector2)unit.transform.position });
-                    EDamageElementalType ElementalType = Tools.GetHighestDamageElemental(__instance.NetworkAvatar, out _);
-                    float Damage = Charm_Basic.CalculateDamage(__instance);
-                    List<UnitAvatar> TargetList = Tools.SearchEnemiesInRange(__instance.NetworkAvatar, unit.transform.position, __instance.attackRadius);
-                    foreach (UnitAvatar Target in TargetList)
-                    {
-                        var Dam = DamageInstance.GetDamage(__instance.NetworkAvatar, __instance.damageId, Target.transform.position, __instance.NetworkAvatar.GetHostileFactionLayers(EDamageFromType.None), Damage, EDamageType.Projectile, EDamageFromType.None, Vector2.zero, 0, 0f);
-                        Dam.criticalChancePercent = -999999f;
-                        Dam.elementalType = ElementalType;
-                        Target.ApplyDamage(Dam);
-                    }
-                    return false;
+                bool chance = (bool)chanceField.GetValue(__instance);
+                if (__instance.NetworkAvatar.IsDead || !damage.IsCriticalOrExecutionAttack || !chance || damage.id == __instance.damageId) return false;
+                chanceField.SetValue(__instance, false);
+                RpcCreateFxMethod.Invoke(__instance, [(Vector2)unit.transform.position]);
+                EDamageElementalType ElementalType = Tools.GetHighestDamageElemental(__instance.NetworkAvatar, out _);
+                float Damage = Charm_Basic.CalculateDamage(__instance);
+                List<UnitAvatar> TargetList = Tools.SearchEnemiesInRange(__instance.NetworkAvatar, unit.transform.position, __instance.attackRadius);
+                foreach (UnitAvatar Target in TargetList)
+                {
+                    var Dam = DamageInstance.GetDamage(__instance.NetworkAvatar, __instance.damageId, Target.transform.position, __instance.NetworkAvatar.GetHostileFactionLayers(EDamageFromType.None), Damage, EDamageType.Projectile, EDamageFromType.None, Vector2.zero, 0, 0f);
+                    Dam.criticalChancePercent = -999999f;
+                    Dam.elementalType = ElementalType;
+                    Target.ApplyDamage(Dam);
                 }
-                return true;
+                return false;
             }
 
             [HarmonyPatch("GetDamage")]
             [HarmonyPostfix]
             static void GetDamage_Postfix(Charm_Reddew __instance, UnitAvatar avatar, ref float __result)
             {
-                if (ModConfig.Instance.AddCategory)
-                {
-                    Tools.GetHighestDamageElemental(avatar, out string StatusName);
-                    float Mult = __instance.damagePercentByLevel.SafeRandomAccess(__instance.CurrentLevelToIdx()) / 100f;
-                    __result = __instance.NetworkAvatar.GetCustomStatUnsafe(StatusName) * Mult;
-                }
+                Tools.GetHighestDamageElemental(avatar, out string StatusName);
+                float Mult = __instance.damagePercentByLevel.SafeRandomAccess(__instance.CurrentLevelToIdx()) / 100f;
+                __result = __instance.NetworkAvatar.GetCustomStatUnsafe(StatusName) * Mult;
             }
         }
 
@@ -485,14 +530,14 @@ namespace SPMod
         public static class Charm_EchoOfTheGlacier_Patch
         {
             private readonly static MethodInfo? CreateFrostbiteMethod = AccessTools.Method(typeof(Charm_EchoOfTheGlacier), "CreateFrostbite");
-            private static readonly int[] MultByLevel = new int[] { 50, 100, 150, 200 };
+            private static readonly int[] MultByLevel = [50, 100, 150, 200, 250, 300, 350, 400];
 
             [HarmonyPatch("BuildKeywords")]
             [HarmonyPostfix]
             static void BuildKeywords_Postfix(Charm_EchoOfTheGlacier __instance, UnitAvatar avatar, int level, int virtualLevelOffset, ref Loc.KeywordValue[] __result)
             {
                 string value = MultByLevel.SafeRandomAccess(__instance.LevelToIdx(level)).ToString() + "%";
-                __result = new Loc.KeywordValue[] { __result[0], new Loc.KeywordValue("Mult", value, Charm_Basic.GetPositiveColor(virtualLevelOffset)) };
+                __result = [__result[0], new("Mult", value, Charm_Basic.GetPositiveColor(virtualLevelOffset))];
             }
 
             [HarmonyPatch("OnUpdate")]
@@ -507,7 +552,7 @@ namespace SPMod
                         if (SilenceofEverfrostCharm.TryGetValue(Player, out bool Attack) && Attack)
                         {
                             SilenceofEverfrostCharm[Player] = false;
-                            CreateFrostbiteMethod.Invoke(__instance, new object[] { Player.transform.position, true });
+                            CreateFrostbiteMethod.Invoke(__instance, [Player.transform.position, true]);
                         }
                     }
                 }
@@ -565,18 +610,46 @@ namespace SPMod
         [HarmonyPatch(typeof(Charm_FlamePlantRoot))]
         public static class Charm_FlamePlantRoot_Patch
         {
-            public static string DamageId = "";
-            public static GameObject? FlamePlant = null;
-
             [HarmonyPatch("OnUpdate")]
             [HarmonyPostfix]
             static void OnUpdate_Postfix(Charm_FlamePlantRoot __instance)
             {
-                if (__instance.Avatar.IsWeapon(WeaponIDs.HeatedBlade))
+                UnitAvatar? Player = __instance.Avatar;
+                if (Player == null || !Player.IsWeapon(WeaponIDs.HeatedBlade)) return;
+
+                List<HeatedBladeAttackData> Attacks = StarSephiriaPatches.ModHeatedBladeAttack;
+                if (Attacks.Count == 0) return;
+
+                for (int i = Attacks.Count - 1; i >= 0; i--)
                 {
-                    if (FlamePlant == null) FlamePlant = __instance.bulletPrefab;
-                    if (DamageId == "") DamageId = __instance.damageId;
-                    StarSephiriaPatches.HeatedBladeEffect[__instance.Avatar.Name] = Charm_Basic.CalculateDamage(__instance);
+                    HeatedBladeAttackData Attack = Attacks[i];
+                    if (Attack.Player != Player) continue;
+                    Attacks.RemoveAt(i);
+
+                    if (Attack.Target == null || Attack.Target.IsDead) continue;
+
+                    if (!StarSephiriaPatches.HeatedBladeStack.TryGetValue(Player.Name, out int Stack))
+                    {
+                        StarSephiriaPatches.HeatedBladeStack[Player.Name] = 1;
+                        continue;
+                    }
+
+                    Stack += 1;
+                    StarSephiriaPatches.HeatedBladeStack[Player.Name] = Stack;
+                    if (Stack < 5) continue;
+
+                    float Mult = Charm_Basic.CalculateDamage(__instance);
+                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.BurnDamage) * 0.01f;
+                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
+                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                    if (Player.GetCustomStatUnsafe(TextFile.BurnEvo) > 0)
+                        Mult *= 28f / 18f;
+                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
+                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
+
+                    Vector3 Pos = Attack.Target.transform.position;
+                    Bullet.Pool.Spawn(__instance.bulletPrefab, Pos, true, EDamageFromType.None, __instance.damageId, Mult * 0.75f, 0, 0f, Player, Player.GetHostileFactionLayers(EDamageFromType.None), 10, Pos, Pos + Vector3.down, null, null, 0f, EDamageElementalType.Fire, true);
+                    StarSephiriaPatches.HeatedBladeStack[Player.Name] = Stack - 5;
                 }
             }
         }
@@ -661,7 +734,7 @@ namespace SPMod
                 }
                 Unit_MiniBallista? miniBalista = miniBalistaField.GetValue(__instance) as Unit_MiniBallista;
                 bool noObstacles = (bool)noObstaclesField.GetValue(__instance);
-                if (miniBalista == null || !(attackIntervalTimerField.GetValue(__instance) is Timer attackIntervalTimer) || !(raycastTimerField.GetValue(__instance) is Timer raycastTimer))
+                if (miniBalista == null || attackIntervalTimerField.GetValue(__instance) is not Timer attackIntervalTimer || raycastTimerField.GetValue(__instance) is not Timer raycastTimer)
                 {
                     StarSephiriaMod.LogError($"[UnitAI_MiniBallista][OnAIUpdate_FoundEnemy]私有字段类型错误");
                     return true;
@@ -687,7 +760,9 @@ namespace SPMod
                     }
                 }
                 float Mult = 1f + __instance.Avatar.GetBonusAttackSpeed() * 0.01f;
-                Mult *= 0.4f + 0.6f * miniBalista.bulletCount;
+                float ShootStack = miniBalista.bulletCount;
+                if (ShootStack > 5f) ShootStack = 3f + ShootStack / 2.5f;
+                Mult *= 0.4f + 0.6f * ShootStack;
                 if (noObstacles && attackIntervalTimer.Update(Time.deltaTime * Mult))
                 {
                     miniBalista.Attack();
@@ -706,7 +781,7 @@ namespace SPMod
                 UnitAvatar Player = __instance.NetworkLeader;
                 if (Player == null || !Player.IsWeapon(WeaponIDs.BallistaSword)) return true;
 
-                Vector3 Y = new Vector3(0f, __instance.TopdownActor.YPos);
+                Vector3 Y = new(0f, __instance.TopdownActor.YPos);
                 Vector3 Vec = HorayUtility.GetVector3FromAngle(__instance.bulletFirePoint.eulerAngles.z) * 5f;
                 Vector3 Pos = __instance.bulletFirePoint.position - Y;
                 Bullet bullet = Bullet.Pool.Spawn(__instance.bulletPrefab, Pos, true, EDamageFromType.DirectAttack, "BasicAttack", __instance.RequestStandardDamage(), 0, 0.5f, __instance, __instance.GetHostileFactionLayers(EDamageFromType.DirectAttack), Y.y, Pos, Pos + Vec, null, null, 0f, EDamageElementalType.Lightning, true);
@@ -779,7 +854,7 @@ namespace SPMod
         [HarmonyPatch(typeof(Charm_EvasionRestore))]
         public static class Charm_EvasionRestore_Patch
         {
-            private static Dictionary<UnitAvatar, double> EvasionRestoreCD = new Dictionary<UnitAvatar, double>();
+            private static Dictionary<UnitAvatar, double> EvasionRestoreCD = [];
             private const float CooldownDuration = 1.2f;
 
             [HarmonyPatch("OnDisabledEffect")]
@@ -886,12 +961,12 @@ namespace SPMod
             private static readonly MethodInfo? rpcFireFxMethod = AccessTools.Method(typeof(Charm_FireBulletInRange), "RpcFireFx");
 
             private static readonly string[] WindBodySprites =
-            {
+            [
                 "ElementalBomb_Fire_00", "ElementalBomb_Fire_01", "ElementalBomb_Fire_02", "ElementalBomb_Fire_03",
                 "ElementalBomb_Fire_04", "ElementalBomb_Fire_05", "ElementalBomb_Fire_06", "ElementalBomb_Fire_07",
-            };
+            ];
 
-            private static readonly Dictionary<string, string> WindExplosionSprites = new Dictionary<string, string>()
+            private static readonly Dictionary<string, string> WindExplosionSprites = new()
             {
                 { "DynamiteFX00", "DynamiteFX00" },
                 { "DynamiteFX01", "DynamiteFX01_0" },
@@ -973,7 +1048,7 @@ namespace SPMod
                 chanceField.SetValue(__instance, false);
                 __instance.NetworkestimatedFireChanceTime = (float)(NetworkTime.time + __instance.coolDownTimer.time);
 
-                List<BulletData> Pool = new List<BulletData>();
+                List<BulletData> Pool = [];
                 if (Physical == Max) Pool.Add(new BulletData(__instance.bulletPrefabs[0], EDamageElementalType.Physical));
                 if (Fire == Max) Pool.Add(new BulletData(__instance.bulletPrefabs[1], EDamageElementalType.Fire));
                 if (Ice == Max) Pool.Add(new BulletData(__instance.bulletPrefabs[2], EDamageElementalType.Ice));

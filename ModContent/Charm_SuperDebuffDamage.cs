@@ -4,13 +4,13 @@ namespace SPMod.ModContent
 {
     public class Charm_SuperDebuffDamage : Charm_Basic
     {
-        public int[] AddDamageByLevel = new int[] { 1, 2, 3, 4, 5 };
+        public int[] AddDamageByLevel = [1, 2, 3, 4, 5];
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Add", AddDamageByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Add", AddDamageByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
+            ];
         }
 
         protected override void OnEnabledEffect()

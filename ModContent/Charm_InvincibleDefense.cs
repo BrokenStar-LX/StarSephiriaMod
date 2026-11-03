@@ -4,7 +4,7 @@ namespace SPMod.ModContent
 {
     public class Charm_InvincibleDefense : Charm_StatusInstance
     {
-        private Timer Cd = new Timer(1.2f, true, true);
+        private Timer Cd = new(1.2f, true, true);
         private bool UseEffect = true;
         protected override void OnEnabledEffect()
         {

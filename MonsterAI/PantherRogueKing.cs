@@ -246,7 +246,7 @@ namespace SPMod.MonsterAI
 
                             case 4:
                                 state = UnitAI_PantherRogueKing.State.CloneDagger;
-                                IEnumerator cloneDaggerCoroutine = (IEnumerator)cloneDaggerPatternCoroutineMethod.Invoke(__instance, new object[] { false });
+                                IEnumerator cloneDaggerCoroutine = (IEnumerator)cloneDaggerPatternCoroutineMethod.Invoke(__instance, [false]);
                                 patternCoroutineField.SetValue(__instance, __instance.StartCoroutine(cloneDaggerCoroutine));
                                 break;
 

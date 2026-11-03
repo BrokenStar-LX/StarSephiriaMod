@@ -15,7 +15,7 @@ namespace SPMod.ModContent
         {
             return new List<Loc.KeywordValue>(base.BuildKeywords())
             {
-                new Loc.KeywordValue("Mult", DamageMult.ToString() + "%", Color.white),
+                new("Mult", DamageMult.ToString() + "%", Color.white),
             }.ToArray();
         }
 

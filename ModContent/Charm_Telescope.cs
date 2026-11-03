@@ -13,23 +13,23 @@ namespace SPMod.ModContent
         private StatusInstance? EffectInstance = null;
         private StatusInstance? EffectInstance2 = null;
         private StatusInstance? EffectInstance3 = null;
-        private readonly Timer CheckTime = new Timer(0.5f);
+        private readonly Timer CheckTime = new(0.5f);
         private int DamageAdd = 0;
         private float NextBroadcastTime = 0f;
         private int AttackAdd = 0;
-        private readonly int[] SpeedbyLevel = new int[] { 5, 10 };
+        private readonly int[] SpeedbyLevel = [5, 10];
         static Charm_Telescope()
         {
             planetsField = AccessTools.Field(typeof(Charm_PlanetModule), "planets");
         }
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Speed", "+" + SpeedbyLevel.SafeRandomAccess(level).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Value", "+1%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Damage", DamageAdd.ToString() + "%", Color.yellow)
-            };
+            return
+            [
+                new("Speed", "+" + SpeedbyLevel.SafeRandomAccess(level).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
+                new("Value", "+1%", GetPositiveColor(virtualLevelOffset)),
+                new("Damage", DamageAdd.ToString() + "%", Color.yellow)
+            ];
         }
         private void ReAttackSpeed()
         {

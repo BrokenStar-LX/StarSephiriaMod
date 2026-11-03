@@ -7,8 +7,8 @@ namespace SPMod.ModContent
 {
     public class Charm_WeaponThorns : Charm_StatusInstance, IAttackableCharm
     {
-        public float[] TimerByLevel = new float[] { 0.4f, 0.3f, 0.2f, 0.1f };
-        public Timer CooldownTimer = new Timer(0.1f);
+        public float[] TimerByLevel = [0.4f, 0.3f, 0.2f, 0.1f];
+        public Timer CooldownTimer = new(0.1f);
         public bool UseEffect = false;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
@@ -16,11 +16,11 @@ namespace SPMod.ModContent
             string text2 = "0";
             if (IsEffectEnabled)
                 text2 = CalculateDamage(this).ToString("#0");
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Time", text + "s", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Damage", text2,  EffectConstant.WeaponColor),
-            };
+            return
+            [
+                new("Time", text + "s", GetPositiveColor(virtualLevelOffset)),
+                new("Damage", text2,  EffectConstant.WeaponColor),
+            ];
         }
         protected override void OnEnabledEffect()
         {

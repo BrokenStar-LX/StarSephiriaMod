@@ -7,9 +7,9 @@ namespace SPMod.ModContent
 {
     public class Charm_Excalibur : Charm_Active, IAttackableCharm, IModCooldownReceiver, IModEventReceiver
     {
-        public float[] MultByLevel = new float[] { 200, 400, 600, 800, 1000 };
-        public Timer CooldownTimer = new Timer(4f);
-        public Timer CooldownTimer2 = new Timer(0.1f);
+        public float[] MultByLevel = [200, 400, 600, 800, 1000];
+        public Timer CooldownTimer = new(4f);
+        public Timer CooldownTimer2 = new(0.1f);
         public GameObject? Shoot = null;
         public NewWeaponFireData? EffectData = null;
         public string DamageId = "[Star's Sephiria Mod]湖中剑";
@@ -22,11 +22,11 @@ namespace SPMod.ModContent
             string text = "0";
             if (IsEffectEnabled)
                 text = CalculateDamage(this).ToString("#0");
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Damage", text, EffectConstant.WeaponColor),
-                new Loc.KeywordValue("Mult", MultByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Damage", text, EffectConstant.WeaponColor),
+                new("Mult", MultByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%", GetPositiveColor(virtualLevelOffset)),
+            ];
         }
         public override float GetCooldownTime(out bool changeByLevel, int level, int virtualLevelOffset)
         {
@@ -138,7 +138,7 @@ namespace SPMod.ModContent
 
             Vector3 position = NetworkAvatar.transform.position;
             float Damage = CalculateDamage(this);
-            MeleeCollision.Pool.Spawn(Shoot, position, true, EDamageFromType.None, DamageId, Damage, 25, 2f, NetworkAvatar, NetworkAvatar.GetHostileFactionLayers(EDamageFromType.None), 0.3f, position, position, null, null, 0f, EDamageElementalType.Physical, false);
+            MeleeCollision.Pool.Spawn(Shoot, position, true, EDamageFromType.None, DamageId, Damage, 25, 2f, NetworkAvatar, NetworkAvatar.GetHostileFactionLayers(EDamageFromType.None), 0.3f, position, position, null, null, 0f, EDamageElementalType.Chaos, false);
 
             if (isClient) PlaySwingFx();
             ModNetwork.SendEvent(netId, 1, NetworkAvatar.transform.position);

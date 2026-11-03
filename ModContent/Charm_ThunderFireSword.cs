@@ -10,10 +10,10 @@ namespace SPMod.ModContent
         public int Recycling = 1;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("RECVERY", Recycling.ToString(), GetPositiveColor(virtualLevelOffset))
-            };
+            return
+            [
+                new("RECVERY", Recycling.ToString(), GetPositiveColor(virtualLevelOffset))
+            ];
         }
 
         protected override void OnEnabledEffect()

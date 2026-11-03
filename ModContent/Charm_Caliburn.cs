@@ -5,19 +5,19 @@ namespace SPMod.ModContent
 {
     public class Charm_Caliburn : Charm_Basic, IAttackableCharm
     {
-        public float[] DamageByLevel = new float[] { 8, 16, 24, 32, 40 };
+        public float[] DamageByLevel = [8, 16, 24, 32, 40];
         public int NeedMana = 400;
         public bool Deformation = false;
         public bool UseEffect = false;
-        public Timer CooldownTimer = new Timer(0.1f);
+        public Timer CooldownTimer = new(0.1f);
         private readonly string DamageId = "[Star's Sephiria Mod]石中剑";
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Damage", DamageByLevel.SafeRandomAccess(LevelToIdx(level)).ToString(),  GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Max", NeedMana.ToString(),  EffectConstant.MagicColor),
-            };
+            return
+            [
+                new("Damage", DamageByLevel.SafeRandomAccess(LevelToIdx(level)).ToString(),  GetPositiveColor(virtualLevelOffset)),
+                new("Max", NeedMana.ToString(),  EffectConstant.MagicColor),
+            ];
         }
         protected override void OnEnabledEffect()
         {
@@ -53,7 +53,7 @@ namespace SPMod.ModContent
                 }
                 if (id < 0) return;
 
-                ItemPosition itemPosition = new ItemPosition(Item.XIdx, Item.YIdx);
+                ItemPosition itemPosition = new(Item.XIdx, Item.YIdx);
                 GridInventory inventory = Inventory;
                 int instanceID = Item.InstanceID;
                 using (new GridInventory.Permission(inventory))

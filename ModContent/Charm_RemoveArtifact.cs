@@ -11,14 +11,14 @@ namespace SPMod.ModContent
 {
     public class Charm_RemoveArtifact : Charm_Active, IModCooldownReceiver, IModEventReceiver
     {
-        public Timer CooldownTimer = new Timer(3f);
+        public Timer CooldownTimer = new(3f);
         public bool UseShootBack = false;
         private float ClientPhaseEnd = 0f;
         private float NextBroadcastTime = 0f;
-        public SyncList<int> RemoveArtifactList = new SyncList<int>();
-        public SyncList<string> AssignedCategory = new SyncList<string>();
-        private readonly List<int> ClientRemoveArtifactList = new List<int>();
-        private readonly List<string> ClientAssignedCategory = new List<string>();
+        public SyncList<int> RemoveArtifactList = [];
+        public SyncList<string> AssignedCategory = [];
+        private readonly List<int> ClientRemoveArtifactList = [];
+        private readonly List<string> ClientAssignedCategory = [];
         private bool IsServerSafe => netIdentity != null && isServer;
         private int RemoveArtifactCount => IsServerSafe ? RemoveArtifactList.Count : ClientRemoveArtifactList.Count;
         private IEnumerable<int> DisplayArtifactList => IsServerSafe ? (IEnumerable<int>)RemoveArtifactList : ClientRemoveArtifactList;
@@ -36,10 +36,10 @@ namespace SPMod.ModContent
                     Line += 1;
                 }
             }
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Charm", text, Color.yellow),
-            };
+            return
+            [
+                new("Charm", text, Color.yellow),
+            ];
         }
         public override float GetCooldownTime(out bool changeByLevel, int level, int virtualLevelOffset)
         {
@@ -127,7 +127,7 @@ namespace SPMod.ModContent
         public override void LoadItemOnServer(ISaveData saveData)
         {
             base.LoadItemOnServer(saveData);
-            List<int> SaveList = new List<int>();
+            List<int> SaveList = [];
             for (int i = 0; i < 3; i++)
             {
                 SaveList.Add(saveData.GetInt($"CharmSaveData_RemoveArtifactList_{Item.InstanceID}_{i}", 0));
@@ -136,7 +136,7 @@ namespace SPMod.ModContent
             foreach (var item in SaveList.Where(x => x != 0))
                 RemoveArtifactList.Add(item);
 
-            List<string> SaveList2 = new List<string>();
+            List<string> SaveList2 = [];
             for (int i = 0; i < 6; i++)
             {
                 string Target = saveData.GetString($"CharmSaveData_RemoveArtifactList2_{Item.InstanceID}_{i}", "");
@@ -233,7 +233,7 @@ namespace SPMod.ModContent
             NextBroadcastTime = (float)NetworkTime.time + 2f;
             BroadcastCooldown();
 
-            ItemPosition TargetPosition = new ItemPosition(Item.XIdx, Item.YIdx - 1);
+            ItemPosition TargetPosition = new(Item.XIdx, Item.YIdx - 1);
             NewItemOwnInstance TargetNewItem = Inventory.FindItem(TargetPosition);
             if (TargetNewItem == null) return;
             if (TargetNewItem.Entity.type != EItemType.Charm) return;

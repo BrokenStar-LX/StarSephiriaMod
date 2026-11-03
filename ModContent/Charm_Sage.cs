@@ -6,9 +6,8 @@ namespace SPMod.ModContent
 {
     public class Charm_Sage : Charm_Basic, IModValueReceiver
     {
-        private readonly Timer CheckTime = new Timer(0.5f);
+        private readonly Timer CheckTime = new(0.5f);
         private StatusInstance? EffectInstance = null;
-        private StatusInstance? EffectInstance2 = null;
         private int Add = 0;
         private int Required = 0;
         private float NextBroadcastTime = 0f;
@@ -19,20 +18,47 @@ namespace SPMod.ModContent
             {
                 Energy = avatar.GetCustomStatUnsafe(TextFile.DrinkPotionStack);
             }
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Value", "+1", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Value2", "+2%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Energy", Energy.ToString(), Color.yellow),
-                new Loc.KeywordValue("Stack", Add.ToString(), Color.yellow),
-                new Loc.KeywordValue("UseEnergy", Required.ToString(), Color.yellow)
-            };
+            return
+            [
+                new("Value", "+1", GetPositiveColor(virtualLevelOffset)),
+                new("Value2", "+2%", GetPositiveColor(virtualLevelOffset)),
+                new("Energy", Energy.ToString(), Color.yellow),
+                new("Stack", Add.ToString(), Color.yellow),
+                new("UseEnergy", Required.ToString(), Color.yellow)
+            ];
         }
         protected override void OnEnabledEffect()
         {
             base.OnEnabledEffect();
             ReInstance();
             LoadInstance();
+            if (NetworkAvatar)
+            {
+                NetworkAvatar.OnAttackUnitBeforeOperation += AddDamage;
+                NetworkAvatar.OnAttackUnitBeforeOperation_AsLeader += AddDamage_AsLeader;
+            }
+        }
+        protected override void OnDisabledEffect()
+        {
+            if (NetworkAvatar)
+            {
+                NetworkAvatar.OnAttackUnitBeforeOperation -= AddDamage;
+                NetworkAvatar.OnAttackUnitBeforeOperation_AsLeader -= AddDamage_AsLeader;
+            }
+            base.OnDisabledEffect();
+            ReInstance();
+            BroadcastValues();
+        }
+
+        private void AddDamage_AsLeader(UnitAvatar Follower, UnitAvatar Target, DamageInstance instance)
+        {
+            AddDamage(Target, instance);
+        }
+
+        private void AddDamage(UnitAvatar Target, DamageInstance instance)
+        {
+            if (Add > 0)
+                instance.damage *= 1f + Add * 0.02f;
         }
         private void ReInstance()
         {
@@ -42,27 +68,14 @@ namespace SPMod.ModContent
                 EffectInstance.ClearTarget();
                 EffectInstance = null;
             }
-            if (EffectInstance2 != null)
-            {
-                EffectInstance2.RemoveStatus();
-                EffectInstance2.ClearTarget();
-                EffectInstance2 = null;
-            }
             Add = 0;
         }
         private void LoadInstance()
         {
             if (NetworkAvatar)
             {
-                Add = 1;
-                int Value = NetworkAvatar.GetCustomStatUnsafe(TextFile.DrinkPotionStack);
-                while (Value >= Add)
-                {
-                    Value -= Add;
-                    Add += 1;
-                    if (Add > 100) break;
-                }
-                int NextCost = Add;
+                Add = CalculateStack(NetworkAvatar.GetCustomStatUnsafe(TextFile.DrinkPotionStack), out int Value);
+                int NextCost = Add + 1;
                 if (Add >= 100) Required = 0;
                 else Required = NextCost - Value;
                 if (Add > 0)
@@ -70,12 +83,22 @@ namespace SPMod.ModContent
                     EffectInstance = StatusDatabase.CreateStatusEntity("HIGHEST_ELEMENTAL_DAMAGE", Add);
                     EffectInstance.SetTarget(NetworkAvatar);
                     EffectInstance.ApplyStatus(true);
-                    EffectInstance2 = StatusDatabase.CreateStatusEntity("FINAL_DAMAGE", Add * 2);
-                    EffectInstance2.SetTarget(NetworkAvatar);
-                    EffectInstance2.ApplyStatus(true);
                 }
                 BroadcastValues();
             }
+        }
+
+        private static int CalculateStack(int Energy, out int Remain)
+        {
+            int Stack = 0;
+            Remain = Energy;
+            while (Remain > Stack)
+            {
+                Stack += 1;
+                Remain -= Stack;
+                if (Stack >= 100) break;
+            }
+            return Stack;
         }
 
         public void OnClientValues(int A, int B)
@@ -89,25 +112,11 @@ namespace SPMod.ModContent
             ModNetwork.SendValues(netId, Add, Required);
         }
 
-        protected override void OnDisabledEffect()
-        {
-            base.OnDisabledEffect();
-            ReInstance();
-            BroadcastValues();
-        }
-
         protected override void OnUpdate()
         {
             if (NetworkAvatar && CheckTime.Update(Time.deltaTime))
             {
-                int Count = 1;
-                int Value = NetworkAvatar.GetCustomStatUnsafe(TextFile.DrinkPotionStack);
-                while (Value >= Count)
-                {
-                    Value -= Count;
-                    Count += 1;
-                    if (Count > 100) break;
-                }
+                int Count = CalculateStack(NetworkAvatar.GetCustomStatUnsafe(TextFile.DrinkPotionStack), out _);
                 if (Add != Count)
                 {
                     ReInstance();

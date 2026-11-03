@@ -35,6 +35,12 @@ namespace SPMod.Tool
         public Vector3 Position;
     }
 
+    public struct ModBossTargetMessage : NetworkMessage
+    {
+        public uint BossNetId;
+        public uint TargetNetId;
+    }
+
     public interface IModCooldownReceiver
     {
         void OnClientCooldown(float PhaseEnd);
@@ -64,7 +70,7 @@ namespace SPMod.Tool
         public const byte KindWeaponTime = 4;
         public const byte SwingFxMoment = 0;
 
-        private static readonly Dictionary<byte, Func<NewWeaponFireData?>> SwingFxSources = new Dictionary<byte, Func<NewWeaponFireData?>>();
+        private static readonly Dictionary<byte, Func<NewWeaponFireData?>> SwingFxSources = [];
 
         static ModNetwork()
         {
@@ -122,6 +128,17 @@ namespace SPMod.Tool
                 Event = reader.ReadByte(),
                 Position = reader.ReadVector3(),
             };
+
+            Writer<ModBossTargetMessage>.write = (writer, msg) =>
+            {
+                writer.WriteVarUInt(msg.BossNetId);
+                writer.WriteVarUInt(msg.TargetNetId);
+            };
+            Reader<ModBossTargetMessage>.read = reader => new ModBossTargetMessage
+            {
+                BossNetId = reader.ReadVarUInt(),
+                TargetNetId = reader.ReadVarUInt(),
+            };
         }
 
         public static void RegisterClientHandlers()
@@ -129,6 +146,26 @@ namespace SPMod.Tool
             NetworkClient.ReplaceHandler<ModCharmMessage>(OnModCharmMessage);
             NetworkClient.ReplaceHandler<ModWeaponSwingFxMessage>(OnModWeaponSwingFxMessage);
             NetworkClient.ReplaceHandler<ModAirValveMessage>(OnModAirValveMessage);
+            NetworkClient.ReplaceHandler<ModBossTargetMessage>(OnModBossTargetMessage);
+        }
+
+        /// <summary>客机上的 Boss 当前目标：BossNetId → TargetNetId。0 表示没有目标。</summary>
+        public static readonly Dictionary<uint, uint> BossTargetNetIds = [];
+
+        private static void OnModBossTargetMessage(ModBossTargetMessage Msg)
+        {
+            if (NetworkServer.active || Msg.BossNetId == 0) return;
+            if (Msg.TargetNetId == 0)
+                BossTargetNetIds.Remove(Msg.BossNetId);
+            else
+                BossTargetNetIds[Msg.BossNetId] = Msg.TargetNetId;
+        }
+
+        /// <summary>服务端广播 Boss 当前目标；TargetNetId 为 0 表示丢失目标。</summary>
+        public static void SendBossTarget(uint BossNetId, uint TargetNetId)
+        {
+            if (!NetworkServer.active || BossNetId == 0) return;
+            NetworkServer.SendToAll(new ModBossTargetMessage { BossNetId = BossNetId, TargetNetId = TargetNetId });
         }
 
         /// <summary>服务端广播气阀领域的 FX；Event 区分触发瞬间（AirValveGround）和每跳脉冲（AirValve）。</summary>
@@ -235,6 +272,16 @@ namespace SPMod.Tool
         public static void SendEvent(uint CharmNetId, byte Event, Vector3 Pos, string S1 = "", string S2 = "")
         {
             Send(CharmNetId, new ModCharmMessage { Kind = KindEvent, Event = Event, Pos = Pos, S1 = S1, S2 = S2 });
+        }
+
+        /// <summary>服务端只向目标网络物体的拥有者发送一次事件。</summary>
+        public static void SendEventToOwner(uint CharmNetId, byte Event, Vector3 Pos, string S1 = "", string S2 = "")
+        {
+            if (!NetworkServer.active || CharmNetId == 0) return;
+            if (!NetworkServer.spawned.TryGetValue(CharmNetId, out NetworkIdentity Identity) || Identity == null) return;
+            NetworkConnectionToClient? Conn = Identity.connectionToClient;
+            if (Conn == null) return;
+            Conn.Send(new ModCharmMessage { CharmNetId = CharmNetId, Kind = KindEvent, Event = Event, Pos = Pos, S1 = S1, S2 = S2 });
         }
 
         public static void SendWeaponTime(uint AvatarNetId, float Time, float Progress)

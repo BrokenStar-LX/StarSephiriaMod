@@ -8,8 +8,8 @@ namespace SPMod.ModContent
     public class Charm_EXLightningBottle : Charm_LightningPouch
     {
         public bool Falg = false;
-        public float[] SpeedByLevel = new float[] { 1.2f, 0.9f, 0.6f, 0.3f };
-        public Timer CooldownTimer = new Timer(1f);
+        public float[] SpeedByLevel = [1.2f, 0.9f, 0.6f, 0.3f];
+        public Timer CooldownTimer = new(1f);
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string text = SpeedByLevel.SafeRandomAccess(LevelToIdx(level)) + "s";

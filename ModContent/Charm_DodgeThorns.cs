@@ -6,8 +6,8 @@ namespace SPMod.ModContent
 {
     public class Charm_DodgeThorns : Charm_StatusInstance, IAttackableCharm
     {
-        public int[] DamageMultByLevel = new int[] { 50, 100, 150, 200 };
-        public Timer CooldownTimer = new Timer(0.5f);
+        public int[] DamageMultByLevel = [50, 100, 150, 200];
+        public Timer CooldownTimer = new(0.5f);
         private StatusInstance? EffectInstance = null;
         private StatusInstance? EffectInstance2 = null;
         public float AddValue = 0;

@@ -9,9 +9,9 @@ namespace SPMod.ModContent
 {
     public class Charm_PotionTransactionProof : Charm_Active, IModCooldownReceiver, IModValueReceiver, IModEventReceiver
     {
-        private static readonly System.Random _serverRng = new System.Random();
+        private static readonly System.Random _serverRng = new();
         public const int Expenses = 50;
-        public Timer CooldownTimer = new Timer(3f);
+        public Timer CooldownTimer = new(3f);
         public int Stack = 1;
         public bool UseShootBack = false;
         private float ClientPhaseEnd = 0f;
@@ -19,10 +19,10 @@ namespace SPMod.ModContent
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             float UseCoin = Stack * Expenses / (1f + avatar.GetCustomStatUnsafe(TextFile.Negotiation) * 0.01f);
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("UseCoin", ((int)UseCoin).ToString(), Color.yellow),
-            };
+            return
+            [
+                new("UseCoin", ((int)UseCoin).ToString(), Color.yellow),
+            ];
         }
 
         public override float GetCooldownTime(out bool changeByLevel, int level, int virtualLevelOffset)
@@ -190,8 +190,8 @@ namespace SPMod.ModContent
             }
         }
 
-        private readonly List<(int weight, int itemId)> PotionToLevel = new List<(int weight, int itemId)>
-        {
+        private readonly List<(int weight, int itemId)> PotionToLevel =
+        [
             (0, 0),   //小再生
             (1, 1),   //大再生
             (2, 27),  //苹果汁
@@ -217,10 +217,10 @@ namespace SPMod.ModContent
             (3, 49),  //小防御药
             (3, 50),  //小闪避药
             (5, 51),  //元素药
-        };
+        ];
         private static List<int> GetCardPool(UnitAvatar Player, List<(int, int)> Orig, int Min, int Max)
         {
-            List<int> Pool = new List<int>();
+            List<int> Pool = [];
             foreach (var Target in Orig)
             {
                 int Value = Target.Item1;
@@ -245,7 +245,7 @@ namespace SPMod.ModContent
         }
         private static List<int> GetFixedPoolPotion(UnitAvatar Player, List<int> PotionIdPool, int Count)
         {
-            List<int> successIds = new List<int>();
+            List<int> successIds = [];
             if (!NetworkServer.active || Player == null || PotionIdPool == null || PotionIdPool.Count == 0)
                 return successIds;
 

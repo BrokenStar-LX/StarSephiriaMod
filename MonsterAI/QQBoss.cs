@@ -51,7 +51,7 @@ namespace SPMod.MonsterAI
 
         private static bool TryGetRandomAlivePlayer(out PlayerAvatar? player)
         {
-            List<PlayerAvatar> list = new List<PlayerAvatar>();
+            List<PlayerAvatar> list = [];
             foreach (PlayerSpawner playerSpawner in PlayerSpawner.MultiplayerList)
             {
                 if (playerSpawner && playerSpawner.PlayerAvatar && !playerSpawner.PlayerAvatar.IsDead)
@@ -75,14 +75,14 @@ namespace SPMod.MonsterAI
         public static class UnitAI_QQBoss_Patch
         {
             private static int Oldpattern = -1;
-            private static List<int> Pattern = new List<int>();
+            private static List<int> Pattern = [];
             private static int AttackFlag = 0;
 
             [HarmonyPatch("Awake")]
             [HarmonyPostfix]
             static void Awake_Postfix(UnitAI_QQBoss __instance)
             {
-                Pattern = new List<int>();
+                Pattern = [];
                 AttackFlag = 0;
                 CrystalStack = 0;
                 __instance.crystalPatternTimer.Ratio = 0.5f;

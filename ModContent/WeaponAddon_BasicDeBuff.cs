@@ -7,13 +7,13 @@ namespace SPMod.ModContent
 {
     public class WeaponAddon_BasicDeBuff : WeaponAddonCommon_Status
     {
-        public float debuffPercent = 80f;
+        public float debuffPercent = 60f;
         public CharacterDebuff? debuffPrefab;
         public override Loc.KeywordValue[] BuildKeywords()
         {
             return new List<Loc.KeywordValue>(base.BuildKeywords())
             {
-                new Loc.KeywordValue("PERCENT", debuffPercent.ToString() + "%", Color.yellow),
+                new("PERCENT", debuffPercent.ToString() + "%", Color.yellow),
             }.ToArray();
         }
 

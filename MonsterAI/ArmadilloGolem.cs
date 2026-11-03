@@ -119,8 +119,8 @@ namespace SPMod.MonsterAI
                 StarSephiriaMod.LogError($"[LibraryGuard]反射初始化失败: {ex}");
             }
         }
-        private static readonly Timer StunTimer = new Timer(1f);
-        private static readonly Timer HitRestoreTimer = new Timer(0.75f);
+        private static readonly Timer StunTimer = new(1f);
+        private static readonly Timer HitRestoreTimer = new(0.75f);
         public static void InstanceUpdate(UnitAvatar __instance)
         {
             // 原有的击晕逻辑
@@ -224,7 +224,7 @@ namespace SPMod.MonsterAI
                 {
                     Unit_ArmadilloGolem Head = Unit_ArmadilloGolem_Patch.Golem;
                     UnitAI_ArmadilloGolem HeadAI = UnitAI_ArmadilloGolem_Patch.GolemAI;
-                    List<Vector3> missilePositions = new List<Vector3> { __instance.transform.position };
+                    List<Vector3> missilePositions = [__instance.transform.position];
                     if (Hard >= 3)
                     {
                         if (UnitAI_ArmadilloGolem_Patch.Stomp == 1 || Hard >= 4)
@@ -296,19 +296,19 @@ namespace SPMod.MonsterAI
                             for (int i = missiles.Count - 1; i >= 0; i--)
                             {
                                 var missile = missiles[i];
-                                bool warningResult = (bool)launchMissileWarningMethod.Invoke(missile, new object[] { Time.deltaTime });
+                                bool warningResult = (bool)launchMissileWarningMethod.Invoke(missile, [Time.deltaTime]);
                                 if (warningResult)
                                 {
                                     Vector3 targetPos = (Vector3)targetPositionField.GetValue(missile);
                                     __instance.RpcCreateLaunchMissileeWarning(targetPos);
                                 }
-                                bool fxResult = (bool)launchMissileFxMethod.Invoke(missile, new object[] { Time.deltaTime });
+                                bool fxResult = (bool)launchMissileFxMethod.Invoke(missile, [Time.deltaTime]);
                                 if (fxResult)
                                 {
                                     Vector2 vector = missileFxZoneDir == 0 ? Vector2.Lerp(__instance.missileFxZone_LB, new Vector2(__instance.missileFxZone_LB.x, __instance.missileFxZone_RT.y), Random.value) : Vector2.Lerp(new Vector2(__instance.missileFxZone_RT.x, __instance.missileFxZone_LB.y), __instance.missileFxZone_RT, Random.value);
                                     __instance.RpcCreateLaunchMissileFx(vector + Random.insideUnitCircle * Random.Range(0f, 1f));
                                 }
-                                bool launchResult = (bool)launchMissileMethod.Invoke(missile, new object[] { Time.deltaTime });
+                                bool launchResult = (bool)launchMissileMethod.Invoke(missile, [Time.deltaTime]);
                                 if (launchResult)
                                 {
                                     Vector3 targetPos = (Vector3)targetPositionField.GetValue(missile);
@@ -652,7 +652,7 @@ namespace SPMod.MonsterAI
         public static class UnitAI_ArmadilloGolem_Patch
         {
             private static int Oldpattern = -1;
-            public static List<int> SpreadBulletType = new List<int>() { };
+            public static List<int> SpreadBulletType = [];
             public static int Stomp = 0;
             public static UnitAI_ArmadilloGolem? GolemAI;
 
@@ -692,7 +692,7 @@ namespace SPMod.MonsterAI
                     }
                     else
                     {
-                        List<Vector3> missilePositions = new List<Vector3>() { };
+                        List<Vector3> missilePositions = [];
                         foreach (PlayerSpawner playerSpawner2 in PlayerSpawner.MultiplayerList)
                         {
                             if (playerSpawner2)
@@ -723,7 +723,7 @@ namespace SPMod.MonsterAI
                     {
                         if (randomPatternForRoundRobin.Count <= 1)
                         {
-                            List<int> random = new List<int> { 0, 1, 2, 3 };
+                            List<int> random = [0, 1, 2, 3];
                             if (Oldpattern != -1) random.Remove(Oldpattern);
                             random.Shuffle();
                             if (Oldpattern != -1) random.Add(Oldpattern);
@@ -749,7 +749,7 @@ namespace SPMod.MonsterAI
                             case 2:
                                 if (Hard >= 2 && SpreadBulletType.Count <= 0)
                                 {
-                                    SpreadBulletType = new List<int> { 0, 1, 2 };
+                                    SpreadBulletType = [0, 1, 2];
                                     SpreadBulletType.Shuffle();
                                 }
                                 Stomp = 0;

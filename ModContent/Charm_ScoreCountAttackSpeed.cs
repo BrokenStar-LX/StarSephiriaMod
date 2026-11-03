@@ -7,16 +7,16 @@ namespace SPMod.ModContent
     {
         private StatusInstance? EffectInstance = null;
         private StatusInstance? EffectInstance2 = null;
-        private readonly Timer CheckTime = new Timer(0.5f);
+        private readonly Timer CheckTime = new(0.5f);
         private int Add = 0;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             int Level = LevelToIdx(level) + 1;
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("AttackSpeed", $"+{6 * Level}%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("WeaponRange", $"+{3 * Level}%", GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("AttackSpeed", $"+{6 * Level}%", GetPositiveColor(virtualLevelOffset)),
+                new("WeaponRange", $"+{3 * Level}%", GetPositiveColor(virtualLevelOffset)),
+            ];
         }
         protected override void OnEnabledEffect()
         {

@@ -8,8 +8,8 @@ namespace SPMod.ModContent
 {
     public class Charm_ElementAllocation : Charm_StatusInstance
     {
-        public int[] ValueByLevel = new int[] { 20, 40, 60 };
-        private readonly List<string> EffectInstance = new List<string>();
+        public int[] ValueByLevel = [20, 40, 60];
+        private readonly List<string> EffectInstance = [];
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             float Mult = ValueByLevel.SafeRandomAccess(LevelToIdx(level)) * 0.01f;
@@ -18,10 +18,10 @@ namespace SPMod.ModContent
                 Mult *= 1.25f;
             }
             Mult *= 100f;
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Value", Mult.ToString() + "%", GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Value", Mult.ToString() + "%", GetPositiveColor(virtualLevelOffset)),
+            ];
         }
         protected override void OnEnabledEffect()
         {
@@ -76,7 +76,7 @@ namespace SPMod.ModContent
             {
                 GetTwoMaxValue(out int TwoMaxStatusValue);
                 if (TwoMaxStatusValue <= 0) return;
-                Dictionary<string, int> StatusList = new Dictionary<string, int>();
+                Dictionary<string, int> StatusList = [];
                 foreach (var key in EffectConstant.BaseStatsName)
                 {
                     int Value = NetworkAvatar.customStats.GetValueOrDefault(key, 0);

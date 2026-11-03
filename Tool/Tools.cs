@@ -81,13 +81,13 @@ namespace SPMod.Tool
 
         public static List<StatInfo> SetStatInfo(params string[] stat)
         {
-            List<StatInfo> infos = new List<StatInfo>();
+            List<StatInfo> infos = [];
             foreach (string statName in stat)
             {
                 string[] parts = statName.Split('=');
                 string left = parts[0];
                 string right = parts[1];
-                StatInfo statInfo = new StatInfo{ status = left };
+                StatInfo statInfo = new() { status = left };
                 if (right == "None")
                     statInfo.type = EEffectType.None;
                 if (right == "Positive")
@@ -417,7 +417,7 @@ namespace SPMod.Tool
 
         public static int BaseOrigStatToMax(UnitAvatar Player)
         {
-            List<int> Stat = new List<int>();
+            List<int> Stat = [];
             foreach (string BaseStat in EffectConstant.BaseStatsName)
             {
                 Stat.Add(Player.customStats.GetValueOrDefault(BaseStat, 0));
@@ -485,7 +485,7 @@ namespace SPMod.Tool
 
         public static Vector2 RotateTarget(Vector3 playerPos, Vector2 targetPos, float angleDegrees)
         {
-            Vector2 player2D = new Vector2(playerPos.x, playerPos.y);
+            Vector2 player2D = new(playerPos.x, playerPos.y);
             Vector2 dir = targetPos - player2D;
 
             float angle = Mathf.Atan2(dir.y, dir.x) + angleDegrees * Mathf.Deg2Rad;
@@ -595,7 +595,7 @@ namespace SPMod.Tool
             }
         }
 
-        public static Dictionary<string, GameObject> CachePro = new Dictionary<string, GameObject>();
+        public static Dictionary<string, GameObject> CachePro = [];
         public static bool GetPro(string Name, out GameObject? Pro)
         {
             if (!NetworkServer.active)
@@ -631,7 +631,7 @@ namespace SPMod.Tool
             return false;
         }
 
-        public static Dictionary<string, Sprite> ModSpriteList = new Dictionary<string, Sprite>();
+        public static Dictionary<string, Sprite> ModSpriteList = [];
         public static Sprite? LoadModSprite(string Name)
         {
             return LoadModSpriteInternal("", Name);
@@ -660,7 +660,7 @@ namespace SPMod.Tool
 
                 byte[] imageData = new byte[stream.Length];
                 stream.Read(imageData, 0, imageData.Length);
-                Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                Texture2D texture = new(2, 2, TextureFormat.RGBA32, false);
                 texture.LoadImage(imageData);
                 texture.name = Name;
                 Sprite a = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 16f);
@@ -676,7 +676,7 @@ namespace SPMod.Tool
             }
         }
 
-        public static List<TMP_SpriteAsset> InjectedKeywordSpriteAssets = new List<TMP_SpriteAsset>();
+        public static List<TMP_SpriteAsset> InjectedKeywordSpriteAssets = [];
         public static void InjectKeywordSpriteAssets()
         {
             if (InjectedKeywordSpriteAssets.Count > 0) return;
@@ -685,7 +685,7 @@ namespace SPMod.Tool
                 const string ResourcePrefix = "SPMod.Sprites.";
                 const string IconPrefix = "KeywordIcon_";
                 Assembly assembly = Assembly.GetExecutingAssembly();
-                List<Sprite> Icons = new List<Sprite>();
+                List<Sprite> Icons = [];
                 foreach (string Resource in assembly.GetManifestResourceNames())
                 {
                     if (!Resource.StartsWith(ResourcePrefix + IconPrefix) || !Resource.EndsWith(".png")) continue;
@@ -727,7 +727,7 @@ namespace SPMod.Tool
             const int Padding = 2;
             int TotalWidth = Icons.Sum(Icon => Icon.texture.width) + Padding * (Icons.Count - 1);
             int TotalHeight = Icons.Max(Icon => Icon.texture.height);
-            Texture2D Sheet = new Texture2D(TotalWidth, TotalHeight, TextureFormat.RGBA32, false)
+            Texture2D Sheet = new(TotalWidth, TotalHeight, TextureFormat.RGBA32, false)
             {
                 name = "ModKeyword",
                 filterMode = FilterMode.Point,
@@ -742,7 +742,7 @@ namespace SPMod.Tool
             {
                 mainTexture = Sheet
             };
-            Asset.spriteInfoList = new List<TMP_Sprite>();
+            Asset.spriteInfoList = [];
 
             int Offset = 0;
             foreach (Sprite Icon in Icons)
@@ -807,7 +807,7 @@ namespace SPMod.Tool
         /// <param name="includeBodySize">是否把目标身体体积补偿进范围</param>
         public static List<UnitAvatar> SearchEnemiesInRange(UnitAvatar owner, Vector3 center, float radius, int attackingLayer = 0, bool includeBodySize = false)
         {
-            List<UnitAvatar> Target = new List<UnitAvatar>();
+            List<UnitAvatar> Target = [];
             foreach (UnitAvatar target in CombatManager.Instance.AllCreatures)
             {
                 if (target == null || target == owner) continue;
@@ -857,7 +857,7 @@ namespace SPMod.Tool
 
         public static Dictionary<string, bool> LoadList(string prefix, List<string> dict)
         {
-            Dictionary<string, bool> result = new Dictionary<string, bool>();
+            Dictionary<string, bool> result = [];
             foreach (var kvp in dict)
             {
                 if (SaveManager.CurrentRun.GetBool(prefix + $"_{kvp}", false))

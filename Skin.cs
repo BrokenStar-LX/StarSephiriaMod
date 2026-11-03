@@ -11,14 +11,14 @@ namespace SPMod
     [HarmonyPatch]
     public static class Skin
     {
-        private static readonly List<SpriteReplaceData> SkinList = new List<SpriteReplaceData>();
-        private static readonly Dictionary<string, SpriteReplaceData> SpriteToSkin = new Dictionary<string, SpriteReplaceData>(StringComparer.OrdinalIgnoreCase);
-        private static readonly Dictionary<(Sprite Origin, Sprite Replacement), Sprite> PivotFixed = new Dictionary<(Sprite Origin, Sprite Replacement), Sprite>();
+        private static readonly List<SpriteReplaceData> SkinList = [];
+        private static readonly Dictionary<string, SpriteReplaceData> SpriteToSkin = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<(Sprite Origin, Sprite Replacement), Sprite> PivotFixed = [];
         public static Sprite FixPivot(Sprite origin, Sprite repl)
         {
             if (PivotFixed.TryGetValue((origin, repl), out Sprite Cached)) return Cached;
 
-            Vector2 Pivot = new Vector2(origin.pivot.x / origin.rect.width,
+            Vector2 Pivot = new(origin.pivot.x / origin.rect.width,
                                         origin.pivot.y / origin.rect.height);
             Sprite Fixed = Sprite.Create(repl.texture, repl.rect, Pivot, origin.pixelsPerUnit, 0, SpriteMeshType.FullRect);
             Fixed.name = repl.name;
@@ -70,8 +70,7 @@ namespace SPMod
                 if (!ModConfig.Instance.EnableWeaponModifier) return false;
                 return owner.GetCustomStatUnsafe(TextFile.FlameSwordFrost) > 0;
             }, 
-            new List<string>()
-            {
+            [
                 "katana_Fire_FlameSword_1",
                 "katana_Fire_FlameSword_2",
                 "katana_Fire_FlameSword_UpgradeFX00",
@@ -117,7 +116,7 @@ namespace SPMod
                 "Katana_FireShura5_Swing5",
                 "Katana_FireShura5_Swing6",
                 "Katana_FireShura5_Swing7",
-            }, "Weapon.SolisEkli"));
+            ], "Weapon.SolisEkli"));
         }
 
         [HarmonyPatch(typeof(Animator2D_MultipleSpriteRenderer))]

@@ -5,14 +5,14 @@ namespace SPMod.ModContent
 {
     public class Charm_DebuffsPenetrationDefense : Charm_StatusInstance
     {
-        public int[] ValueByLevel = new int[] { 3, 6, 9, 12 };
+        public int[] ValueByLevel = [3, 6, 9, 12];
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string Text = ValueByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%";
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Value", Text, GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Value", Text, GetPositiveColor(virtualLevelOffset)),
+            ];
         }
 
         protected override void OnEnabledEffect()

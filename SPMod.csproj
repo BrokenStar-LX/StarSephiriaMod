@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <BaseOutputPath>D:\DLL文件\赛菲模组\SPMod\bin</BaseOutputPath>
   </PropertyGroup>
@@ -60,13 +61,22 @@
     <None Remove="Sprites\Item_DevilPact_MiniIcon.png" />
     <None Remove="Sprites\Item_EcologicalSphere.png" />
     <None Remove="Sprites\Item_ElectricIce.png" />
+    <None Remove="Sprites\Item_ElementKey.png" />
+    <None Remove="Sprites\Item_ElementKey_1.png" />
+    <None Remove="Sprites\Item_ElementKey_2.png" />
+    <None Remove="Sprites\Item_ElementKey_3.png" />
+    <None Remove="Sprites\Item_ElementKey_4.png" />
+    <None Remove="Sprites\Item_ElementKey_5.png" />
     <None Remove="Sprites\Item_EnergyRecoveryDevice.png" />
+    <None Remove="Sprites\Item_EnhancedCompass.png" />
+    <None Remove="Sprites\Item_EnhancedCompass2.png" />
     <None Remove="Sprites\Item_Epaulette.png" />
     <None Remove="Sprites\Item_Excalibur.png" />
     <None Remove="Sprites\Item_FrostyAnvil.png" />
     <None Remove="Sprites\Item_GrowthFund.png" />
     <None Remove="Sprites\Item_HeartofElements.png" />
     <None Remove="Sprites\Item_HolyGuardian.png" />
+    <None Remove="Sprites\Item_Homunculus.png" />
     <None Remove="Sprites\Item_KatanaClash.png" />
     <None Remove="Sprites\Item_KeelFrgment.png" />
     <None Remove="Sprites\Item_LightningBottle.png" />
@@ -139,6 +149,15 @@
     <EmbeddedResource Include="Sprites\Item_ChaosGlyph.png" />
     <EmbeddedResource Include="Sprites\Item_Convergence.png" />
     <EmbeddedResource Include="Sprites\Item_CyanScarf.png" />
+    <EmbeddedResource Include="Sprites\Item_ElementKey.png" />
+    <EmbeddedResource Include="Sprites\Item_ElementKey_1.png" />
+    <EmbeddedResource Include="Sprites\Item_ElementKey_2.png" />
+    <EmbeddedResource Include="Sprites\Item_ElementKey_3.png" />
+    <EmbeddedResource Include="Sprites\Item_ElementKey_4.png" />
+    <EmbeddedResource Include="Sprites\Item_ElementKey_5.png" />
+    <EmbeddedResource Include="Sprites\Item_EnhancedCompass.png" />
+    <EmbeddedResource Include="Sprites\Item_EnhancedCompass2.png" />
+    <EmbeddedResource Include="Sprites\Item_Homunculus.png" />
     <EmbeddedResource Include="Sprites\Item_Organ.png" />
     <EmbeddedResource Include="Sprites\Item_Potion_Wind.png" />
     <EmbeddedResource Include="Sprites\Item_Potion_Wind2.png" />
@@ -255,360 +274,479 @@
   <ItemGroup>
     <Reference Include="0Harmony">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\0Harmony.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="com.rlabrecque.steamworks.net">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="FizzySteamworks">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\FizzySteamworks.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="FMODUnity">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\FMODUnity.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="FMODUnityResonance">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\FMODUnityResonance.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Heathen.Steamworks">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Heathen.Steamworks.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Mirror">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Mirror.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UniTask">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UniTask.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.AI.Navigation">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.AI.Navigation.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Burst">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Burst.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Burst.Unsafe">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Burst.Unsafe.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Collections">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Collections.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.InputSystem">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.InputSystem.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.InputSystem.ForUI">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.InputSystem.ForUI.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.InternalAPIEngineBridge.001">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.InternalAPIEngineBridge.001.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Mathematics">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Mathematics.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.MemoryProfiler">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.MemoryProfiler.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Profiling.Core">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Profiling.Core.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Recorder">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Recorder.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Recorder.Base">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Recorder.Base.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.RenderPipeline.Universal.ShaderLibrary">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.RenderPipeline.Universal.ShaderLibrary.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.RenderPipelines.Core.Runtime">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.RenderPipelines.Core.ShaderLibrary">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.RenderPipelines.Core.ShaderLibrary.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.RenderPipelines.Universal.Config.Runtime">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.RenderPipelines.Universal.Config.Runtime.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.RenderPipelines.Universal.Runtime">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.RenderPipelines.Universal.Runtime.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.RenderPipelines.Universal.Shaders">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.RenderPipelines.Universal.Shaders.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.CloudDiagnostics">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.CloudDiagnostics.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Analytics">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Analytics.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Components">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Components.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Configuration">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Configuration.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Device">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Device.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Environments">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Environments.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Environments.Internal">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Environments.Internal.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Internal">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Internal.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Networking">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Networking.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Registration">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Registration.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Scheduler">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Scheduler.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Telemetry">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Telemetry.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Services.Core.Threading">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Services.Core.Threading.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.Timeline">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.Timeline.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.VisualEffectGraph.Runtime">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.VisualEffectGraph.Runtime.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.VisualScripting.Antlr3.Runtime">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.VisualScripting.Antlr3.Runtime.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.VisualScripting.Core">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.VisualScripting.Core.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.VisualScripting.Flow">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.VisualScripting.Flow.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.VisualScripting.State">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\Unity.VisualScripting.State.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AccessibilityModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.AccessibilityModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AIModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.AIModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AndroidJNIModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.AndroidJNIModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AnimationModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ARModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.ARModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AssetBundleModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AudioModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ClothModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.ClothModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ClusterInputModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.ClusterInputModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ClusterRendererModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.ClusterRendererModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ContentLoadModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.ContentLoadModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.CrashReportingModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.CrashReportingModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.DirectorModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.DirectorModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.DSPGraphModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.DSPGraphModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.GameCenterModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.GameCenterModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.GIModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.GIModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.GridModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.GridModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.HotReloadModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.HotReloadModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.InputModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.InputModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.JSONSerializeModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.JSONSerializeModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.LocalizationModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.LocalizationModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.NVIDIAModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.NVIDIAModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ParticleSystemModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.PerformanceReportingModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.PerformanceReportingModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.Physics2DModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.Physics2DModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.PropertiesModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.PropertiesModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ScreenCaptureModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.ScreenCaptureModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.SharedInternalsModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.SharedInternalsModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.SpriteMaskModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.SpriteMaskModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.SpriteShapeModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.SpriteShapeModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.StreamingModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.StreamingModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.SubstanceModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.SubstanceModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.SubsystemsModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.SubsystemsModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.TerrainModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.TerrainModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.TerrainPhysicsModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.TerrainPhysicsModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.TextCoreFontEngineModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.TextCoreFontEngineModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.TextCoreTextEngineModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.TextCoreTextEngineModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.TilemapModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.TilemapModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.TLSModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.TLSModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UIElementsModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UIElementsModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UIModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UmbraModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UmbraModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityAnalyticsCommonModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UnityAnalyticsCommonModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityAnalyticsModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UnityAnalyticsModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityConnectModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UnityConnectModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityCurlModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UnityCurlModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestAssetBundleModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UnityWebRequestAssetBundleModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestAudioModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestTextureModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestWWWModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.UnityWebRequestWWWModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.VehiclesModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.VehiclesModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.VFXModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.VFXModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.VideoModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.VideoModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.VirtualTexturingModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.VirtualTexturingModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.VRModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.VRModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.WindModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.WindModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.XRModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\UnityEngine.XRModule.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="XNode">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sephiria\Sephiria_Data\Managed\XNode.dll</HintPath>
+      <Private>false</Private>
     </Reference>
   </ItemGroup>
 

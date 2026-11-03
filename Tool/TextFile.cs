@@ -349,6 +349,7 @@ namespace SPMod.Tool
         public static string SwarmingShadow => Tools.GetLocalization(nameof(SwarmingShadow));
         public static string SwiftRegret => Tools.GetLocalization(nameof(SwiftRegret));
         public static string Compliance => Tools.GetLocalization(nameof(Compliance));
+        public static string ScatteredLonging => Tools.GetLocalization(nameof(ScatteredLonging));
         public static string Minimalism => Tools.GetLocalization(nameof(Minimalism));
         public static string TheSecond => Tools.GetLocalization(nameof(TheSecond));
         public static string BlackIronHalberd => Tools.GetLocalization(nameof(BlackIronHalberd));
@@ -440,9 +441,9 @@ namespace SPMod.Tool
         #endregion
 
         public static bool InitializationCostumeText = false;
-        public static Dictionary<string, string> CostumeTextMap = new Dictionary<string, string> { };
+        public static Dictionary<string, string> CostumeTextMap = [];
         public static bool InitializationWeaponText = false;
-        public static Dictionary<int, (string, int)> WeaponTextMap = new Dictionary<int, (string, int)> { };
+        public static Dictionary<int, (string, int)> WeaponTextMap = [];
         public static void LoadText()
         {
             if (!InitializationCostumeText && ModConfig.Instance.EnableCostumeModifier)
@@ -560,6 +561,7 @@ namespace SPMod.Tool
                     {WeaponIDs.SwarmingShadow, (GetWeaponTooltip(SwarmingShadow), WeaponIDs.SteelGreatsword)},
                     {WeaponIDs.SwiftRegret, (GetWeaponTooltip(SwiftRegret), WeaponIDs.SwarmingShadow)},
                     {WeaponIDs.Compliance, (GetWeaponTooltip(Compliance), WeaponIDs.SwarmingShadow)},
+                    {WeaponIDs.ScatteredLonging, (GetWeaponTooltip(ScatteredLonging), WeaponIDs.SwarmingShadow)},
                     {WeaponIDs.Minimalism, (GetWeaponTooltip(Minimalism), WeaponIDs.SteelGreatsword)},
                     {WeaponIDs.TheSecond, (GetWeaponTooltip(TheSecond), WeaponIDs.Minimalism)},
                     {WeaponIDs.BlackIronHalberd, (GetWeaponTooltip(BlackIronHalberd), WeaponIDs.Minimalism)},
@@ -697,6 +699,8 @@ namespace SPMod.Tool
                 KeywordDatabase.Modify("WeaponAction_CloudSlash", modifier => modifier.description = GetModTooltip("CeruleanCloudSwordArges_Effect1"));
                 KeywordDatabase.Modify("ResidualLightning", modifier => modifier.description = GetModTooltip("CeruleanCloudSwordArges_Effect2"));
                 KeywordDatabase.Modify("Buff_Katana_Nanmu", modifier => modifier.description = GetModTooltip("RendbladeRuinDance_Effect"));
+                KeywordDatabase.Modify("Buff_Greatsword_ChainSlash", modifier => modifier.description = GetModTooltip("ScatteredLonging_Effect"));
+                KeywordDatabase.Modify("WeaponAction_Greatsword_DualSlash", modifier => modifier.description = GetModTooltip("ScatteredLonging_Effect2"));
                 KeywordDatabase.Modify("DebuffDamage", modifier => modifier.visualText = new LocalizedString("ModKeyword_Stat_DeBuffDamage"));
                 KeywordDatabase.Modify("DebuffDuration", modifier => modifier.visualText = new LocalizedString("ModKeyword_Stat_DeBuffDuration"));
             }
@@ -731,8 +735,8 @@ namespace SPMod.Tool
             }
             try
             {
-                StringBuilder stringBuilder = new StringBuilder();
-                string[] lines = OrigString.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                StringBuilder stringBuilder = new();
+                string[] lines = OrigString.Split(['\n'], StringSplitOptions.RemoveEmptyEntries);
                 foreach (string line in lines)
                 {
                     string tempLine = line.Trim();
@@ -779,10 +783,10 @@ namespace SPMod.Tool
             }
             try
             {
-                StringBuilder stringBuilder = new StringBuilder();
+                StringBuilder stringBuilder = new();
                 {
                     string NewString = "";
-                    string[] lines = OrigString.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] lines = OrigString.Split(['\n'], StringSplitOptions.RemoveEmptyEntries);
                     bool AddLineStack = false;
                     foreach (string line in lines)
                     {
@@ -845,7 +849,7 @@ namespace SPMod.Tool
             }
         }
 
-        private static readonly Regex tokenRegex = new Regex(
+        private static readonly Regex tokenRegex = new(
             @"\{(?<sign>[+\-])(?<value>\d+(?:\.\d+)?%?)\}|\{(?<mul>[×xX])(?<percent>\d+(?:\.\d+)?)%\}",
             RegexOptions.Compiled);
         public static string FormatLine(string line)

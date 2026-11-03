@@ -15,8 +15,8 @@ namespace SPMod.ModContent
         {
             return new List<Loc.KeywordValue>(base.BuildKeywords())
             {
-                new Loc.KeywordValue("PERCENT", debuffPercent.ToString() + "%", Color.yellow),
-                new Loc.KeywordValue("ADDPERCENT", AdddebuffPercent.ToString() + "%", Color.yellow),
+                new("PERCENT", debuffPercent.ToString() + "%", Color.yellow),
+                new("ADDPERCENT", AdddebuffPercent.ToString() + "%", Color.yellow),
             }.ToArray();
         }
 

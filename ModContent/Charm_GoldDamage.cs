@@ -6,7 +6,7 @@ namespace SPMod.ModContent
 {
     public class Charm_GoldDamage : Charm_StatusInstance
     {
-        public int[] CoinToDamageByLevel = new int[] { 500 };
+        public int[] CoinToDamageByLevel = [500];
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             int Add = 0;
@@ -19,11 +19,11 @@ namespace SPMod.ModContent
                 All = Coin;
             }
             string text = CoinToDamageByLevel.SafeRandomAccess(LevelToIdx(level)).ToString();
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Coin", text.ToString(), GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Add", Add.ToString() + "%" + $" ({All})", Color.yellow),
-            };
+            return
+            [
+                new("Coin", text.ToString(), GetPositiveColor(virtualLevelOffset)),
+                new("Add", Add.ToString() + "%" + $" ({All})", Color.yellow),
+            ];
         }
 
         protected override void OnEnabledEffect()

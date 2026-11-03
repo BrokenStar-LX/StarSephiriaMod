@@ -8,14 +8,14 @@ using UnityEngine;
 
 namespace SPMod.ModContent
 {
-    public class Charm_Lottery : Charm_Active, IModCooldownReceiver, IModValueReceiver
+    public class Charm_Lottery : Charm_Active, IModCooldownReceiver, IModValueReceiver, IModEventReceiver
     {
-        public List<StatusGroup> AddStatus = new List<StatusGroup>();
+        public List<StatusGroup> AddStatus = [];
         public bool RandomLottery = false;
         public float LuckMult = 0.5f;
         public float LuckValue = 0;
         public int Level = 0;
-        public Timer CooldownTimer = new Timer(3f);
+        public Timer CooldownTimer = new(3f);
         public bool UseShootBack = false;
         private float ClientPhaseEnd = 0f;
         private float NextBroadcastTime = 0f;
@@ -43,13 +43,13 @@ namespace SPMod.ModContent
                     .ToString(true, false, true, GetPositiveColor(virtualLevelOffset));
                 StatusText += $"\n{Key}";
             }
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Probability", UseCoin.ToString("#0.0") + "%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Level", $"<{KeywordDatabase.GetEntity(LevelText).Convert()}>", Color.yellow),
-                new Loc.KeywordValue("Status", StatusText, GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Luck", LuckValue.ToString("#0"), Color.greenYellow),
-            };
+            return
+            [
+                new("Probability", UseCoin.ToString("#0") + "%", GetPositiveColor(virtualLevelOffset)),
+                new("Level", $"<{KeywordDatabase.GetEntity(LevelText).Convert()}>", Color.yellow),
+                new("Status", StatusText, GetPositiveColor(virtualLevelOffset)),
+                new("Luck", LuckValue.ToString("#0"), Color.greenYellow),
+            ];
         }
 
         public override float GetCooldownTime(out bool changeByLevel, int level, int virtualLevelOffset)
@@ -86,6 +86,44 @@ namespace SPMod.ModContent
         {
             Level = A;
             LuckValue = B;
+        }
+
+        public void OnClientEvent(byte Event, Vector3 Pos, string S1, string S2)
+        {
+            if (!NetworkAvatar) return;
+            if (Event == 1)
+            {
+                if (!int.TryParse(S1, out int ItemId)) return;
+                ItemEntity? Entity = ItemDatabase.FindItemById(ItemId);
+                if (Entity == null) return;
+                NetworkAvatar.WriteSystemMessage(string.Format(Tools.GetLocalization("UI_Message_MysteryBox_1"), Entity.Name), 2.5f, false);
+                return;
+            }
+            if (Event < 2 || Event > 6) return;
+            if (!int.TryParse(S2, out int RarityValue)) return;
+            string RarityName = ItemDatabase.GetItemRarityName((EItemRarity)RarityValue).ToString();
+            string Text;
+            switch (Event)
+            {
+                case 2:
+                case 3:
+                    ItemCategoryEntity? Category = ItemDatabase.FindItemCategory(S1);
+                    string ComboName = Category != null ? Category.Name : S1;
+                    Text = Event == 2
+                        ? string.Format(Tools.GetLocalization("UI_Message_MysteryBox_2"), ComboName, RarityName)
+                        : string.Format(Tools.GetLocalization("UI_Message_MysteryBox_3"), RarityName, ComboName);
+                    break;
+                case 4:
+                    Text = string.Format(Tools.GetLocalization("UI_Message_MysteryBox_Random_2"), RarityName);
+                    break;
+                case 5:
+                    Text = string.Format(Tools.GetLocalization("UI_Message_MysteryBox_Random_3"), RarityName);
+                    break;
+                default:
+                    Text = string.Format(Tools.GetLocalization("UI_Message_MysteryBox_Random_4"), RarityName);
+                    break;
+            }
+            NetworkAvatar.WriteSystemMessage(Text, 5f, false);
         }
 
         private void BroadcastCooldown()
@@ -162,12 +200,21 @@ namespace SPMod.ModContent
                 Player.savableParameters.Add("Lottery_MoveFloor/" + $"{Item.InstanceID}/" + f);
                 float Value = GetLevelUpValue(Player.GetCustomStatUnsafe(TextFile.Luck));
                 LuckValue = Random.Range(0, 100);
-                if (Value * 100f > LuckValue)
+                if ((int)(Value * 100f) >= LuckValue)
                 {
                     Level += 1;
+                    StartCoroutine(AnnounceRarityUp(Item.EntityID));
                 }
                 BroadcastValues();
             }
+        }
+
+        private IEnumerator AnnounceRarityUp(int ItemId)
+        {
+            yield return new WaitForSeconds(1f);
+            if (!NetworkAvatar) yield break;
+            if (!NetworkAvatar.NetworkisInputReceived) yield break;
+            ModNetwork.SendEventToOwner(netId, 1, NetworkAvatar.transform.position, ItemId.ToString());
         }
 
         public override void SaveItemOnServer(ISaveData saveData)
@@ -210,6 +257,7 @@ namespace SPMod.ModContent
                 if (player.isInDungeon <= 0) return;
             }
             if (!UseShootBack) return;
+            if (NetworkAvatar == null) return;
 
             UseShootBack = false;
             CooldownTimer.Ratio = 0f;
@@ -219,7 +267,25 @@ namespace SPMod.ModContent
             var MySpawner = PlayerSpawner.MultiplayerList.FirstOrDefault(s => s.PlayerAvatar == NetworkAvatar);
             if (MySpawner == null) return;
 
-            List<int> AddItemList = RandomLottery ? RandomSelectItem(MySpawner) : SelectItem(MySpawner);
+            List<int> AddItemList;
+            if (RandomLottery)
+            {
+                AddItemList = RandomSelectItem(MySpawner, out int MatchCount, out bool UseNoCategories);
+                if (AddItemList.Count <= 0)
+                {
+                    byte TipEvent = MatchCount <= 0 ? (UseNoCategories ? (byte)6 : (byte)4) : (byte)5;
+                    ModNetwork.SendEventToOwner(netId, TipEvent, NetworkAvatar.transform.position, "", ((int)GetLotteryRarity()).ToString());
+                }
+            }
+            else
+            {
+                AddItemList = SelectItem(MySpawner, out int MatchCount, out string ComboKey);
+                if (AddItemList.Count <= 0 && !string.IsNullOrEmpty(ComboKey))
+                {
+                    byte TipEvent = MatchCount <= 0 ? (byte)2 : (byte)3;
+                    ModNetwork.SendEventToOwner(netId, TipEvent, NetworkAvatar.transform.position, ComboKey, ((int)GetLotteryRarity()).ToString());
+                }
+            }
             if (AddItemList.Count <= 0) return;
 
             if (NetworkAvatar is PlayerAvatar Player)
@@ -239,7 +305,7 @@ namespace SPMod.ModContent
             }
             GridInventory inventory = Inventory;
             int instanceID = Item.InstanceID;
-            ItemPosition itemPosition = new ItemPosition(Item.XIdx, Item.YIdx);
+            ItemPosition itemPosition = new(Item.XIdx, Item.YIdx);
             using (new GridInventory.Permission(inventory))
             {
                 inventory.ForceRemoveItem(itemPosition);
@@ -256,15 +322,15 @@ namespace SPMod.ModContent
                 _ => EItemRarity.Common,
             };
         }
-        public List<int> RandomSelectItem(PlayerSpawner Spawner)
+        public List<int> RandomSelectItem(PlayerSpawner Spawner, out int MatchCount, out bool UseNoCategories)
         {
-            List<string> TargetCategories = new List<string>();
+            List<string> TargetCategories = [];
             foreach (var Combo in Inventory.lastAppliedComboEffects)
             {
                 if (!TargetCategories.Contains(Combo.Key))
                     TargetCategories.Add(Combo.Key);
             }
-            bool UseNoCategories = TargetCategories.Count <= 0;
+            UseNoCategories = TargetCategories.Count <= 0;
             if (TargetCategories.Count > 0)
             {
                 float Value = 100f / (TargetCategories.Count + 1);
@@ -272,7 +338,8 @@ namespace SPMod.ModContent
             }
 
             List<int> AllCharmList = Spawner.unlockedCharms.ToList();
-            List<int> AddItemList = new List<int>();
+            List<int> MatchList = [];
+            List<int> AddItemList = [];
             EItemRarity Rarity = GetLotteryRarity();
             foreach (int NewItemList in AllCharmList)
             {
@@ -282,31 +349,35 @@ namespace SPMod.ModContent
                 if (TargetItem.rarity != Rarity) continue;
                 if (TargetItem.activeType == EItemActiveType.Hidden) continue;
                 if (!UseNoCategories && !TargetCategories.Any(Category => TargetItem.categories.Contains(Category))) continue;
+                if (MatchList.Contains(TargetItem.id)) continue;
+                MatchList.Add(TargetItem.id);
                 if (TargetItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Charm) && Charm.isUniqueEffect)
                 {
                     if (Inventory.HasItem(TargetItem, out var _, out var _, out var _)) continue;
                 }
-                if (AddItemList.Contains(TargetItem.id)) continue;
                 AddItemList.Add(TargetItem.id);
             }
+            MatchCount = MatchList.Count;
             return AddItemList;
         }
-        public List<int> SelectItem(PlayerSpawner Spawner)
+        public List<int> SelectItem(PlayerSpawner Spawner, out int MatchCount, out string ComboKey)
         {
+            MatchCount = 0;
+            ComboKey = "";
             int Count = 0;
-            string TargetCategories = "";
             foreach (var Combo in Inventory.lastAppliedComboEffects)
             {
                 if (Combo.Value.comboCount > Count)
                 {
-                    TargetCategories = Combo.Key;
+                    ComboKey = Combo.Key;
                     Count = Combo.Value.comboCount;
                 }
             }
-            if (TargetCategories == "") return new List<int>();
+            if (ComboKey == "") return [];
 
             List<int> AllCharmList = Spawner.unlockedCharms.ToList();
-            List<int> AddItemList = new List<int>();
+            List<int> MatchList = [];
+            List<int> AddItemList = [];
             EItemRarity Rarity = GetLotteryRarity();
             foreach (int NewItemList in AllCharmList)
             {
@@ -315,14 +386,16 @@ namespace SPMod.ModContent
                 if (TargetItem.id == Item.EntityID) continue;
                 if (TargetItem.rarity != Rarity) continue;
                 if (TargetItem.activeType == EItemActiveType.Hidden) continue;
-                if (!TargetItem.categories.Contains(TargetCategories)) continue;
+                if (!TargetItem.categories.Contains(ComboKey)) continue;
+                if (MatchList.Contains(TargetItem.id)) continue;
+                MatchList.Add(TargetItem.id);
                 if (TargetItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Charm) && Charm.isUniqueEffect)
                 {
                     if (Inventory.HasItem(TargetItem, out var _, out var _, out var _)) continue;
                 }
-                if (AddItemList.Contains(TargetItem.id)) continue;
                 AddItemList.Add(TargetItem.id);
             }
+            MatchCount = MatchList.Count;
             return AddItemList;
         }
 

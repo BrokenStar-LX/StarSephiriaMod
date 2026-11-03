@@ -8,17 +8,17 @@ namespace SPMod.ModContent
     public class Charm_CyanOrb : Charm_StatusInstance, IAttackableCharm, IModEventReceiver
     {
         private readonly string DamageId = "[Star's Sephiria Mod]青色宝珠";
-        public float[] MultByLevel = new float[] { 75, 150, 225 };
-        public Timer CooldownTimer = new Timer(1f);
+        public float[] MultByLevel = [75, 150, 225];
+        public Timer CooldownTimer = new(1f);
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string text = MultByLevel.SafeRandomAccess(LevelToIdx(level)).ToString();
             string text2 = CooldownTimer.time.ToString("#0.##");
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Mult", text + "%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Time", text2 + "s", Color.yellow)
-            };
+            return
+            [
+                new("Mult", text + "%", GetPositiveColor(virtualLevelOffset)),
+                new("Time", text2 + "s", Color.yellow)
+            ];
         }
         protected override void OnEnabledEffect()
         {

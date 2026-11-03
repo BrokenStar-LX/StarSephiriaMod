@@ -12,8 +12,8 @@ namespace SPMod.ModContent
 {
     public class Charm_SpearofZeus : Charm_Basic, IAttackableCharm
     {
-        public float[] BaseByLevel = new float[] { 10, 20, 30, 40 };
-        public float[] MultByLevel = new float[] { 80, 160, 240, 320 };
+        public float[] BaseByLevel = [10, 20, 30, 40];
+        public float[] MultByLevel = [80, 160, 240, 320];
         public const float BaseCooldown = 6f;
         public const int DownValue = 10;
         public int MaxShootCount = 1;
@@ -35,15 +35,15 @@ namespace SPMod.ModContent
             string Damage = "0";
             if (IsEffectEnabled)
                 Damage = CalculateDamage(this).ToString("#0");
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Time", Time, EffectConstant.CooldownColor),
-                new Loc.KeywordValue("Down", Down, EffectConstant.CooldownColor),
-                new Loc.KeywordValue("Stat", Status, Color.white),
-                new Loc.KeywordValue("Mult", Mult + "%", GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Base", Base, GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Damage", Damage, EffectConstant.WeaponColor),
-            };
+            return
+            [
+                new("Time", Time, EffectConstant.CooldownColor),
+                new("Down", Down, EffectConstant.CooldownColor),
+                new("Stat", Status, Color.white),
+                new("Mult", Mult + "%", GetPositiveColor(virtualLevelOffset)),
+                new("Base", Base, GetPositiveColor(virtualLevelOffset)),
+                new("Damage", Damage, EffectConstant.WeaponColor),
+            ];
         }
 
         protected override void OnEnabledEffect()

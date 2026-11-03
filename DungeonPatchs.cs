@@ -18,13 +18,14 @@ namespace SPMod
     {
         public static int NumberofReincarnations = 0;
         public static readonly FieldInfo eachStageHeadsField = AccessTools.Field(typeof(DungeonManager), "eachStageHeads");
+        private static readonly FieldInfo? stageOrderField = AccessTools.Field(typeof(DungeonManager), "stageOrder");
         private static Coroutine? AllTeleport = null;
-        private static readonly List<PlayerAvatar> TeleportPlayerList = new List<PlayerAvatar>();
+        private static readonly List<PlayerAvatar> TeleportPlayerList = [];
 
         public static float Seed = 0;
-        public static Dictionary<string, List<string>> NoAddExp = new Dictionary<string, List<string>>();
+        public static Dictionary<string, List<string>> NoAddExp = [];
 
-        public static Dictionary<string, bool> DefeatMoleElite = new Dictionary<string, bool>();
+        public static Dictionary<string, bool> DefeatMoleElite = [];
         public static bool UseSpawnerMoleElite = false;
 
         const string HomeFloor = "Grasstown_Chapter4_Dark";
@@ -35,45 +36,81 @@ namespace SPMod
         const string MolelandBOSS1Floor = "Moleland_Boss2";
         const string MolelandBOSS2Floor = "Moleland_Boss_Bomb";
         const string MolelandBOSS3Floor = "Moleland_Boss_RootDemon";
-        private static readonly List<string> DefeatMolelandBossList = new List<string>()
-        {
+        private static readonly List<string> DefeatMolelandBossList =
+        [
             MolelandBOSS1Floor, MolelandBOSS2Floor, MolelandBOSS3Floor
-        };
-        public static Dictionary<string, List<string>> DefeatMolelandBossDictionary = new Dictionary<string, List<string>>();
+        ];
+        public static Dictionary<string, List<string>> DefeatMolelandBossDictionary = [];
 
         const string GrasslandRestFloor = "Grassland_LibraryEntrance"; 
         const string GrasslandBoss1Floor = "GrasslandBoss"; 
         const string GrasslandBoss2Floor = "GrasslandBoss_Panther";
         const string GrasslandMiniBossToBossFloor = "Grasstown_Chapter6_ForReward_Day";
         const string GrasslandMiniBossToBossFloor2 = "Grasstown_Chapter6_ForReward";
-        private static readonly List<string> DefeatGrasslandBossList = new List<string>()
-        {
+        private static readonly List<string> DefeatGrasslandBossList =
+        [
             GrasslandBoss1Floor, GrasslandBoss2Floor
-        };
-        public static Dictionary<string, List<string>> DefeatGrasslandBossDictionary = new Dictionary<string, List<string>>();
+        ];
+        public static Dictionary<string, List<string>> DefeatGrasslandBossDictionary = [];
 
         const string LibraryRestFloor = "Library_Elevator_Chapter2";
         const string LibraryBoss1Floor = "LibraryBoss"; 
         const string LibraryBoss2Floor = "LibraryBoss_Factory";
-        private static readonly List<string> DefeatLibraryBossList = new List<string>()
-        {
+        private static readonly List<string> DefeatLibraryBossList =
+        [
             LibraryBoss1Floor, LibraryBoss2Floor
-        };
-        public static Dictionary<string, List<string>> DefeatLibraryBossDictionary = new Dictionary<string, List<string>>();
+        ];
+        public static Dictionary<string, List<string>> DefeatLibraryBossDictionary = [];
 
         const string DeepCaveRestFloor = "DeepCaveDark_Boss_Q_Chapter6";
         const string DeepCaveLizardFloor = "DeepCave_Boss_Lizard_Chapter6";
         const string DeepCaveBirdFloor = "DeepCave_Boss_Bird_Chapter6";
-        private static readonly List<string> DefeatDeepCaveBossList = new List<string>()
-        {
+        private static readonly List<string> DefeatDeepCaveBossList =
+        [
             DeepCaveBirdFloor, DeepCaveLizardFloor
-        };
-        public static Dictionary<string, List<string>> DefeatDeepCaveBossDictionary = new Dictionary<string, List<string>>();
+        ];
+        public static Dictionary<string, List<string>> DefeatDeepCaveBossDictionary = [];
 
         public static bool NoInitialization = false;
         public static bool LastFloor = false;
         public static float HardModAddLife = 0f;
         public static event Action? OnLoadNewNumberofReincarnations = null;
+
+        public static void ResetSavedStageData()
+        {
+            SaveData Run = SaveManager.CurrentRun;
+            if (Run == null) return;
+
+            int OldStageCount = Run.GetInt("StagesCount", 0);
+            for (int i = 0; i < OldStageCount; i++)
+            {
+                string StageName = Run.GetString($"StageName{i}", "");
+                if (!string.IsNullOrEmpty(StageName))
+                    Run.RemoveKey("StageHead_" + StageName);
+                Run.RemoveKey($"StageName{i}");
+            }
+
+            int OldFloorCount = Run.GetInt("FloorCount", 0);
+            for (int i = 0; i < OldFloorCount; i++)
+                Run.RemoveKey($"Floor{i}");
+
+            Run.SetInt("StagesCount", 0);
+            Run.SetInt("FloorCount", 0);
+            Run.RemoveKey("LastFloorGuid");
+        }
+
+        public static void ResetStageData(DungeonManager Dungeon)
+        {
+            if (Dungeon == null) return;
+
+            ResetSavedStageData();
+            eachStageHeadsField.SetValue(Dungeon, new Dictionary<string, FloorData>());
+            stageOrderField?.SetValue(Dungeon, 0);
+            Dungeon.generatedFloors.Clear();
+            Dungeon.sortedStages.Clear();
+            Dungeon.stageProgress.Clear();
+        }
+
         public static void InitializationModGameData(string UseName)
         {
             if (NoInitialization)
@@ -109,12 +146,12 @@ namespace SPMod
             if (SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]BossRushMode_Level", 0) == 1)
             {
                 Seed = (float)new Random().NextDouble();
-                DefeatMoleElite = new Dictionary<string, bool>();
-                DefeatMolelandBossDictionary = new Dictionary<string, List<string>>();
-                DefeatGrasslandBossDictionary = new Dictionary<string, List<string>>();
-                DefeatLibraryBossDictionary = new Dictionary<string, List<string>>();
-                DefeatDeepCaveBossDictionary = new Dictionary<string, List<string>>();
-                NoAddExp = new Dictionary<string, List<string>>();
+                DefeatMoleElite = [];
+                DefeatMolelandBossDictionary = [];
+                DefeatGrasslandBossDictionary = [];
+                DefeatLibraryBossDictionary = [];
+                DefeatDeepCaveBossDictionary = [];
+                NoAddExp = [];
                 foreach (PlayerSpawner PlayerSp in PlayerSpawner.MultiplayerList)
                 {
                     string Player = PlayerSp.PlayerAvatar.Name;
@@ -183,11 +220,11 @@ namespace SPMod
                     Seed = SaveManager.CurrentRun.GetFloat("[Star's Sephiria Mod]BossRush_Seed", (float)new Random().NextDouble());
                     StarSephiriaMod.LogInfoDungeon($"BossRush种子：{Seed}");
 
-                    DefeatMoleElite = new Dictionary<string, bool>();
-                    DefeatMolelandBossDictionary = new Dictionary<string, List<string>>();
-                    DefeatGrasslandBossDictionary = new Dictionary<string, List<string>>();
-                    DefeatLibraryBossDictionary = new Dictionary<string, List<string>>();
-                    DefeatDeepCaveBossDictionary = new Dictionary<string, List<string>>();
+                    DefeatMoleElite = [];
+                    DefeatMolelandBossDictionary = [];
+                    DefeatGrasslandBossDictionary = [];
+                    DefeatLibraryBossDictionary = [];
+                    DefeatDeepCaveBossDictionary = [];
 
                     string Player = SaveManager.CurrentRun.GetString("[Star's Sephiria Mod]BossRush_Player", "");
                     UseSpawnerMoleElite = SaveManager.CurrentRun.GetBool("[Star's Sephiria Mod]BossRush_MoleList_MoleElite", false);
@@ -201,7 +238,7 @@ namespace SPMod
                     LastFloor = Last;
                     StarSephiriaMod.LogInfoDungeon($"是否最后一层：{Last}");
 
-                    List<string> BossList = new List<string>();
+                    List<string> BossList = [];
                     foreach (string Mole in DefeatMolelandBossList)
                     {
                         if (!SaveManager.CurrentRun.GetBool("[Star's Sephiria Mod]BossRush_DefeatMole_" + Mole, false))
@@ -214,11 +251,11 @@ namespace SPMod
                     }
                     else
                     {
-                        DefeatMolelandBossDictionary.Add(Player, new List<string>());
+                        DefeatMolelandBossDictionary.Add(Player, []);
                         StarSephiriaMod.LogInfoDungeon($"鼹鼠层剩余Boss列表：无");
                     }
 
-                    BossList = new List<string>();
+                    BossList = [];
                     foreach (string Grass in DefeatGrasslandBossList)
                     {
                         if (!SaveManager.CurrentRun.GetBool("[Star's Sephiria Mod]BossRush_DefeatGrass_" + Grass, false))
@@ -231,11 +268,11 @@ namespace SPMod
                     }
                     else
                     {
-                        DefeatGrasslandBossDictionary.Add(Player, new List<string>());
+                        DefeatGrasslandBossDictionary.Add(Player, []);
                         StarSephiriaMod.LogInfoDungeon($"草原层剩余Boss列表：无");
                     }
 
-                    BossList = new List<string>();
+                    BossList = [];
                     foreach (string Library in DefeatLibraryBossList)
                     {
                         if (!SaveManager.CurrentRun.GetBool("[Star's Sephiria Mod]BossRush_DefeatLibrary_" + Library, false))
@@ -248,11 +285,11 @@ namespace SPMod
                     }
                     else
                     {
-                        DefeatLibraryBossDictionary.Add(Player, new List<string>());
+                        DefeatLibraryBossDictionary.Add(Player, []);
                         StarSephiriaMod.LogInfoDungeon($"图书馆层剩余Boss列表：无");
                     }
 
-                    BossList = new List<string>();
+                    BossList = [];
                     foreach (string DeepCave in DefeatDeepCaveBossList)
                     {
                         if (!SaveManager.CurrentRun.GetBool("[Star's Sephiria Mod]BossRush_DefeatDeepCave_" + DeepCave, false))
@@ -265,7 +302,7 @@ namespace SPMod
                     }
                     else
                     {
-                        DefeatDeepCaveBossDictionary.Add(Player, new List<string>());
+                        DefeatDeepCaveBossDictionary.Add(Player, []);
                         StarSephiriaMod.LogInfoDungeon($"洞穴馆层剩余Boss列表：无");
                     }
                 }
@@ -308,11 +345,13 @@ namespace SPMod
                 }
             }
         }
-        public static Dictionary<string, GameObject> AllBossList = new Dictionary<string, GameObject>();
+        public static Dictionary<string, GameObject> AllBossList = [];
 
         [HarmonyPatch(typeof(DungeonManager))]
         public static class DungeonManager_Patch
         {
+            private static float PartyStatsTimer = 0.2f;
+
             [HarmonyPatch("Awake")]
             [HarmonyPostfix]
             static void Awake_Postfix(DungeonManager __instance)
@@ -338,6 +377,10 @@ namespace SPMod
             [HarmonyPostfix]
             static void Update_Postfix(DungeonManager __instance)
             {
+                PartyStatsTimer += Time.deltaTime;
+                if (PartyStatsTimer < 0.2f) return;
+                PartyStatsTimer = 0f;
+
                 AllPlayerStatus NewValue = Tools.GetMaxPlayerStatus();
                 if (StarSephiriaMod.PartyStats.SameAs(NewValue)) return;
 
@@ -413,8 +456,8 @@ namespace SPMod
                 if (AllTeleport != null)
                     return false;
 
-                Dictionary<string, string> FloorKey = new Dictionary<string, string>();
-                Dictionary<string, string> FloorNameToKey = new Dictionary<string, string>();
+                Dictionary<string, string> FloorKey = [];
+                Dictionary<string, string> FloorNameToKey = [];
                 foreach (var kvp in Dungeon.generatedFloors.ToList())
                 {
                     if (!FloorKey.ContainsKey(kvp.Key))
@@ -429,15 +472,15 @@ namespace SPMod
                 bool Falg = true;
                 if (FloorKey.TryGetValue(floorGuid, out string FloorName))
                 {
-                    HashSet<string> UseCheckFloor = new HashSet<string>()
-                    {
+                    HashSet<string> UseCheckFloor =
+                    [
                         MolelandRestFloor,
                         GrasslandRestFloor,
                         GrasslandMiniBossToBossFloor,
                         GrasslandMiniBossToBossFloor2,
                         LibraryRestFloor,
                         DeepCaveRestFloor
-                    };
+                    ];
                     if (UseCheckFloor.Contains(FloorName))
                         Falg = false;
                 }
@@ -487,8 +530,8 @@ namespace SPMod
                 {
                     if (!__instance.isServer) return true;
 
-                    Dictionary<string, string> FloorKey = new Dictionary<string, string>();
-                    Dictionary<string, string> FloorNameToKey = new Dictionary<string, string>();
+                    Dictionary<string, string> FloorKey = [];
+                    Dictionary<string, string> FloorNameToKey = [];
                     // 简化楼层查找逻辑
                     foreach (var kvp in __instance.generatedFloors.ToList())
                     {
@@ -640,7 +683,7 @@ namespace SPMod
                                     NoAddExp[avatar.Name].Add(FloorName);
                                 }
                             }
-                            else NoAddExp.Add(avatar.Name, new List<string>() { FloorName });
+                            else NoAddExp.Add(avatar.Name, [FloorName]);
                         }
                     }
                     return true;
@@ -687,23 +730,23 @@ namespace SPMod
                 {
                     if (!ModConfig.BossRushMode) return true;
 
-                    Dictionary<EFloorThreatType, List<FloorGenerator>> dictionary = new Dictionary<EFloorThreatType, List<FloorGenerator>>();
-                    Dictionary<EFloorThreatType, Dictionary<EFloorMainEventType, List<FloorGenerator>>> dictionary2 = new Dictionary<EFloorThreatType, Dictionary<EFloorMainEventType, List<FloorGenerator>>>();
+                    Dictionary<EFloorThreatType, List<FloorGenerator>> dictionary = [];
+                    Dictionary<EFloorThreatType, Dictionary<EFloorMainEventType, List<FloorGenerator>>> dictionary2 = [];
 
                     foreach (object obj in Enum.GetValues(typeof(EFloorThreatType)))
                     {
                         EFloorThreatType efloorThreatType = (EFloorThreatType)obj;
-                        dictionary[efloorThreatType] = new List<FloorGenerator>();
-                        dictionary2[efloorThreatType] = new Dictionary<EFloorMainEventType, List<FloorGenerator>>();
+                        dictionary[efloorThreatType] = [];
+                        dictionary2[efloorThreatType] = [];
                         foreach (object obj2 in Enum.GetValues(typeof(EFloorMainEventType)))
                         {
                             EFloorMainEventType efloorMainEventType = (EFloorMainEventType)obj2;
-                            dictionary2[efloorThreatType][efloorMainEventType] = new List<FloorGenerator>();
+                            dictionary2[efloorThreatType][efloorMainEventType] = [];
                         }
                     }
 
                     // BOSS楼层生成器专用列表
-                    List<FloorGenerator> BossList = new List<FloorGenerator>();
+                    List<FloorGenerator> BossList = [];
 
                     // 分类随机事件楼层预置体
                     GameObject[] array = __instance.randomEventFloorPrefabs;
@@ -729,15 +772,15 @@ namespace SPMod
                     }
 
                     int num = 0;
-                    Random rngChoice = new Random(seed);// 用于事件/节点选择
-                    Random rngSeed = new Random(seed + 1);// 用于生成楼层 seed
-                    Random rngPos = new Random(seed + 10);// 用于位置偏移
-                    Random rngDisturb = new Random(seed + 20);// 用于干扰/扰动
-                    Random rngMerchant = new Random(seed + 99);// 用于商店
-                    Random rngHidden = new Random(seed + 1000);// 用于隐藏房
-                    Random rngHardBoss = new Random(seed + 20);// 你原来的 Boss 硬化随机
+                    Random rngChoice = new(seed);// 用于事件/节点选择
+                    Random rngSeed = new(seed + 1);// 用于生成楼层 seed
+                    Random rngPos = new(seed + 10);// 用于位置偏移
+                    Random rngDisturb = new(seed + 20);// 用于干扰/扰动
+                    Random rngMerchant = new(seed + 99);// 用于商店
+                    Random rngHidden = new(seed + 1000);// 用于隐藏房
+                    Random rngHardBoss = new(seed + 20);// 你原来的 Boss 硬化随机
                     // 创建第一个楼层（起始点）
-                    FloorData floorData = new FloorData
+                    FloorData floorData = new()
                     {
                         guid = Guid.NewGuid().ToString(),
                         name = __instance.firstFloor.name,
@@ -754,10 +797,10 @@ namespace SPMod
                         disturbance = ""
                     };
 
-                    List<FloorData> 生成列表 = new List<FloorData> { floorData };
+                    List<FloorData> 生成列表 = [floorData];
 
                     // 创建标准主要事件类型列表
-                    List<EFloorMainEventType> list5 = new List<EFloorMainEventType>();
+                    List<EFloorMainEventType> list5 = [];
                     EFloorMainEventType[] possibleMainEvents = __instance.unknownNormalEvents;
                     for (i = 0; i < possibleMainEvents.Length; i++)
                     {
@@ -765,12 +808,12 @@ namespace SPMod
                     }
 
                     // 初始化唯一楼层生成器字典
-                    Dictionary<EFloorMainEventType, List<FloorGenerator>> dictionary3 = new Dictionary<EFloorMainEventType, List<FloorGenerator>>();
+                    Dictionary<EFloorMainEventType, List<FloorGenerator>> dictionary3 = [];
                     foreach (FloorGenerator floorGenerator in __instance.uniqueFloorPrefabs)
                     {
                         if (!dictionary3.ContainsKey(floorGenerator.floorMainEventType))
                         {
-                            dictionary3[floorGenerator.floorMainEventType] = new List<FloorGenerator>();
+                            dictionary3[floorGenerator.floorMainEventType] = [];
                         }
                         dictionary3[floorGenerator.floorMainEventType].Add(floorGenerator);
                         //StarSephiriaMod.LogInfoDungeon($"—输出唯一楼层列表：{floorGenerator.floorMainEventType}");
@@ -780,15 +823,15 @@ namespace SPMod
                     List<FloorData>[] array3 = new List<FloorData>[__instance.steps.Length + 1];
                     for (int j = 0; j < array3.Length; j++)
                     {
-                        array3[j] = new List<FloorData>();
+                        array3[j] = [];
                     }
                     array3[0].Add(floorData);
 
                     // 遍历每个步骤生成楼层
                     int stepsLength = __instance.steps.Length;
                     int ActualLevels = 0;
-                    List<int> LayerMapping = new List<int>();
-                    List<FloorData> hiddenCandidates = new List<FloorData>();
+                    List<int> LayerMapping = [];
+                    List<FloorData> hiddenCandidates = [];
                     for (int Stack = 0; Stack < stepsLength; Stack++)
                     {
                         int Last = stepsLength - 1;
@@ -821,7 +864,7 @@ namespace SPMod
                         int BossStack = BossList.Count;
 
                         // 过滤当前步骤可能的主要事件类型
-                        List<EFloorMainEventType> MiniBossALLEvents = new List<EFloorMainEventType>();
+                        List<EFloorMainEventType> MiniBossALLEvents = [];
                         possibleMainEvents = __instance.steps[Stack].possibleMainEvents;
 
                         for (i = 0; i < possibleMainEvents.Length; i++)
@@ -832,7 +875,7 @@ namespace SPMod
                             MiniBossALLEvents.Add(possibleMainEvents[i]);
                         }
                         // 创建节点类型列表
-                        List<StageEntity_Choice.EFloorNodeType> EfloorList = new List<StageEntity_Choice.EFloorNodeType>();
+                        List<StageEntity_Choice.EFloorNodeType> EfloorList = [];
                         // 先把固定匹配事件加进去
                         foreach (StageEntity_Choice.EFloorNodeType nodeType in __instance.steps[Stack].matchEvents)
                         {
@@ -862,8 +905,8 @@ namespace SPMod
                         }
 
                         // 分离必需节点和可选节点
-                        List<StageEntity_Choice.EFloorNodeType> NecessaryStage = new List<StageEntity_Choice.EFloorNodeType>();
-                        List<StageEntity_Choice.EFloorNodeType> OptionalNodes = new List<StageEntity_Choice.EFloorNodeType>();
+                        List<StageEntity_Choice.EFloorNodeType> NecessaryStage = [];
+                        List<StageEntity_Choice.EFloorNodeType> OptionalNodes = [];
                         foreach (var nodeType in EfloorList)
                         {
                             if (nodeType.essential)
@@ -886,7 +929,7 @@ namespace SPMod
                             Rand = rngHidden.Next(0, UseStack);
                         }
 
-                        List<float> Offset = new List<float>();
+                        List<float> Offset = [];
                         for (int n = 0; n < UseStack; n++)
                         {
                             float NU = n - Middle;
@@ -993,7 +1036,7 @@ namespace SPMod
 
                                 // 创建楼层数据
                                 float Y = (ActualLevels + 1) * -__instance.distanceBetweenNodes + rngDisturb.Next(-15, 15);
-                                FloorData Data = new FloorData
+                                FloorData Data = new()
                                 {
                                     guid = Guid.NewGuid().ToString(),
                                     name = floorGenerator2.name,
@@ -1024,7 +1067,7 @@ namespace SPMod
                     }
                     if (hiddenCandidates.Count > 0 && !LastFloor)
                     {
-                        Random hiddenRand = new Random(seed + 1000);
+                        Random hiddenRand = new(seed + 1000);
                         List<FloorData> pool = hiddenCandidates.ToList();
                         for (int t = 0; t < 1; t++)
                         {
@@ -1063,7 +1106,7 @@ namespace SPMod
                         if (a >= LayerMapping.Count) continue;
                         for (int b = 0; b < array3[a].Count; b++)
                         {
-                            List<string> LineList = new List<string>();
+                            List<string> LineList = [];
                             if (a + 1 < array3.Length && array3[a + 1].Count > 0)
                             {
                                 foreach (FloorData floorData7 in array3[a + 1])
@@ -1077,7 +1120,7 @@ namespace SPMod
                     // 添加必需的特殊楼层
                     foreach (FloorGenerator Floor in __instance.essentialFloorPrefabs)
                     {
-                        FloorData FloorData = new FloorData
+                        FloorData FloorData = new()
                         {
                             guid = Guid.NewGuid().ToString(),
                             name = Floor.name,
@@ -1119,11 +1162,11 @@ namespace SPMod
 
                     int num = 0;
                     int num2 = 0;
-                    Random random = new Random(seed);
-                    Random random2 = new Random(seed);
-                    Random random3 = new Random(seed);
-                    Random random4 = new Random(seed);
-                    FloorData floorData = new FloorData
+                    Random random = new(seed);
+                    Random random2 = new(seed);
+                    Random random3 = new(seed);
+                    Random random4 = new(seed);
+                    FloorData floorData = new()
                     {
                         guid = Guid.NewGuid().ToString(),
                         name = __instance.firstFloor.name,
@@ -1141,12 +1184,12 @@ namespace SPMod
                     };
                     num++;
                     int num3 = 1;
-                    List<FloorData> list = new List<FloorData> { floorData };
-                    List<FloorData> list2 = new List<FloorData>();
-                    List<FloorData> list3 = new List<FloorData>();
-                    List<FloorData> list4 = new List<FloorData>();
-                    List<EFloorMainEventType> list5 = new List<EFloorMainEventType>(__instance.mainEventTypes);
-                    List<EFloorMainEventType> list6 = new List<EFloorMainEventType>(__instance.subEventTypes);
+                    List<FloorData> list = [floorData];
+                    List<FloorData> list2 = [];
+                    List<FloorData> list3 = [];
+                    List<FloorData> list4 = [];
+                    List<EFloorMainEventType> list5 = new(__instance.mainEventTypes);
+                    List<EFloorMainEventType> list6 = new(__instance.subEventTypes);
                     int num4 = __instance.eventCount - list5.Count;
                     for (int i = 0; i < num4; i++)
                     {
@@ -1155,9 +1198,9 @@ namespace SPMod
                         list6.RemoveAt(num5);
                     }
                     int num6 = __instance.eventCount;
-                    List<GrasslandTownEventEntity> list7 = new List<GrasslandTownEventEntity>();
-                    List<GrasslandTownEventEntity> list8 = new List<GrasslandTownEventEntity>();
-                    List<GrasslandTownEventEntity> list9 = new List<GrasslandTownEventEntity>();
+                    List<GrasslandTownEventEntity> list7 = [];
+                    List<GrasslandTownEventEntity> list8 = [];
+                    List<GrasslandTownEventEntity> list9 = [];
                     foreach (GrasslandTownEventEntity grasslandTownEventEntity in __instance.nodeEvents)
                     {
                         if (grasslandTownEventEntity.isAnvilFirstReward)
@@ -1173,8 +1216,8 @@ namespace SPMod
                             list8.Add(grasslandTownEventEntity);
                         }
                     }
-                    List<FloorData> list10 = new List<FloorData>();
-                    List<FloorData> list11 = new List<FloorData>();
+                    List<FloorData> list10 = [];
+                    List<FloorData> list11 = [];
                     int num7 = 0;
                     for (int k = list5.Count - 1; k >= 0; k--)
                     {
@@ -1191,7 +1234,7 @@ namespace SPMod
                                 GrasslandTownEventEntity grasslandTownEventEntity2 = list9[num8];
                                 int num9 = random.Next();
                                 FloorGenerator floorPrefab = grasslandTownEventEntity2.floorPrefab;
-                                FloorData floorData2 = new FloorData
+                                FloorData floorData2 = new()
                                 {
                                     guid = Guid.NewGuid().ToString(),
                                     name = floorPrefab.name,
@@ -1218,7 +1261,7 @@ namespace SPMod
                                     list4.Add(floorData2);
                                 }
                                 FloorGenerator random5 = __instance.townRewardFloors.GetRandom(random);
-                                FloorData floorData3 = new FloorData
+                                FloorData floorData3 = new()
                                 {
                                     guid = Guid.NewGuid().ToString(),
                                     name = random5.name,
@@ -1238,7 +1281,7 @@ namespace SPMod
                                     isAnvilFirstReward = grasslandTownEventEntity2.isAnvilFirstReward
                                 };
                                 list11.Add(floorData3);
-                                floorData2.connectionToOtherFloors = new string[] { floorData3.guid };
+                                floorData2.connectionToOtherFloors = [floorData3.guid];
                                 num3++;
                                 list7.Remove(grasslandTownEventEntity2);
                                 list8.Remove(grasslandTownEventEntity2);
@@ -1255,7 +1298,7 @@ namespace SPMod
                         list5.RemoveAt(num10);
                         int num11 = random.Next();
                         FloorGenerator floorPrefab2 = grasslandTownEventEntity3.floorPrefab;
-                        FloorData floorData4 = new FloorData
+                        FloorData floorData4 = new()
                         {
                             guid = Guid.NewGuid().ToString(),
                             name = floorPrefab2.name,
@@ -1282,7 +1325,7 @@ namespace SPMod
                             list4.Add(floorData4);
                         }
                         FloorGenerator random6 = __instance.townRewardFloors.GetRandom(random);
-                        FloorData floorData5 = new FloorData
+                        FloorData floorData5 = new()
                         {
                             guid = Guid.NewGuid().ToString(),
                             name = random6.name,
@@ -1302,7 +1345,7 @@ namespace SPMod
                             isAnvilFirstReward = grasslandTownEventEntity3.isAnvilFirstReward
                         };
                         list11.Add(floorData5);
-                        floorData4.connectionToOtherFloors = new string[] { floorData5.guid };
+                        floorData4.connectionToOtherFloors = [floorData5.guid];
                         num3++;
                     }
 
@@ -1317,7 +1360,7 @@ namespace SPMod
                         list8.RemoveAt(num13);
                         int num14 = random.Next();
                         FloorGenerator floorPrefab3 = grasslandTownEventEntity4.floorPrefab;
-                        FloorData floorData6 = new FloorData
+                        FloorData floorData6 = new()
                         {
                             guid = Guid.NewGuid().ToString(),
                             name = floorPrefab3.name,
@@ -1344,7 +1387,7 @@ namespace SPMod
                             list4.Add(floorData6);
                         }
                         FloorGenerator random7 = __instance.townRewardFloors.GetRandom(random);
-                        FloorData floorData7 = new FloorData
+                        FloorData floorData7 = new()
                         {
                             guid = Guid.NewGuid().ToString(),
                             name = random7.name,
@@ -1364,15 +1407,15 @@ namespace SPMod
                             isAnvilFirstReward = grasslandTownEventEntity4.isAnvilFirstReward
                         };
                         list11.Add(floorData7);
-                        floorData6.connectionToOtherFloors = new string[] { floorData7.guid };
+                        floorData6.connectionToOtherFloors = [floorData7.guid];
                         num3++;
                     }
-                    Random random8 = new Random(seed + 97);
+                    Random random8 = new(seed + 97);
                     list10.Shuffle(random8);
                     list.AddRange(list10);
                     list.AddRange(list11);
 
-                    List<FloorData> filteredList = new List<FloorData> { list[0] };
+                    List<FloorData> filteredList = [list[0]];
                     foreach (FloorData FData in list)
                     {
                         if (FData.threatType == EFloorThreatType.MiniBoss)
@@ -1392,7 +1435,7 @@ namespace SPMod
                     list = filteredList;
                     foreach (FloorGenerator floorGenerator in __instance.essentialFloorPrefabs)
                     {
-                        FloorData floorData8 = new FloorData
+                        FloorData floorData8 = new()
                         {
                             guid = Guid.NewGuid().ToString(),
                             name = floorGenerator.name,
@@ -1414,7 +1457,7 @@ namespace SPMod
                     foreach (FloorGenerator BossFloors in __instance.bossFloors)
                     {
                         StarSephiriaMod.LogInfoDungeon(BossFloors.name);
-                        FloorData floorData9 = new FloorData
+                        FloorData floorData9 = new()
                         {
                             guid = Guid.NewGuid().ToString(),
                             name = BossFloors.name,

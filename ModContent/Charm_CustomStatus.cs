@@ -2,7 +2,7 @@
 {
     public class Charm_CustomStatus : Charm_StatusInstance
     {
-        public int[] ValueByLevel = new int[0];
+        public int[] ValueByLevel = [];
         public string ValueName = "";
         public string Ending = "";
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
@@ -16,10 +16,10 @@
             {
                 text = ValueByLevel.SafeRandomAccess(0).ToString() + Ending + "→" + ValueByLevel.SafeRandomAccess(maxLevel).ToString() + Ending;
             }
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Value", text.ToString(), GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Value", text.ToString(), GetPositiveColor(virtualLevelOffset)),
+            ];
         }
 
         protected override void OnEnabledEffect()

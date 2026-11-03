@@ -6,8 +6,8 @@ namespace SPMod.ModContent
 {
     public class Charm_BodyBomb : Charm_Active, IAttackableCharm, IModCooldownReceiver
     {
-        public float[] MaxByLevel = new float[] { 90, 180, 270, 360, 450 };
-        public Timer CooldownTimer = new Timer(1f);
+        public float[] MaxByLevel = [90, 180, 270, 360, 450];
+        public Timer CooldownTimer = new(1f);
         public GameObject? Boom = null;
         public string DamageId = "[Star's Sephiria Mod]邪祭咒纸";
         public bool UseShootBack = false;
@@ -16,10 +16,10 @@ namespace SPMod.ModContent
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             float text = MaxByLevel.SafeRandomAccess(LevelToIdx(level));
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Max", text.ToString("#0"), GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Max", text.ToString("#0"), GetPositiveColor(virtualLevelOffset)),
+            ];
         }
 
         public override float GetCooldownTime(out bool changeByLevel, int level, int virtualLevelOffset)

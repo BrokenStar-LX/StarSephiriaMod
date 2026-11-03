@@ -10,12 +10,12 @@ namespace SPMod.ModContent
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string value = damageByLevel.SafeRandomAccess(LevelToIdx(level)).ToString();
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("ELEMENTAL", $"<tag={ElementalName}>"),
-                new Loc.KeywordValue("DAMAGE", value, GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("TIME", cooldownTimer.time.ToString("0.##"))
-            };
+            return
+            [
+                new("ELEMENTAL", $"<tag={ElementalName}>"),
+                new("DAMAGE", value, GetPositiveColor(virtualLevelOffset)),
+                new("TIME", cooldownTimer.time.ToString("0.##"))
+            ];
         }
 
         public override bool Weaved()

@@ -25,46 +25,46 @@ namespace SPMod
     [HarmonyPatch]
     public static class WeaponPatch
     {
-        public static Dictionary<(UnitAvatar, int), (string, int)> DamageIdx = new Dictionary<(UnitAvatar, int), (string, int)>();
-        public static Dictionary<UnitAvatar, bool> UsePlanetShoot = new Dictionary<UnitAvatar, bool>();
-        public static Dictionary<UnitAvatar, bool> IceBowAttack = new Dictionary<UnitAvatar, bool>();
-        public static Dictionary<UnitAvatar, Timer> DraftbladeAttack = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, int> SilenceofEverfrostAttack = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, bool> SilenceofEverfrostCharm = new Dictionary<UnitAvatar, bool>();
-        public static Dictionary<UnitAvatar, float> SilenceofEverfrostCharmDamage = new Dictionary<UnitAvatar, float>();
-        public static Dictionary<UnitAvatar, int> MinimalismDashAttack = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, bool> TheSecondDashAttack = new Dictionary<UnitAvatar, bool>();
-        public static Dictionary<UnitAvatar, int> LightningFlashBuff = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, CharacterBuff> DarkVeilBuff = new Dictionary<UnitAvatar, CharacterBuff>();
-        public static Dictionary<UnitAvatar, int> HeidiDashAttack = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, int> LightningsWrathEffect = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, Timer> LightningsWrathEffect2 = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, int> RuadhsleaSpearBuff = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, Timer> RuadhsleaSpearTime = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, int> WeightOfTheSeaBuff = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, bool> BlazingHelbanusSpeed = new Dictionary<UnitAvatar, bool>();
-        public static Dictionary<UnitAvatar, int> YuisShortDaggerMagic = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, float> YuisShortDaggerTime = new Dictionary<UnitAvatar, float>();
-        public static Dictionary<UnitAvatar, Timer> FiaolasJudgmentStaffBuff = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, int> PristineFormAttackCount = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, float> TomeOfMimicryEffect = new Dictionary<UnitAvatar, float>();
-        public static Dictionary<UnitAvatar, float> TomeOfMimicryMaxTime = new Dictionary<UnitAvatar, float>();
-        public static Dictionary<UnitAvatar, LegacyofTheIllusionistAttackData> LegacyofTheIllusionistAttack = new Dictionary<UnitAvatar, LegacyofTheIllusionistAttackData>();
-        public static Dictionary<UnitAvatar, Timer> InvincibleSpecialAttackCD = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, int> FrozenSmeltEffect = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, bool> CloudGathererEffect = new Dictionary<UnitAvatar, bool>();
-        public static Dictionary<UnitAvatar, int> TheBarnacleEffect = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, SuccessorBoltData> SuccessorEffect = new Dictionary<UnitAvatar, SuccessorBoltData>();
-        public static Dictionary<UnitAvatar, Timer> GlacialBladeEffect = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, Timer> GlobalTimer = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, int> AmmoStack = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, float> ThrowSwordTime = new Dictionary<UnitAvatar, float>();
-        public static Dictionary<UnitAvatar, Timer> GardenofNeedleIceEffect = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, Timer> LightningsWrathTime = new Dictionary<UnitAvatar, Timer>();
-        public static Dictionary<UnitAvatar, int> XRA9Effect = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, int> MarkStabilizationEffect = new Dictionary<UnitAvatar, int>();
-        public static Dictionary<UnitAvatar, float> OverhangingStormCloudEffect = new Dictionary<UnitAvatar, float>();
-        public static Dictionary<UnitAvatar, bool> AutoSweepSwing = new Dictionary<UnitAvatar, bool>();
+        public static Dictionary<(UnitAvatar, int), (string, int)> DamageIdx = [];
+        public static Dictionary<UnitAvatar, bool> UsePlanetShoot = [];
+        public static Dictionary<UnitAvatar, bool> IceBowAttack = [];
+        public static Dictionary<UnitAvatar, Timer> DraftbladeAttack = [];
+        public static Dictionary<UnitAvatar, int> SilenceofEverfrostAttack = [];
+        public static Dictionary<UnitAvatar, bool> SilenceofEverfrostCharm = [];
+        public static Dictionary<UnitAvatar, float> SilenceofEverfrostCharmDamage = [];
+        public static Dictionary<UnitAvatar, int> MinimalismDashAttack = [];
+        public static Dictionary<UnitAvatar, bool> TheSecondDashAttack = [];
+        public static Dictionary<UnitAvatar, int> LightningFlashBuff = [];
+        public static Dictionary<UnitAvatar, CharacterBuff> DarkVeilBuff = [];
+        public static Dictionary<UnitAvatar, int> HeidiDashAttack = [];
+        public static Dictionary<UnitAvatar, int> LightningsWrathEffect = [];
+        public static Dictionary<UnitAvatar, Timer> LightningsWrathEffect2 = [];
+        public static Dictionary<UnitAvatar, int> RuadhsleaSpearBuff = [];
+        public static Dictionary<UnitAvatar, Timer> RuadhsleaSpearTime = [];
+        public static Dictionary<UnitAvatar, int> WeightOfTheSeaBuff = [];
+        public static Dictionary<UnitAvatar, bool> BlazingHelbanusSpeed = [];
+        public static Dictionary<UnitAvatar, int> YuisShortDaggerMagic = [];
+        public static Dictionary<UnitAvatar, float> YuisShortDaggerTime = [];
+        public static Dictionary<UnitAvatar, Timer> FiaolasJudgmentStaffBuff = [];
+        public static Dictionary<UnitAvatar, int> PristineFormAttackCount = [];
+        public static Dictionary<UnitAvatar, float> TomeOfMimicryEffect = [];
+        public static Dictionary<UnitAvatar, float> TomeOfMimicryMaxTime = [];
+        public static Dictionary<UnitAvatar, LegacyofTheIllusionistAttackData> LegacyofTheIllusionistAttack = [];
+        public static Dictionary<UnitAvatar, Timer> InvincibleSpecialAttackCD = [];
+        public static Dictionary<UnitAvatar, int> FrozenSmeltEffect = [];
+        public static Dictionary<UnitAvatar, bool> CloudGathererEffect = [];
+        public static Dictionary<UnitAvatar, int> TheBarnacleEffect = [];
+        public static Dictionary<UnitAvatar, SuccessorBoltData> SuccessorEffect = [];
+        public static Dictionary<UnitAvatar, Timer> GlacialBladeEffect = [];
+        public static Dictionary<UnitAvatar, Timer> GlobalTimer = [];
+        public static Dictionary<UnitAvatar, int> AmmoStack = [];
+        public static Dictionary<UnitAvatar, float> ThrowSwordTime = [];
+        public static Dictionary<UnitAvatar, Timer> GardenofNeedleIceEffect = [];
+        public static Dictionary<UnitAvatar, Timer> LightningsWrathTime = [];
+        public static Dictionary<UnitAvatar, int> XRA9Effect = [];
+        public static Dictionary<UnitAvatar, int> MarkStabilizationEffect = [];
+        public static Dictionary<UnitAvatar, float> OverhangingStormCloudEffect = [];
+        public static Dictionary<UnitAvatar, bool> AutoSweepSwing = [];
 
         public static event Action? OnCrossbowUseReLoad = null;
         private static void InitializeModEffect(WeaponSimple __instance)
@@ -105,6 +105,35 @@ namespace SPMod
         [HarmonyPatch(typeof(WeaponControllerSimple))]
         public static class WeaponControllerSimple_Patches
         {
+            [HarmonyPatch("SetAnimationTrigger")]
+            [HarmonyPrefix]
+            static bool SetAnimationTrigger_ThirdHitToDual_Prefix(WeaponControllerSimple __instance, int hash)
+            {
+                if (__instance.currentWeapon == null) return true;
+                if (__instance.currentWeapon.entityId != WeaponIDs.ScatteredLonging) return true;
+                if (hash != AnimHashContainer.Instance.AttackHash) return true;
+                if (!__instance.isServer) return true;
+
+                WeaponSimple Weapon = __instance.currentWeapon;
+                WeaponAddonGreatsword_DualSlash? Addon = null;
+                foreach (WeaponAddon a in Weapon.addons)
+                {
+                    if (a is WeaponAddonGreatsword_DualSlash d && d.IsEnabled)
+                    {
+                        Addon = d;
+                        break;
+                    }
+                }
+                if (Addon == null) return true;
+
+                if (Addon.Networkstacks >= Addon.finishRequiredStacks) return true;
+                if ((bool)WeaponAddonGreatsword_DualSlash_Patches.PowerActiveField.GetValue(Addon)) return true;
+                if (!Addon.OnSubAttackButtonDown()) return true;
+
+                WeaponAddonGreatsword_DualSlash_Patches.SubConsumedField.SetValue(Addon, false);
+                return false;
+            }
+
             [HarmonyPatch("EquipWeapon")]
             [HarmonyPostfix]
             static void EquipWeapon_Postfix(WeaponControllerSimple __instance, bool fromTownObject, int weaponID, bool showFx = false)
@@ -225,8 +254,6 @@ namespace SPMod
             static void GetBasicAttack_Postfix(WeaponSimple __instance, int idx, ref NewWeaponFireData __result)
             {
                 DamageIdx[(__instance.Networkowner.unitAvatar, __instance.entityId)] = ("Basic", idx);
-                if (ModConfig.Instance.DebugLoggingProjectile)
-                    LogInfoProjectile($"GetBasicAttack 被调用 攻击索引:{idx}");
 
                 UnitAvatar Player = __instance.Networkowner.unitAvatar;
                 if (Player.IsWeapon(Twin) && __instance.entityId == Twin)
@@ -241,8 +268,6 @@ namespace SPMod
             static void GetSpecialAttack_Postfix(WeaponSimple __instance, int idx, ref NewWeaponFireData __result)
             {
                 DamageIdx[(__instance.Networkowner.unitAvatar, __instance.entityId)] = ("Special", idx);
-                if (ModConfig.Instance.DebugLoggingProjectile)
-                    LogInfoProjectile($"GetSpecialAttack 被调用 攻击索引:{idx}");
             }
 
             [HarmonyPatch("GetDashAttack")]
@@ -250,8 +275,6 @@ namespace SPMod
             static void GetDashAttack_Postfix(WeaponSimple __instance, int idx, ref NewWeaponFireData __result)
             {
                 DamageIdx[(__instance.Networkowner.unitAvatar, __instance.entityId)] = ("Dash", idx);
-                if (ModConfig.Instance.DebugLoggingProjectile)
-                    LogInfoProjectile($"GetSpecialAttack 被调用 攻击索引:{idx}");
             }
 
             [HarmonyPatch("OnAttack_Basic")]
@@ -374,6 +397,16 @@ namespace SPMod
                 UnitAvatar Player = __instance.Networkowner.unitAvatar;
                 if (Player == null) return;
 
+                if (ModConfig.Instance.DebugLoggingWeapon)
+                    StarSephiriaMod.LogInfoWeapon($"武器：{__instance.entityId} 普通攻击段数：{idx}");
+                if (Player.IsWeapon(ScatteredLonging))
+                {
+                    if (idx == 3 || idx == 4)
+                    {
+                        idx = __instance.finalComboIdx;
+                        projectile.forceFinalCombo = true;
+                    }
+                }//散落眷恋
                 if (Player.IsWeapon(SwiftRegret, ExplosiveDevice))
                 {
                     idx = __instance.finalComboIdx;
@@ -489,24 +522,24 @@ namespace SPMod
             public static MethodInfo? AddFuryMethod = AccessTools.Method(typeof(WeaponSimple_Dagger), "AddFury");
             public static MethodInfo? CreateFuryChargedParticleMethod = AccessTools.Method(typeof(WeaponSimple_Dagger), "CreateFuryChargedParticle");
             public static MethodInfo? TargetFuryChargedMessage_EvasionMethod = AccessTools.Method(typeof(WeaponSimple_Dagger), "TargetFuryChargedMessage_Evasion");
-            public static Dictionary<int, Color> DaggerFuryColor = new Dictionary<int, Color>();
+            public static Dictionary<int, Color> DaggerFuryColor = [];
 
             static void ModAddFurey(WeaponSimple_Dagger Dagger, int Stack, Color color)
             {
                 DaggerFuryColor[Dagger.entityId] = color;
                 if (AddFuryMethod != null && CreateFuryChargedParticleMethod != null && TargetFuryChargedMessage_EvasionMethod != null)
                 {
-                    AddFuryMethod.Invoke(Dagger, new object[] { 1 });
+                    AddFuryMethod.Invoke(Dagger, [1]);
                     Dagger.furyDisableTimer.SetTimer(0f);
                     Dagger.Networkowner.unitAvatar.CreateEffectHUD("IMMERSION", "DaggerImmersion");
                     Dagger.NetworkevasionFuryCounting = false;
                     if (Dagger.connectionToClient == null)
                     {
-                        CreateFuryChargedParticleMethod.Invoke(Dagger, new object[] { color });
+                        CreateFuryChargedParticleMethod.Invoke(Dagger, [color]);
                     }
                     else
                     {
-                        TargetFuryChargedMessage_EvasionMethod.Invoke(Dagger, new object[] { Dagger.connectionToClient });
+                        TargetFuryChargedMessage_EvasionMethod.Invoke(Dagger, [Dagger.connectionToClient]);
                     }
                 }
             }
@@ -713,7 +746,7 @@ namespace SPMod
             static void HandleSpecialAttack_Postfix(WeaponSimple_Dagger __instance, CombatBehaviour arg1, DamageInstance arg2, ProjectileBase arg3)
             {
                 if (!__instance.Networkowner) return;
-                if (!(arg1 is UnitAvatar Target)) return;
+                if (arg1 is not UnitAvatar Target) return;
 
                 UnitAvatar Player = __instance.Networkowner.unitAvatar;
                 if (arg3.swingId == "FURY")
@@ -858,7 +891,7 @@ namespace SPMod
                             YuisShortDaggerMagic.Add(Player, 0);
                             YuisShortDaggerTime.Add(Player, 0);
                         }
-                        else if (YuisShortDaggerMagic[Player] < 75)
+                        else if (YuisShortDaggerMagic[Player] < 100)
                         {
                             float Mult = 1f + Player.GetCustomStatUnsafe(TextFile.CooldownRecoverySpeed) * 0.01f;
                             if (Player.TryGetComponent<SkillController>(out SkillController skillController))
@@ -867,7 +900,7 @@ namespace SPMod
                                 if (lastUsedMagic != null) Mult += lastUsedMagic.additionalcooldownRecoverySpeedSynced * 0.01f;
                             }
                             YuisShortDaggerTime[Player] += Time.deltaTime * Mult;
-                            float TimeCd = 0.33f;
+                            float TimeCd = 0.25f;
                             TimeCd *= 1f - Player.GetCustomStatUnsafe(TextFile.MagicCooldownReduction) * 0.01f;
                             if (YuisShortDaggerTime[Player] > TimeCd)
                             {
@@ -1043,7 +1076,7 @@ namespace SPMod
                 {
                     if (Player.IsWeapon(CeruleanCloudSwordArges) && __instance.entityId == CeruleanCloudSwordArges)
                     {
-                        SetResidualLightningStackMethod?.Invoke(__instance, new object[] { 0 });
+                        SetResidualLightningStackMethod?.Invoke(__instance, [0]);
                     }//苍云刀
                 }
             }
@@ -1082,7 +1115,7 @@ namespace SPMod
                     }
                     if (Cout <= 0) continue;
 
-                    MomentAttackData Moment = new MomentAttackData(Player, Target, BaseDamage, Cout);
+                    MomentAttackData Moment = new(Player, Target, BaseDamage, Cout);
                     __instance.StartCoroutine(Moment.UpdateMomentAttack(__instance));
                 }
                 RpcNanmuStartFxMethod?.Invoke(__instance, null);
@@ -1490,6 +1523,14 @@ namespace SPMod
                     if (Player.IsWeapon(Twin) && __instance.entityId == Twin)
                     {
                         __instance.decreaseSpeed = 0f;
+                        if (__instance.isReloading)
+                        {
+                            float Mult = 1f - 1f / Player.GetMoveSpeedMultiplier();
+                            if (__instance.NetworkreloadTimer < __instance.reloadTime * Mult)
+                            {
+                                __instance.NetworkreloadTimer = __instance.reloadTime * Mult;
+                            }
+                        }
                     }//双子
                     if (Player.IsWeapon(RapidFireDevice) && __instance.entityId == RapidFireDevice)
                     {
@@ -1653,6 +1694,11 @@ namespace SPMod
                 if (Player.IsWeapon(RapidFireDevice) && __instance.entityId == RapidFireDevice)
                 {
                     if (__instance.NetworkammoInCurrentMagazine > 0) __result = 1;
+                }
+                if (Player.IsWeapon(Twin) && __instance.entityId == Twin)
+                {
+                    float Mult = Player.GetMoveSpeedMultiplier() - 1f;
+                    __result *= 1f - Math.Clamp(Mult, 0f, 1f);
                 }
             }
 
@@ -2444,7 +2490,7 @@ namespace SPMod
                                 if (Target.ApplyDamage(damageInstance) == EApplyDamageResult.Success)
                                 {
                                     onAttack.Invoke(Target, damageInstance, __instance);
-                                    RpcCollisionMethod.Invoke(__instance, new object[] { (Vector2)__instance.transform.position, (Vector2)Target.transform.position });
+                                    RpcCollisionMethod.Invoke(__instance, [(Vector2)__instance.transform.position, (Vector2)Target.transform.position]);
                                     __result = true;
                                 }
                             }
@@ -2670,8 +2716,8 @@ namespace SPMod
         [HarmonyPatch(typeof(GreenBat))]
         public static class GreenBat_Patches
         {
-            private static readonly List<int> PlantList = new List<int>();
-            private static readonly Dictionary<UnitAvatar, List<int>> AttackPlant = new Dictionary<UnitAvatar, List<int>>();
+            private static readonly List<int> PlantList = [];
+            private static readonly Dictionary<UnitAvatar, List<int>> AttackPlant = [];
             private static GameObject? ShootBullet = null;
             private static GameObject? BigShootBullet = null;
             public static FieldInfo? charmField = AccessTools.Field(typeof(GreenBat), "charm");
@@ -2826,6 +2872,27 @@ namespace SPMod
                     a.useCustomColorType = Bullet.ECustomColorType.Chaos;
                     a.customColor = EffectConstant.ChaosColor;
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(WeaponAddonGreatsword_DualSlash))]
+        public static class WeaponAddonGreatsword_DualSlash_Patches
+        {
+            public static readonly FieldInfo PowerActiveField = AccessTools.Field(typeof(WeaponAddonGreatsword_DualSlash), "isPowerAttackActive");
+            public static readonly FieldInfo SubConsumedField = AccessTools.Field(typeof(WeaponAddonGreatsword_DualSlash), "subButtonDownConsumed");
+
+            [HarmonyPatch("OnAttackButtonDown")]
+            [HarmonyPrefix]
+            static bool OnAttackButtonDown_Prefix(WeaponAddonGreatsword_DualSlash __instance, int dashAttack, ref bool __result)
+            {
+                if (dashAttack > 0) return true;
+                if ((bool)PowerActiveField.GetValue(__instance)) return true;
+                if (__instance.Networkstacks >= __instance.finishRequiredStacks) return true;
+
+                if (!__instance.OnSubAttackButtonDown()) return true;
+                SubConsumedField.SetValue(__instance, false);
+                __result = true;
+                return false;
             }
         }
 
@@ -3227,7 +3294,7 @@ namespace SPMod
             static bool CreateAttack_Before_Prefix(NewWeaponFireData __instance, EDamageFromType damageFromType, UnitAvatar owner, string damageId, Vector2 motionFrom, Vector2 motionTo, float height, ref float attackDashScale, bool isIgnoreAttackDash, float rangeBonus)
             {
                 if (owner == null) return true;
-                if (!(owner is PlayerAvatar)) return true;
+                if (owner is not PlayerAvatar) return true;
                 if (ModConfig.Instance.EnableWeaponModifier)
                 {
                     if (Tools.CostumeSkinUse(owner.Name, "Skeleton_3"))
@@ -3293,7 +3360,9 @@ namespace SPMod
                         if (Type == AccelerationCore)
                         {
                             int Stack = owner.GetCustomStatUnsafe(TextFile.CrossbowAdditionalMagazine);
+                            float Mult = owner.GetCustomStatUnsafe(TextFile.CrossbowReloadSpeed) / 5f;
                             damage *= 1f + Stack * 0.2f;
+                            damage *= 1f + Mult * 0.01f;
                         }//加速核心
                         if (Type == RapidFreezeCrystal)
                         {
@@ -3479,7 +3548,7 @@ namespace SPMod
                         {
                             if (owner.TryGetComponent<SkillController>(out SkillController skillController))
                             {
-                                List<Charm_Magic> MagicList = new List<Charm_Magic>();
+                                List<Charm_Magic> MagicList = [];
                                 foreach (Charm_Basic Charm in skillController.GridInventory.charms.Values)
                                 {
                                     if (Charm is Charm_Magic Magic)
@@ -4369,6 +4438,15 @@ namespace SPMod
                                 owner.SetEffectHUDValue("MarkStabilizationCharge", MarkStabilizationEffect[owner].ToString());
                             }
                         }//标记稳定化
+                        if (Type == Tornado && Data.AttackType == "Special")
+                        {
+                            float Mult = 1f + owner.GetCustomStatUnsafe(TextFile.WindErosionDamage) * 0.01f;
+                            Mult *= 1f + owner.GetCustomStatUnsafe(TextFile.WindErosionMult) / 0.24f * 0.01f;
+                            Mult *= 1f + owner.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
+                            Mult *= 1f + owner.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                            damage *= Mult;
+                            swingMultiplier *= Mult;
+                        }//扶摇
                     }
                 }
                 if (DirectWeaponDamage != 0)

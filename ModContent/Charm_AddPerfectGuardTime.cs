@@ -7,7 +7,7 @@ namespace SPMod.ModContent
 {
     public class Charm_AddPerfectGuardTime : Charm_GrowthGuard
     {
-        public int[] ValueByLevel = new int[] { 10, 20, 30, 40 };
+        public int[] ValueByLevel = [10, 20, 30, 40];
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             List<Loc.KeywordValue> OrigLoc = base.BuildKeywords(avatar, level, virtualLevelOffset, showAllLevel, ignoreAvatarStatus).ToList();

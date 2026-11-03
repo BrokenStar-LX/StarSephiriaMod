@@ -11,10 +11,10 @@ namespace SPMod.ModContent
             float Damage = 0f;
             if (IsEffectEnabled)
                 Damage = Mathf.Max(0, CalculateDamage(this));
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Damage", Damage.ToString("#0"),  EffectConstant.WeaponColor),
-            };
+            return
+            [
+                new("Damage", Damage.ToString("#0"),  EffectConstant.WeaponColor),
+            ];
         }
         protected override void OnEnabledEffect()
         {

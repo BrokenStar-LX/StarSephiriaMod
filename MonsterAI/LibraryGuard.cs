@@ -94,8 +94,8 @@ namespace SPMod.MonsterAI
                 StarSephiriaMod.LogError($"[LibraryGuard]反射初始化失败: {ex}");
             }
         }
-        private static readonly Timer StunTimer = new Timer(1f);
-        private static readonly Timer HitRestoreTimer = new Timer(0.75f);
+        private static readonly Timer StunTimer = new(1f);
+        private static readonly Timer HitRestoreTimer = new(0.75f);
         public static void InstanceUpdate(UnitAvatar __instance)
         {
             // 原有的击晕逻辑
@@ -850,7 +850,7 @@ namespace SPMod.MonsterAI
                 }
 
                 Unit_LibraryGuard? unit = unitField.GetValue(__instance) as Unit_LibraryGuard;
-                if (unit == null || !(patternQueueField.GetValue(__instance) is List<int> patternQueue))
+                if (unit == null || patternQueueField.GetValue(__instance) is not List<int> patternQueue)
                 {
                     StarSephiriaMod.LogError("[UnitAI_LibraryGuard][OnAIUpdate_FoundEnemy]反射获取错误");
                     return true;

@@ -14,19 +14,19 @@ namespace SPMod.ModContent
     public class Charm_DodgeShield : Charm_StatusInstance
     {
         private StatusInstance? EffectInstance = null;
-        public int[] BaseShieldByLevel = new int[] { 2, 4, 6, 8 };
-        public int[] DodgeToShieldByLevel = new int[] { 3, 6, 9, 12 };
-        public Timer CooldownTimer = new Timer(12f);
+        public int[] BaseShieldByLevel = [2, 4, 6, 8];
+        public int[] DodgeToShieldByLevel = [3, 6, 9, 12];
+        public Timer CooldownTimer = new(12f);
         public float AddValue = 0;
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             string text = BaseShieldByLevel.SafeRandomAccess(LevelToIdx(level)).ToString();
             string text2 = DodgeToShieldByLevel.SafeRandomAccess(LevelToIdx(level)).ToString() + "%";
-            return new Loc.KeywordValue[]
-            {
-                new Loc.KeywordValue("Base", text.ToString(), GetPositiveColor(virtualLevelOffset)),
-                new Loc.KeywordValue("Dodge", text2.ToString(), GetPositiveColor(virtualLevelOffset)),
-            };
+            return
+            [
+                new("Base", text.ToString(), GetPositiveColor(virtualLevelOffset)),
+                new("Dodge", text2.ToString(), GetPositiveColor(virtualLevelOffset)),
+            ];
         }
 
         protected override void OnEnabledEffect()

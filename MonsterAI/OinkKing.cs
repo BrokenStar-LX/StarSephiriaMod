@@ -285,8 +285,8 @@ namespace SPMod.MonsterAI
         public static class UnitAI_OinkKing_Patch
         {
             private static int Oldpattern = -1;
-            private static readonly List<int> Pattern = new List<int>();
-            private static readonly Timer GravityExplosionTimer = new Timer(6f);
+            private static readonly List<int> Pattern = [];
+            private static readonly Timer GravityExplosionTimer = new(6f);
 
             [HarmonyPatch("OnAIUpdate_FoundEnemy")]
             [HarmonyPrefix]

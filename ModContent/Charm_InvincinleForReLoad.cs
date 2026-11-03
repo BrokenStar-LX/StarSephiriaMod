@@ -5,7 +5,7 @@ namespace SPMod.ModContent
 {
     public class Charm_InvincinleForReLoad : Charm_GrowthCrossbow
     {
-        private Timer EffectTime = new Timer(0.8f, true, true);
+        private Timer EffectTime = new(0.8f, true, true);
         private bool UseEffect = true;
         protected override void OnEnabledEffect()
         {

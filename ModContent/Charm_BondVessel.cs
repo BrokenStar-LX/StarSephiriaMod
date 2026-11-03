@@ -9,9 +9,9 @@ using static HeathenEngineering.SteamworksIntegration.ItemShoppingCartManager;
 
 namespace SPMod.ModContent
 {
-    public class Charm_BondVessel : Charm_Active, IModCooldownReceiver
+    public class Charm_BondVessel : Charm_Active, IModCooldownReceiver, IModEventReceiver
     {
-        public Timer CooldownTimer = new Timer(3f);
+        public Timer CooldownTimer = new(3f);
         public bool UseShootBack = false;
         private float ClientPhaseEnd = 0f;
         private float NextBroadcastTime = 0f;
@@ -42,6 +42,18 @@ namespace SPMod.ModContent
         public void OnClientCooldown(float PhaseEnd)
         {
             ClientPhaseEnd = PhaseEnd;
+        }
+
+        public void OnClientEvent(byte Event, Vector3 Pos, string S1, string S2)
+        {
+            if (Event < 1 || Event > 3) return;
+            if (!NetworkAvatar) return;
+            NetworkAvatar.WriteSystemMessage(Tools.GetLocalization($"UI_Message_BondVessel_{Event}"), 2.5f, false);
+        }
+
+        private void SendTip(byte Event)
+        {
+            ModNetwork.SendEventToOwner(netId, Event, NetworkAvatar ? NetworkAvatar.transform.position : Vector3.zero);
         }
 
         private void BroadcastCooldown()
@@ -99,43 +111,64 @@ namespace SPMod.ModContent
             NextBroadcastTime = (float)NetworkTime.time + 2f;
             BroadcastCooldown();
 
-            List<string> TargetCategories = new List<string>();
-            List<ItemPosition> TargetPosition = new List<ItemPosition>()
-            {
+            List<string> TargetCategories = [];
+            List<ItemPosition> TargetPosition =
+            [
                 new ItemPosition(Item.XIdx + 1, Item.YIdx),
                 new ItemPosition(Item.XIdx - 1, Item.YIdx)
-            };
+            ];
             foreach (ItemPosition Pos in TargetPosition)
             {
                 NewItemOwnInstance TargetNewItem = Inventory.FindItem(Pos);
-                if (TargetNewItem == null) return;
-                if (TargetNewItem.Entity.categories.Count <= 0) return;
+                if (TargetNewItem == null || TargetNewItem.Entity.type != EItemType.Charm)
+                {
+                    SendTip(1);
+                    return;
+                }
+                if (TargetNewItem.Entity.categories.Count <= 0)
+                {
+                    SendTip(2);
+                    return;
+                }
 
                 foreach (string ItemCategories in TargetNewItem.Entity.categories)
                     TargetCategories.Add(ItemCategories);
             }
-            List<int> AddItemList = new List<int>();
-            List<int> AllCharmList = new List<int>();
+            List<int> AllCharmList = [];
             foreach (PlayerSpawner Spawner in PlayerSpawner.MultiplayerList.ToList())
             {
                 if (Spawner.PlayerAvatar != NetworkAvatar) continue;
                 AllCharmList = Spawner.unlockedCharms.ToList();
                 break;
             }
+            List<int> MatchList = [];
+            List<int> AddItemList = [];
             foreach (int NewItemList in AllCharmList)
             {
                 ItemEntity Item = ItemDatabase.FindItemById(NewItemList);
                 if (!Item.isDual) continue;
                 if (Item.activeType == EItemActiveType.Hidden) continue;
-                if (Inventory.HasItem(Item, out var _, out var _, out var _)) continue;
                 if (Item.categories.Intersect(TargetCategories).ToList().Count >= 2)
-                    AddItemList.Add(Item.id);
+                {
+                    MatchList.Add(Item.id);
+                    if (!Inventory.HasItem(Item, out var _, out var _, out var _))
+                        AddItemList.Add(Item.id);
+                }
             }
-            if (AddItemList.Count <= 0) return;
+            if (MatchList.Count <= 0)
+            {
+                SendTip(2);
+                return;
+            }
+            if (AddItemList.Count <= 0)
+            {
+                SendTip(3);
+                return;
+            }
 
             GridInventory inventory = Inventory;
             int instanceID = Item.InstanceID;
-            ItemPosition itemPosition = new ItemPosition(Item.XIdx, Item.YIdx);
+            ItemPosition itemPosition = new(Item.XIdx, Item.YIdx);
             using (new GridInventory.Permission(inventory))
             {
                 foreach (ItemPosition Pos in TargetPosition)
