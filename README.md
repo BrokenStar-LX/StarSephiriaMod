@@ -1,1 +1,1 @@
-# SPMod
+# Sephiria Mod
