@@ -42,7 +42,7 @@ namespace SPMod.ModContent
 
             if (instance.fromType == EDamageFromType.DirectAttack)
             {
-                string Id = "[Star's Sephiria Mod]铁蒺藜";
+                string Id = "[Star's Sephiria Mod]Caltrop";
                 var Dam = DamageInstance.GetDamage(NetworkAvatar, Id, avatar.transform.position, 4294967295L, CalculateDamage(this), EDamageType.Slice, EDamageFromType.None, Vector2.zero, 0, 0f);
                 avatar.ApplyDamage(Dam);
                 UseEffect = false;

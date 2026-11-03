@@ -131,7 +131,7 @@ namespace SPMod.Tool
         public const string DarkCloudSweep = "DARKCLOUDSWEEP";                                              // 启用超导体效果
         public const string RedSnakeEyeAtkCooldownBonus = "REDSNAKEEYEATKCOOLDOWNBONUS";                    // 普攻减少红蛇之眼冷却
         public const string RedSnakeEyeDamageBonus = "REDSNAKEEYEDAMAGEBONUS";                              // 红蛇之眼造成的伤害
-        public const string WoundDamage = "WOUNDDAMAGE";                                                    // 伤口恶化堆叠
+        public const string WoundDamage = "WOUNDDAMAGE";                                                    // 伤口恶化伤害
         public const string WoundStack = "WOUNDSTACK";                                                      // 伤口恶化堆叠
         public const string WoundExplosion = "WOUNDEXPLOSION";                                              // 启用裁判官效果
         public const string EvasionFury = "EVASIONFURY";                                                    // 启用碧玉残影效果

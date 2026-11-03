@@ -9,7 +9,7 @@ namespace SPMod.ModContent
         public float[] MaxByLevel = [90, 180, 270, 360, 450];
         public Timer CooldownTimer = new(1f);
         public GameObject? Boom = null;
-        public string DamageId = "[Star's Sephiria Mod]邪祭咒纸";
+        public string DamageId = "[Star's Sephiria Mod]UnhallowedRitePaper";
         public bool UseShootBack = false;
         private float ClientPhaseEnd = 0f;
         private float NextBroadcastTime = 0f;

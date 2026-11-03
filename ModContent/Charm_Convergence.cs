@@ -8,7 +8,7 @@ namespace SPMod.ModContent
         public float[] DamageByLevel = [16, 32, 48];
         public bool UseEffect = false;
         public Timer CooldownTimer = new(0.8f);
-        private readonly string DamageId = "[Star's Sephiria Mod]辐合";
+        private readonly string DamageId = "[Star's Sephiria Mod]Convergence";
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             float Value = GetChance(avatar) * 100f;

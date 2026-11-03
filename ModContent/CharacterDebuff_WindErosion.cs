@@ -10,7 +10,7 @@ namespace SPMod.ModContent
     {
         private const byte FxWindSailExplosion = 1;
         public string id = "WINDEROSION";
-        public string damageId = "[Star's Sephiria Mod]风蚀";
+        public string damageId = "[Star's Sephiria Mod]WindErosion";
         public Timer TickTimer = new(0.5f);
         public int DamageCount = 0;
         public int MaxDamageCount
@@ -74,7 +74,7 @@ namespace SPMod.ModContent
                 if (TickTimer.Update(Time.deltaTime))
                 {
                     float Value = NetworkAttacker.GetCustomStatUnsafe(TextFile.WindDamage) * Mult;
-                    string TickDamageId = "[Star's Sephiria Mod]空气钟";
+                    string TickDamageId = "[Star's Sephiria Mod]AtmosClock";
                     DamageInstance damage = DamageInstance.GetDamage(NetworkAttacker, TickDamageId, NetworkTarget.transform.position, -1, Value,
                         EDamageType.Slice, EDamageFromType.None, Vector2.zero, 0, 0f);
                     damage.elementalType = EffectConstant.Wind;
@@ -106,7 +106,7 @@ namespace SPMod.ModContent
             Dam += NetworkAttacker.GetCustomStatUnsafe(TextFile.WindErosionOverFlowBase);
             if (Dam <= 0) return;
 
-            string OverFlowDamageId = "[Star's Sephiria Mod]风帆";
+            string OverFlowDamageId = "[Star's Sephiria Mod]WindSail";
             DamageInstance damage = DamageInstance.GetDamage(NetworkAttacker, OverFlowDamageId, NetworkTarget.transform.position, -1, Dam,
                 EDamageType.ElementalEffectDamage, EDamageFromType.None, Vector2.zero, 0, 0f);
             damage.elementalType = EffectConstant.Wind;

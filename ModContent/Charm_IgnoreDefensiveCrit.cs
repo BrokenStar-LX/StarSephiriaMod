@@ -5,7 +5,7 @@ namespace SPMod.ModContent
 {
     public class Charm_IgnoreDefensiveCrit : Charm_Basic, IAttackableCharm
     {
-        private readonly string DamageId = "[Star's Sephiria Mod]增幅器组件";
+        private readonly string DamageId = "[Star's Sephiria Mod]AmplifierComponent";
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             float Damage = 0f;

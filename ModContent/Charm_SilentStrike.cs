@@ -14,7 +14,7 @@ namespace SPMod.ModContent
         public GameObject? Shoot = null;
         public NewWeaponFireData? EffectData = null;
         public int EvasionHit = 0;
-        public string DamageId = "[Star's Sephiria Mod]隐秘斗篷";
+        public string DamageId = "[Star's Sephiria Mod]SecretCloak";
         private StatusInstance? MoveSpeedInstance = null;
         private Coroutine? EffectCoroutine = null;
         public float ProgressTime = 0f;
