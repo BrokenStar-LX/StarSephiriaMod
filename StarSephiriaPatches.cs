@@ -1040,26 +1040,27 @@ namespace SPMod
             [HarmonyPrefix]
             public static bool RefreshElementalBonus(UnitAvatar __instance)
             {
-                if (ModConfig.Instance.ModifyCharm)
+                foreach (string Key in EffectConstant.BaseStatsName)
                 {
-                    int AddElemental = __instance.highestElementalBonus + StarSephiriaMod.PartyStats.ElementalDamage;
-                    if (AddElemental >= 0)
+                    __instance.calculatedBonusStats[Key] = 0;
+                }
+                int AddElemental = __instance.highestElementalBonus + StarSephiriaMod.PartyStats.ElementalDamage;
+                if (AddElemental >= 0)
+                {
+                    int MaxValue = Tools.BaseOrigStatToMax(__instance);
+                    if (MaxValue > 0)
                     {
-                        int MaxValue = Tools.BaseOrigStatToMax(__instance);
                         foreach (string Key in EffectConstant.BaseStatsName)
                         {
                             if (__instance.customStats.GetValueOrDefault(Key, 0) == MaxValue)
                             {
                                 __instance.calculatedBonusStats[Key] = AddElemental;
-                                continue;
                             }
-                            else __instance.calculatedBonusStats[Key] = 0;
                         }
                     }
-                    OnUpdateHighestElemental?.Invoke();
-                    return false;
                 }
-                return true;
+                OnUpdateHighestElemental?.Invoke();
+                return false;
             }
         }
 

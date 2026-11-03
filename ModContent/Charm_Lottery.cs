@@ -45,10 +45,10 @@ namespace SPMod.ModContent
             }
             return
             [
-                new("Probability", UseCoin.ToString("#0") + "%", GetPositiveColor(virtualLevelOffset)),
+                new("Probability", UseCoin.ToString("#0.##") + "%", GetPositiveColor(virtualLevelOffset)),
                 new("Level", $"<{KeywordDatabase.GetEntity(LevelText).Convert()}>", Color.yellow),
                 new("Status", StatusText, GetPositiveColor(virtualLevelOffset)),
-                new("Luck", LuckValue.ToString("#0"), Color.greenYellow),
+                new("Luck", LuckValue.ToString("#0.##"), Color.greenYellow),
             ];
         }
 
@@ -85,7 +85,7 @@ namespace SPMod.ModContent
         public void OnClientValues(int A, int B)
         {
             Level = A;
-            LuckValue = B;
+            LuckValue = B / 100f;
         }
 
         public void OnClientEvent(byte Event, Vector3 Pos, string S1, string S2)
@@ -134,7 +134,7 @@ namespace SPMod.ModContent
 
         private void BroadcastValues()
         {
-            ModNetwork.SendValues(netId, Level, (int)LuckValue);
+            ModNetwork.SendValues(netId, Level, (int)(LuckValue * 100f));
         }
 
         protected override void OnEnabledEffect()
@@ -199,8 +199,8 @@ namespace SPMod.ModContent
                 }
                 Player.savableParameters.Add("Lottery_MoveFloor/" + $"{Item.InstanceID}/" + f);
                 float Value = GetLevelUpValue(Player.GetCustomStatUnsafe(TextFile.Luck));
-                LuckValue = Random.Range(0, 100);
-                if ((int)(Value * 100f) >= LuckValue)
+                LuckValue = Random.value * 100f;
+                if (Value * 100f > LuckValue)
                 {
                     Level += 1;
                     StartCoroutine(AnnounceRarityUp(Item.EntityID));
@@ -213,7 +213,10 @@ namespace SPMod.ModContent
         {
             yield return new WaitForSeconds(1f);
             if (!NetworkAvatar) yield break;
-            if (!NetworkAvatar.NetworkisInputReceived) yield break;
+            while (!NetworkAvatar.NetworkisInputReceived)
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
             ModNetwork.SendEventToOwner(netId, 1, NetworkAvatar.transform.position, ItemId.ToString());
         }
 
@@ -322,6 +325,13 @@ namespace SPMod.ModContent
                 _ => EItemRarity.Common,
             };
         }
+        private bool IsWeaponMatched(ItemEntity TargetItem)
+        {
+            if (!TargetItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Charm)) return true;
+            if (!Charm.isWeaponRelatedCharm) return true;
+            return WeaponController != null && WeaponController.currentWeapon != null && WeaponController.currentWeapon.weaponType == Charm.relatedWeapon;
+        }
+
         public List<int> RandomSelectItem(PlayerSpawner Spawner, out int MatchCount, out bool UseNoCategories)
         {
             List<string> TargetCategories = [];
@@ -349,6 +359,7 @@ namespace SPMod.ModContent
                 if (TargetItem.rarity != Rarity) continue;
                 if (TargetItem.activeType == EItemActiveType.Hidden) continue;
                 if (!UseNoCategories && !TargetCategories.Any(Category => TargetItem.categories.Contains(Category))) continue;
+                if (!IsWeaponMatched(TargetItem)) continue;
                 if (MatchList.Contains(TargetItem.id)) continue;
                 MatchList.Add(TargetItem.id);
                 if (TargetItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Charm) && Charm.isUniqueEffect)
@@ -386,7 +397,9 @@ namespace SPMod.ModContent
                 if (TargetItem.id == Item.EntityID) continue;
                 if (TargetItem.rarity != Rarity) continue;
                 if (TargetItem.activeType == EItemActiveType.Hidden) continue;
+                if (TargetItem.isDual) continue;
                 if (!TargetItem.categories.Contains(ComboKey)) continue;
+                if (!IsWeaponMatched(TargetItem)) continue;
                 if (MatchList.Contains(TargetItem.id)) continue;
                 MatchList.Add(TargetItem.id);
                 if (TargetItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Charm) && Charm.isUniqueEffect)

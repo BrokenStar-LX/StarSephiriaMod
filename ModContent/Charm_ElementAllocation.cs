@@ -1,15 +1,11 @@
 ﻿using SPMod.Tool;
 using System.Collections.Generic;
-using System.Linq;
-using Unity.VisualScripting;
-using UnityEngine;
 
 namespace SPMod.ModContent
 {
     public class Charm_ElementAllocation : Charm_StatusInstance
     {
         public int[] ValueByLevel = [20, 40, 60];
-        private readonly List<string> EffectInstance = [];
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             float Mult = ValueByLevel.SafeRandomAccess(LevelToIdx(level)) * 0.01f;
@@ -27,7 +23,6 @@ namespace SPMod.ModContent
         {
             base.OnEnabledEffect();
             StarSephiriaPatches.OnUpdateHighestElemental += OnUpdateHighestElemental;
-            ReInstance();
             LoadInstance();
         }
 
@@ -35,7 +30,7 @@ namespace SPMod.ModContent
         {
             base.OnDisabledEffect();
             StarSephiriaPatches.OnUpdateHighestElemental -= OnUpdateHighestElemental;
-            ReInstance();
+            if (NetworkAvatar) StarSephiriaPatches.UnitAvatar_Patches.RefreshElementalBonus(NetworkAvatar);
         }
 
         protected override void OnUpdate()
@@ -45,7 +40,6 @@ namespace SPMod.ModContent
 
         public void OnUpdateHighestElemental()
         {
-            ReInstance();
             LoadInstance();
         }
 
@@ -62,14 +56,6 @@ namespace SPMod.ModContent
             if (TwoMaxValue == MaxValue) TwoMaxValue = 0;
         }
 
-        private void ReInstance()
-        {
-            foreach(string Key in EffectInstance.ToList())
-            {
-                NetworkAvatar.calculatedBonusStats[Key] = 0;
-                EffectInstance.Remove(Key);
-            }
-        }
         private void LoadInstance()
         {
             if (NetworkAvatar)
@@ -94,7 +80,6 @@ namespace SPMod.ModContent
                 {
                     int Add = ElementalDamage.IntMult(Mult);
                     NetworkAvatar.calculatedBonusStats[key] = Add;
-                    EffectInstance.Add(key);
                 }
             }
         }
