@@ -650,21 +650,6 @@ namespace SPMod.Tool
                     {WeaponIDs.Successor, (GetWeaponTooltip(Successor), WeaponIDs.Javelin)},
                     #endregion
                 };
-                KeywordDatabase.Modify("HighestElementalDamage", modifier =>
-                {
-                    modifier.description = GetModTooltip("ModKeyword_Stat_ElementalDamage_Effect");
-                    modifier.displayDetails = true;
-                });
-                KeywordDatabase.Modify("DashInvincibleTimeBonus", modifier =>
-                {
-                    modifier.description = GetModTooltip("ModKeyword_Stat_DashInvincibleTime_Effect");
-                    modifier.displayDetails = true;
-                });
-                KeywordDatabase.Modify("DashRecovery", modifier =>
-                {
-                    modifier.description = GetModTooltip("ModKeyword_Stat_DashRecovery_Effect");
-                    modifier.displayDetails = true;
-                });
                 KeywordDatabase.Modify("WeaponAction_LightningSpear", modifier => modifier.description = GetModTooltip("Superconductor_Effect"));
                 KeywordDatabase.Modify("WeaponAction_CarrotAttack", modifier => modifier.description = GetModTooltip("CarrotSword2_Effect"));
                 KeywordDatabase.Modify("WeaponAction_ShieldBash", modifier => modifier.description = GetModTooltip("StoneSword_Effect"));
@@ -701,8 +686,6 @@ namespace SPMod.Tool
                 KeywordDatabase.Modify("Buff_Katana_Nanmu", modifier => modifier.description = GetModTooltip("RendbladeRuinDance_Effect"));
                 KeywordDatabase.Modify("Buff_Greatsword_ChainSlash", modifier => modifier.description = GetModTooltip("ScatteredLonging_Effect"));
                 KeywordDatabase.Modify("WeaponAction_Greatsword_DualSlash", modifier => modifier.description = GetModTooltip("ScatteredLonging_Effect2"));
-                KeywordDatabase.Modify("DebuffDamage", modifier => modifier.visualText = new LocalizedString("ModKeyword_Stat_DeBuffDamage"));
-                KeywordDatabase.Modify("DebuffDuration", modifier => modifier.visualText = new LocalizedString("ModKeyword_Stat_DeBuffDuration"));
             }
         }
 
@@ -727,7 +710,62 @@ namespace SPMod.Tool
             }
         }
 
+        private static string ConvertTooltipLine(string line)
+        {
+            line = FormatLine(line);
+            line = KeywordDatabase.Convert(line);
+            return AddStringIcon(line);
+        }
+
         public static string GetCostumeTooltip(string OrigString)
+        {
+            if (string.IsNullOrEmpty(OrigString))
+            {
+                return string.Empty;
+            }
+            try
+            {
+                StringBuilder stringBuilder = new();
+                string greenTag = GreenTag;
+                string redTag = RedTag;
+                string[] lines = OrigString.Split(['\n'], StringSplitOptions.RemoveEmptyEntries);
+                foreach (string line in lines)
+                {
+                    string tempLine = line.Trim();
+                    if (string.IsNullOrEmpty(tempLine))
+                    {
+                        continue;
+                    }
+                    string lineColor = "";
+                    if (tempLine.Contains(greenTag, StringComparison.Ordinal))
+                    {
+                        lineColor = GreenColorTag;
+                        tempLine = tempLine.Replace(greenTag, "").Trim();
+                    }
+                    else if (tempLine.Contains(redTag, StringComparison.Ordinal))
+                    {
+                        lineColor = RedColorTag;
+                        tempLine = tempLine.Replace(redTag, "").Trim();
+                    }
+                    string formattedLine = ConvertTooltipLine(tempLine);
+                    if (!string.IsNullOrEmpty(lineColor) && !string.IsNullOrEmpty(formattedLine))
+                    {
+                        formattedLine = $"{lineColor}{formattedLine}{ColorEndTag}";
+                    }
+                    if (!string.IsNullOrWhiteSpace(formattedLine))
+                    {
+                        stringBuilder.Append("- ").AppendLine(formattedLine);
+                    }
+                }
+                return stringBuilder.ToString().TrimEnd('\r', '\n');
+            }
+            catch(Exception ex)
+            {
+                StarSephiriaMod.LogError($"服装提示加载失败{ex}");
+                return Tools.GetLocalization("Tooltip_LoadFailed");
+            }
+        }
+        public static string GetWeaponTooltip(string OrigString)
         {
             if (string.IsNullOrEmpty(OrigString))
             {
@@ -744,86 +782,28 @@ namespace SPMod.Tool
                     {
                         continue;
                     }
-                    string lineColor = "";
-                    if (tempLine.Contains(GreenTag))
+                    string formattedLine = ConvertTooltipLine(tempLine);
+                    if (string.IsNullOrWhiteSpace(formattedLine))
                     {
-                        lineColor = GreenColorTag;
-                        tempLine = tempLine.Replace(GreenTag, "").Trim();
+                        continue;
                     }
-                    else if (tempLine.Contains(RedTag))
+                    if (stringBuilder.Length > 0)
                     {
-                        lineColor = RedColorTag;
-                        tempLine = tempLine.Replace(RedTag, "").Trim();
+                        stringBuilder.Append('\n');
                     }
-                    string formattedLine = FormatLine(tempLine) ?? string.Empty;
-                    formattedLine = KeywordDatabase.Convert(KeywordDatabase.Convert(formattedLine)) ?? string.Empty;
-                    formattedLine = AddStringIcon(formattedLine) ?? string.Empty;
-                    if (!string.IsNullOrEmpty(lineColor) && !string.IsNullOrEmpty(formattedLine))
-                    {
-                        formattedLine = $"{lineColor}{formattedLine}{ColorEndTag}";
-                    }
-                    if (!string.IsNullOrWhiteSpace(formattedLine))
-                    {
-                        stringBuilder.AppendLine($"- {formattedLine}");
-                    }
+                    stringBuilder.Append(formattedLine);
                 }
-                return stringBuilder.ToString().TrimEnd('\n');
-            }
-            catch(Exception ex)
-            {
-                StarSephiriaMod.LogError($"服装提示加载失败{ex}");
-                return "加载失败";
-            }
-        }
-        public static string GetWeaponTooltip(string OrigString)
-        {
-            if (string.IsNullOrEmpty(OrigString))
-            {
-                return string.Empty;
-            }
-            try
-            {
-                StringBuilder stringBuilder = new();
-                {
-                    string NewString = "";
-                    string[] lines = OrigString.Split(['\n'], StringSplitOptions.RemoveEmptyEntries);
-                    bool AddLineStack = false;
-                    foreach (string line in lines)
-                    {
-                        string tempLine = line.Trim();
-                        if (string.IsNullOrEmpty(tempLine))
-                        {
-                            continue;
-                        }
-                        string formattedLine = FormatLine(tempLine) ?? string.Empty;
-                        formattedLine = KeywordDatabase.Convert(KeywordDatabase.Convert(formattedLine)) ?? string.Empty;
-                        formattedLine = AddStringIcon(formattedLine) ?? string.Empty;
-                        if (!string.IsNullOrWhiteSpace(formattedLine))
-                        {
-                            if (!AddLineStack)
-                            {
-                                NewString = $"{formattedLine}";
-                                AddLineStack = true;
-                            }
-                            else NewString += $"\n{formattedLine}";
-                        }
-                    }
-                    stringBuilder.AppendLine($"{NewString}");
-                }
-                return stringBuilder.ToString().TrimEnd('\n');
+                return stringBuilder.ToString();
             }
             catch (Exception ex)
             {
                 StarSephiriaMod.LogError($"武器提示加载失败{ex}");
-                return "加载失败";
+                return Tools.GetLocalization("Tooltip_LoadFailed");
             }
         }
         public static LocalizedString GetModTooltip(string Name)
         {
-            string Text = Tools.GetLocalization(Name);
-            Text = FormatLine(Text);
-            Text = KeywordDatabase.Convert(KeywordDatabase.Convert(Text));
-            Text = AddStringIcon(Text);
+            string Text = ConvertTooltipLine(Tools.GetLocalization(Name));
             return new LocalizedString(Text);
         }
         public static string AddStringIcon(string line)

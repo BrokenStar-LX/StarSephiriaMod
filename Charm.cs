@@ -124,7 +124,7 @@ namespace SPMod
         [HarmonyPatch(typeof(Charm_AirSlash))]
         public static class Charm_AirSlash_Patch
         {
-            private static readonly float[] DamageToLevel = [20f, 40f, 60f, 80f, 100f, 120f, 140f];
+            private static readonly float[] DamageToLevel = [ 20f, 40f, 60f, 80f, 100f, 120f, 140f, 160f, 180f, 200f, 220f, 240f, 260f, 280f, 300f];
 
             [HarmonyPatch("GetDamage")]
             [HarmonyPostfix]

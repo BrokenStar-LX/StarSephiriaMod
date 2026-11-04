@@ -27,12 +27,35 @@ namespace SPMod.Tool
         public Vector3 EulerAngles;
     }
 
-    public struct ModAirValveMessage : NetworkMessage
+    public struct ModWeaponFxMessage : NetworkMessage
     {
-        public uint WeaponNetId;
         public uint OwnerNetId;
         public byte Event;
         public Vector3 Position;
+    }
+
+    public struct ModWeaponHudMessage : NetworkMessage
+    {
+        public uint AvatarNetId;
+        public int YuisMagic;
+        public int HeidiHeat;
+        public int MinimalismStack;
+        public int EverfrostStack;
+        public int RuadhsleaStacks;
+        public int FrozenSmelt;
+        public int LightningsWrath;
+        public float DraftbladeRemain;
+        public float DraftbladeTotal;
+        public float RuadhsleaRemain;
+        public float RuadhsleaTotal;
+        public float FiaolasRemain;
+        public float FiaolasTotal;
+        public float GlacialBladeRemain;
+        public float GlacialBladeTotal;
+        public float OtterRemain;
+        public float OtterTotal;
+        public float BrownRabbitRemain;
+        public float BrownRabbitTotal;
     }
 
     public struct ModBossTargetMessage : NetworkMessage
@@ -69,8 +92,12 @@ namespace SPMod.Tool
         public const byte KindEvent = 3;
         public const byte KindWeaponTime = 4;
         public const byte SwingFxMoment = 0;
+        // WeaponFx 的 Event 与 AirValveZone.FxPulse(0)/FxTrigger(1) 共用编号，从 2 开始
+        public const byte WeaponFxShadowThorns = 2;
 
         private static readonly Dictionary<byte, Func<NewWeaponFireData?>> SwingFxSources = [];
+        private static readonly Dictionary<UnitAvatar, ModWeaponHudMessage> LastHud = [];
+        private static readonly Dictionary<UnitAvatar, float> LastHudTime = [];
 
         static ModNetwork()
         {
@@ -114,19 +141,64 @@ namespace SPMod.Tool
                 EulerAngles = reader.ReadVector3(),
             };
 
-            Writer<ModAirValveMessage>.write = (writer, msg) =>
+            Writer<ModWeaponFxMessage>.write = (writer, msg) =>
             {
-                writer.WriteVarUInt(msg.WeaponNetId);
                 writer.WriteVarUInt(msg.OwnerNetId);
                 writer.WriteByte(msg.Event);
                 writer.WriteVector3(msg.Position);
             };
-            Reader<ModAirValveMessage>.read = reader => new ModAirValveMessage
+            Reader<ModWeaponFxMessage>.read = reader => new ModWeaponFxMessage
             {
-                WeaponNetId = reader.ReadVarUInt(),
                 OwnerNetId = reader.ReadVarUInt(),
                 Event = reader.ReadByte(),
                 Position = reader.ReadVector3(),
+            };
+
+            Writer<ModWeaponHudMessage>.write = (writer, msg) =>
+            {
+                writer.WriteVarUInt(msg.AvatarNetId);
+                writer.WriteVarInt(msg.YuisMagic);
+                writer.WriteVarInt(msg.HeidiHeat);
+                writer.WriteVarInt(msg.MinimalismStack);
+                writer.WriteVarInt(msg.EverfrostStack);
+                writer.WriteVarInt(msg.RuadhsleaStacks);
+                writer.WriteVarInt(msg.FrozenSmelt);
+                writer.WriteVarInt(msg.LightningsWrath);
+                writer.WriteFloat(msg.DraftbladeRemain);
+                writer.WriteFloat(msg.DraftbladeTotal);
+                writer.WriteFloat(msg.RuadhsleaRemain);
+                writer.WriteFloat(msg.RuadhsleaTotal);
+                writer.WriteFloat(msg.FiaolasRemain);
+                writer.WriteFloat(msg.FiaolasTotal);
+                writer.WriteFloat(msg.GlacialBladeRemain);
+                writer.WriteFloat(msg.GlacialBladeTotal);
+                writer.WriteFloat(msg.OtterRemain);
+                writer.WriteFloat(msg.OtterTotal);
+                writer.WriteFloat(msg.BrownRabbitRemain);
+                writer.WriteFloat(msg.BrownRabbitTotal);
+            };
+            Reader<ModWeaponHudMessage>.read = reader => new ModWeaponHudMessage
+            {
+                AvatarNetId = reader.ReadVarUInt(),
+                YuisMagic = reader.ReadVarInt(),
+                HeidiHeat = reader.ReadVarInt(),
+                MinimalismStack = reader.ReadVarInt(),
+                EverfrostStack = reader.ReadVarInt(),
+                RuadhsleaStacks = reader.ReadVarInt(),
+                FrozenSmelt = reader.ReadVarInt(),
+                LightningsWrath = reader.ReadVarInt(),
+                DraftbladeRemain = reader.ReadFloat(),
+                DraftbladeTotal = reader.ReadFloat(),
+                RuadhsleaRemain = reader.ReadFloat(),
+                RuadhsleaTotal = reader.ReadFloat(),
+                FiaolasRemain = reader.ReadFloat(),
+                FiaolasTotal = reader.ReadFloat(),
+                GlacialBladeRemain = reader.ReadFloat(),
+                GlacialBladeTotal = reader.ReadFloat(),
+                OtterRemain = reader.ReadFloat(),
+                OtterTotal = reader.ReadFloat(),
+                BrownRabbitRemain = reader.ReadFloat(),
+                BrownRabbitTotal = reader.ReadFloat(),
             };
 
             Writer<ModBossTargetMessage>.write = (writer, msg) =>
@@ -145,7 +217,8 @@ namespace SPMod.Tool
         {
             NetworkClient.ReplaceHandler<ModCharmMessage>(OnModCharmMessage);
             NetworkClient.ReplaceHandler<ModWeaponSwingFxMessage>(OnModWeaponSwingFxMessage);
-            NetworkClient.ReplaceHandler<ModAirValveMessage>(OnModAirValveMessage);
+            NetworkClient.ReplaceHandler<ModWeaponFxMessage>(OnModWeaponFxMessage);
+            NetworkClient.ReplaceHandler<ModWeaponHudMessage>(OnModWeaponHudMessage);
             NetworkClient.ReplaceHandler<ModBossTargetMessage>(OnModBossTargetMessage);
         }
 
@@ -168,23 +241,212 @@ namespace SPMod.Tool
             NetworkServer.SendToAll(new ModBossTargetMessage { BossNetId = BossNetId, TargetNetId = TargetNetId });
         }
 
-        /// <summary>服务端广播气阀领域的 FX；Event 区分触发瞬间（AirValveGround）和每跳脉冲（AirValve）。</summary>
-        public static void SendAirValveFx(uint WeaponNetId, uint OwnerNetId, Vector3 Position, byte Event = ModuleComponents.AirValveZone.FxPulse)
+        /// <summary>服务端广播武器 FX；Event 区分 AirValve 的触发/脉冲和 ShadowThorns 等。</summary>
+        public static void SendWeaponFx(uint OwnerNetId, Vector3 Position, byte Event)
         {
-            if (!NetworkServer.active || WeaponNetId == 0) return;
-            NetworkServer.SendToAll(new ModAirValveMessage { WeaponNetId = WeaponNetId, OwnerNetId = OwnerNetId, Event = Event, Position = Position });
+            if (!NetworkServer.active || OwnerNetId == 0) return;
+            NetworkServer.SendToAll(new ModWeaponFxMessage
+            {
+                OwnerNetId = OwnerNetId,
+                Event = Event,
+                Position = Position,
+            });
         }
 
-        private static void OnModAirValveMessage(ModAirValveMessage Msg)
+        private static void OnModWeaponFxMessage(ModWeaponFxMessage Msg)
         {
             if (NetworkServer.active) return;
 
-            int OwnerIndex = 0;
-            if (NetworkClient.spawned.TryGetValue(Msg.OwnerNetId, out NetworkIdentity Owner) && Owner != null && Owner.isOwned)
-                OwnerIndex = 1;
+            string Key = Msg.Event switch
+            {
+                ModuleComponents.AirValveZone.FxTrigger => "AirValveGround",
+                ModuleComponents.AirValveZone.FxPulse => "AirValve",
+                WeaponFxShadowThorns => "ShadowThornsFx",
+                _ => "",
+            };
+            if (Key.Length > 0)
+                ModuleComponents.ModFxPool.Spawn(Key, Msg.Position, GetOwnerIndex(Msg.OwnerNetId));
+        }
 
-            string Key = Msg.Event == ModuleComponents.AirValveZone.FxTrigger ? "AirValveGround" : "AirValve";
-            ModuleComponents.ModFxPool.Spawn(Key, Msg.Position, OwnerIndex);
+        private static int GetOwnerIndex(uint OwnerNetId)
+        {
+            return NetworkClient.spawned.TryGetValue(OwnerNetId, out NetworkIdentity Owner) && Owner != null && Owner.isOwned ? 1 : 0;
+        }
+
+        public static void SendWeaponHud(UnitAvatar Avatar)
+        {
+            if (!NetworkServer.active || Avatar == null) return;
+
+            ModWeaponHudMessage Msg = new() { AvatarNetId = Avatar.netId };
+            if (WeaponPatch.YuisShortDaggerMagic.TryGetValue(Avatar, out int YuisMagic)) Msg.YuisMagic = YuisMagic;
+            if (WeaponPatch.HeidiDashAttack.TryGetValue(Avatar, out int HeidiHeat)) Msg.HeidiHeat = HeidiHeat;
+            if (WeaponPatch.MinimalismDashAttack.TryGetValue(Avatar, out int Minimalism)) Msg.MinimalismStack = Minimalism;
+            if (WeaponPatch.SilenceofEverfrostAttack.TryGetValue(Avatar, out int Everfrost)) Msg.EverfrostStack = Everfrost;
+            if (WeaponPatch.RuadhsleaSpearBuff.TryGetValue(Avatar, out int RuadhsleaStacks)) Msg.RuadhsleaStacks = RuadhsleaStacks;
+            if (WeaponPatch.FrozenSmeltEffect.TryGetValue(Avatar, out int FrozenSmelt)) Msg.FrozenSmelt = FrozenSmelt;
+            if (WeaponPatch.LightningsWrathEffect.TryGetValue(Avatar, out int LightningsWrath)) Msg.LightningsWrath = LightningsWrath;
+
+            if (WeaponPatch.DraftbladeAttack.TryGetValue(Avatar, out Timer Draftblade))
+            {
+                Msg.DraftbladeRemain = Draftblade.GetRemainingTime();
+                Msg.DraftbladeTotal = Draftblade.time;
+            }
+            if (WeaponPatch.RuadhsleaSpearTime.TryGetValue(Avatar, out Timer Ruadhslea))
+            {
+                Msg.RuadhsleaRemain = Ruadhslea.GetRemainingTime();
+                Msg.RuadhsleaTotal = Ruadhslea.time;
+            }
+            if (WeaponPatch.FiaolasJudgmentStaffBuff.TryGetValue(Avatar, out Timer Fiaolas))
+            {
+                Msg.FiaolasRemain = Fiaolas.GetRemainingTime();
+                Msg.FiaolasTotal = Fiaolas.time;
+            }
+            if (WeaponPatch.GlacialBladeEffect.TryGetValue(Avatar, out Timer GlacialBlade))
+            {
+                Msg.GlacialBladeRemain = GlacialBlade.GetRemainingTime();
+                Msg.GlacialBladeTotal = GlacialBlade.time;
+            }
+            if (StarSephiriaMod.Otter3_AddCrit.TryGetValue(Avatar, out Timer Otter))
+            {
+                Msg.OtterRemain = Otter.GetRemainingTime();
+                Msg.OtterTotal = Otter.time;
+            }
+            if (StarSephiriaMod.BrownRabbit2Hit.TryGetValue(Avatar.Name, out Timer BrownRabbit))
+            {
+                Msg.BrownRabbitRemain = BrownRabbit.GetRemainingTime();
+                Msg.BrownRabbitTotal = BrownRabbit.time;
+            }
+
+            bool HasPrev = LastHud.TryGetValue(Avatar, out ModWeaponHudMessage Prev);
+            bool Changed = !HasPrev || !SameHud(Msg, Prev);
+
+            if (IsHudEmpty(Msg))
+            {
+                LastHud[Avatar] = Msg;
+                LastHudTime.Remove(Avatar);
+                if (Changed && HasPrev) NetworkServer.SendToAll(Msg);
+                return;
+            }
+
+            // 非空快照每秒至少发一次，保证中途加入的客机能收到当前值
+            bool Heartbeat = !LastHudTime.TryGetValue(Avatar, out float Last) || Time.time - Last >= 1f;
+            if (!Changed && !Heartbeat) return;
+
+            LastHud[Avatar] = Msg;
+            LastHudTime[Avatar] = Time.time;
+            NetworkServer.SendToAll(Msg);
+        }
+
+        /// <summary>玩家离开/销毁时清掉 HUD 缓存，避免字典残留。</summary>
+        public static void RemoveHudCache(UnitAvatar Avatar)
+        {
+            if (Avatar == null) return;
+            LastHud.Remove(Avatar);
+            LastHudTime.Remove(Avatar);
+        }
+
+        public static void ResetHudCache()
+        {
+            LastHud.Clear();
+            LastHudTime.Clear();
+        }
+
+        private static bool SameHud(in ModWeaponHudMessage A, in ModWeaponHudMessage B)
+        {
+            return A.YuisMagic == B.YuisMagic
+                && A.HeidiHeat == B.HeidiHeat
+                && A.MinimalismStack == B.MinimalismStack
+                && A.EverfrostStack == B.EverfrostStack
+                && A.RuadhsleaStacks == B.RuadhsleaStacks
+                && A.FrozenSmelt == B.FrozenSmelt
+                && A.LightningsWrath == B.LightningsWrath
+                && A.DraftbladeRemain == B.DraftbladeRemain
+                && A.DraftbladeTotal == B.DraftbladeTotal
+                && A.RuadhsleaRemain == B.RuadhsleaRemain
+                && A.RuadhsleaTotal == B.RuadhsleaTotal
+                && A.FiaolasRemain == B.FiaolasRemain
+                && A.FiaolasTotal == B.FiaolasTotal
+                && A.GlacialBladeRemain == B.GlacialBladeRemain
+                && A.GlacialBladeTotal == B.GlacialBladeTotal
+                && A.OtterRemain == B.OtterRemain
+                && A.OtterTotal == B.OtterTotal
+                && A.BrownRabbitRemain == B.BrownRabbitRemain
+                && A.BrownRabbitTotal == B.BrownRabbitTotal;
+        }
+
+        private static bool IsHudEmpty(in ModWeaponHudMessage M)
+        {
+            return M.YuisMagic == 0
+                && M.HeidiHeat == 0
+                && M.MinimalismStack == 0
+                && M.EverfrostStack == 0
+                && M.RuadhsleaStacks == 0
+                && M.FrozenSmelt == 0
+                && M.LightningsWrath == 0
+                && M.DraftbladeRemain == 0f
+                && M.RuadhsleaRemain == 0f
+                && M.FiaolasRemain == 0f
+                && M.GlacialBladeRemain == 0f
+                && M.OtterRemain == 0f
+                && M.BrownRabbitRemain == 0f;
+        }
+
+        private static void OnModWeaponHudMessage(ModWeaponHudMessage Msg)
+        {
+            if (NetworkServer.active) return;
+            if (!NetworkClient.spawned.TryGetValue(Msg.AvatarNetId, out NetworkIdentity Identity) || Identity == null) return;
+            if (!Identity.TryGetComponent(out UnitAvatar Avatar) || Avatar == null) return;
+
+            ApplyHudInt(WeaponPatch.YuisShortDaggerMagic, Avatar, Msg.YuisMagic);
+            ApplyHudInt(WeaponPatch.HeidiDashAttack, Avatar, Msg.HeidiHeat);
+            ApplyHudInt(WeaponPatch.MinimalismDashAttack, Avatar, Msg.MinimalismStack);
+            ApplyHudInt(WeaponPatch.SilenceofEverfrostAttack, Avatar, Msg.EverfrostStack);
+            ApplyHudInt(WeaponPatch.RuadhsleaSpearBuff, Avatar, Msg.RuadhsleaStacks);
+            ApplyHudInt(WeaponPatch.FrozenSmeltEffect, Avatar, Msg.FrozenSmelt);
+            ApplyHudInt(WeaponPatch.LightningsWrathEffect, Avatar, Msg.LightningsWrath);
+
+            ApplyHudTimer(WeaponPatch.DraftbladeAttack, Avatar, Msg.DraftbladeRemain, Msg.DraftbladeTotal);
+            ApplyHudTimer(WeaponPatch.RuadhsleaSpearTime, Avatar, Msg.RuadhsleaRemain, Msg.RuadhsleaTotal);
+            ApplyHudTimer(WeaponPatch.FiaolasJudgmentStaffBuff, Avatar, Msg.FiaolasRemain, Msg.FiaolasTotal);
+            ApplyHudTimer(WeaponPatch.GlacialBladeEffect, Avatar, Msg.GlacialBladeRemain, Msg.GlacialBladeTotal);
+            ApplyHudTimer(StarSephiriaMod.Otter3_AddCrit, Avatar, Msg.OtterRemain, Msg.OtterTotal);
+            ApplyHudTimer(StarSephiriaMod.BrownRabbit2Hit, Avatar.Name, Msg.BrownRabbitRemain, Msg.BrownRabbitTotal);
+        }
+
+        private static void ApplyHudInt(Dictionary<UnitAvatar, int> Target, UnitAvatar Avatar, int Value)
+        {
+            if (Value > 0)
+            {
+                if (!Target.TryGetValue(Avatar, out int Old) || Old != Value)
+                    Target[Avatar] = Value;
+            }
+            else Target.Remove(Avatar);
+        }
+
+        private static void ApplyHudTimer(Dictionary<UnitAvatar, Timer> Target, UnitAvatar Avatar, float Remain, float Total)
+        {
+            if (Remain <= 0f || Total <= 0f)
+            {
+                Target.Remove(Avatar);
+                return;
+            }
+            if (!Target.TryGetValue(Avatar, out Timer T) || T == null)
+                Target[Avatar] = T = new Timer(Total, false);
+            T.time = Total;
+            T.SetTimer(Total - Remain);
+        }
+
+        private static void ApplyHudTimer(Dictionary<string, Timer> Target, string Name, float Remain, float Total)
+        {
+            if (Remain <= 0f || Total <= 0f)
+            {
+                Target.Remove(Name);
+                return;
+            }
+            if (!Target.TryGetValue(Name, out Timer T) || T == null)
+                Target[Name] = T = new Timer(Total, false);
+            T.time = Total;
+            T.SetTimer(Total - Remain);
         }
 
         /// <summary>
@@ -211,6 +473,7 @@ namespace SPMod.Tool
 
         private static void OnModCharmMessage(ModCharmMessage Msg)
         {
+            // 不能在这里因为 NetworkServer.active 直接 return：SendEventToOwner 需要主机自己的客户端处理（如 Lottery 提示）。
             if (!NetworkClient.spawned.TryGetValue(Msg.CharmNetId, out NetworkIdentity Identity) || Identity == null) return;
 
             if (Identity.TryGetComponent(out Charm_Basic Charm))

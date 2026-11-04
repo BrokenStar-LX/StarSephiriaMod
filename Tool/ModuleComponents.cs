@@ -450,7 +450,7 @@ namespace SPMod.Tool
                 Vector3 FxPos = Position;
                 FxPos.y += 0.5f;
                 PlayFx(FxPos, FxTrigger, Player);
-                ModNetwork.SendAirValveFx(Weapon.netId, Player.netId, FxPos, FxTrigger);
+                ModNetwork.SendWeaponFx(Player.netId, FxPos, FxTrigger);
             }
 
             private static void PlayFx(Vector3 Position, byte Event, UnitAvatar Owner)
@@ -499,7 +499,7 @@ namespace SPMod.Tool
                     }
                     PlayFx(Position, FxPulse, Player);
                     if (Weapon != null)
-                        ModNetwork.SendAirValveFx(Weapon.netId, Player.netId, Position, FxPulse);
+                        ModNetwork.SendWeaponFx(Player.netId, Position, FxPulse);
                     yield return new WaitForSeconds(Interval);
                 }
                 if (Player != null && Active.TryGetValue(Player!, out AirValveZone? Current) && Current == this)

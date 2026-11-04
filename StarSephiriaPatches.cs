@@ -517,6 +517,9 @@ namespace SPMod
                 {
                     itemController.OnDrinkPotionServerside -= OnDrinkPotion;
                 }
+                if (__instance is PlayerAvatar HudPlayer)
+                    PlayerAvatar_Patches.RemoveHudState(HudPlayer);
+                ModNetwork.RemoveHudCache(__instance);
             }
 
             [HarmonyPatch("Update")]
@@ -779,10 +782,8 @@ namespace SPMod
             [HarmonyPrefix]
             public static bool GetDamageReduction_Prefix(float damage, int defense, ref float __result)
             {
-                if (!ModConfig.Instance.ModifyDefenseFormula)
-                {
-                    return true;
-                }
+                if (!ModConfig.Instance.ModifyDefenseFormula) return true;
+                if (defense < 0) return true;
                 __result = damage * (1 - 65f / (defense + 65f));
                 return false;
             }
@@ -816,7 +817,7 @@ namespace SPMod
             [HarmonyPrefix]
             public static bool CreateHPBar_Prefix(UnitAvatar __instance)
             {
-                if (__instance.Leader is PlayerAvatar Player)
+                if (__instance.Leader is PlayerAvatar)
                 {
                     return false;
                 }
@@ -1190,6 +1191,18 @@ namespace SPMod
         [HarmonyPatch(typeof(PlayerAvatar))]
         public static class PlayerAvatar_Patches
         {
+            private static readonly Dictionary<PlayerAvatar, float> NextHudSend = [];
+
+            public static void RemoveHudState(PlayerAvatar Player)
+            {
+                if (Player != null) NextHudSend.Remove(Player);
+            }
+
+            public static void ResetHudState()
+            {
+                NextHudSend.Clear();
+            }
+
             [HarmonyPatch("Update")]
             [HarmonyPostfix]
             static void Update_Postfix(PlayerAvatar __instance)
@@ -1460,6 +1473,16 @@ namespace SPMod
                 if (RosionTime.ContainsKey(__instance))
                 {
                     RosionTime[__instance] -= Time.deltaTime;
+                }
+
+                if (NetworkServer.active)
+                {
+                    float Now = Time.time;
+                    if (!NextHudSend.TryGetValue(__instance, out float Next) || Now >= Next)
+                    {
+                        NextHudSend[__instance] = Now + 0.1f;
+                        ModNetwork.SendWeaponHud(__instance);
+                    }
                 }
             }
 

@@ -118,6 +118,8 @@ namespace SPMod
             ColdAngerTime.Clear();
             HeatedBladeStack.Clear();
             ModHeatedBladeAttack.Clear();
+            ModNetwork.ResetHudCache();
+            PlayerAvatar_Patches.ResetHudState();
             RosionList.Clear();
             CharmLevelBoost.RestoreAll();
         }
@@ -1408,7 +1410,7 @@ namespace SPMod
                 ItemDatabase.Modify(1245, item =>
                 {
                     Charm_TheTyphoonSheetmusic Effect = item.resourcePrefab.GetComponent<Charm_TheTyphoonSheetmusic>();
-                    Effect.cloudAttackSpeedByLevel = [100];
+                    Effect.cloudAttackSpeedByLevel = [100, 100, 100];
                 }); // 乐谱《台风》
                 ItemDatabase.Modify(1268, item =>
                 {
@@ -1645,7 +1647,24 @@ namespace SPMod
 
         public static void OnLoadKeywordDatabase()
         {
-            foreach(ModKeyWord Data in ModKeywordEntityData)
+            KeywordDatabase.Modify("HighestElementalDamage", modifier =>
+            {
+                modifier.description = new LocalizedString("ModKeyword_Stat_ElementalDamage_Effect");
+                modifier.displayDetails = true;
+            });
+            KeywordDatabase.Modify("DashInvincibleTimeBonus", modifier =>
+            {
+                modifier.description = new LocalizedString("ModKeyword_Stat_DashInvincibleTime_Effect");
+                modifier.displayDetails = true;
+            });
+            KeywordDatabase.Modify("DashRecovery", modifier =>
+            {
+                modifier.description = new LocalizedString("ModKeyword_Stat_DashRecovery_Effect");
+                modifier.displayDetails = true;
+            });
+            KeywordDatabase.Modify("DebuffDamage", modifier => modifier.visualText = new LocalizedString("ModKeyword_Stat_DeBuffDamage"));
+            KeywordDatabase.Modify("DebuffDuration", modifier => modifier.visualText = new LocalizedString("ModKeyword_Stat_DeBuffDuration"));
+            foreach (ModKeyWord Data in ModKeywordEntityData)
             {
                 KeywordEntity Entity = Data.EndCreate();
                 if (Data.UseKeyWordSpriteName != "")
@@ -1728,6 +1747,15 @@ namespace SPMod
             ModFxPool.Register("AirValveGround", prewarm: 2, max: 8, fps: 18, loop: false,
                 "AirArrow_FX_Ground00", "AirArrow_FX_Ground01", "AirArrow_FX_Ground02", "AirArrow_FX_Ground03", "AirArrow_FX_Ground04", "AirArrow_FX_Ground05", "AirArrow_FX_Ground06");
             ModFxPool.Register("WindSail_Explosion", 4, 7, 10, false, "FX", 0, "WindSail_Explosion00", "WindSail_Explosion01", "WindSail_Explosion02", "WindSail_Explosion03", "WindSail_Explosion04", "WindSail_Explosion05");
+            ModFxPool.Register("VacuumBurstFX", 2, 8, 8.75f, false, "FX", 0,
+                "VacuumBurstFX_0", "VacuumBurstFX_1", "VacuumBurstFX_2", "VacuumBurstFX_3",
+                "VacuumBurstFX_4", "VacuumBurstFX_5", "VacuumBurstFX_6");
+            ModFxPool.Register("ShadowThornsFx", prewarm: 2, max: 8, fps: 18, loop: false, "FX", 0,
+                "ShadowThornsFx_1", "ShadowThornsFx_2", "ShadowThornsFx_3", "ShadowThornsFx_4",
+                "ShadowThornsFx_5", "ShadowThornsFx_6", "ShadowThornsFx_7", "ShadowThornsFx_8");
+            ModFxPool.RegisterFromPath("WindyWeatherParticle", "Bullet", 8, 32, 12f, false, "FX", 0,
+                "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
+                "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5");
         }
 
         public static void InitializeModStat(string Name)

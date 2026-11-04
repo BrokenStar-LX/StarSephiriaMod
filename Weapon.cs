@@ -693,6 +693,8 @@ namespace SPMod
                         {
                             var Dam = DamageInstance.GetDamage(Player, Id, Target.transform.position, 4294967295L, EffectDamage, EDamageType.Slice, EDamageFromType.DirectAttack, Vector2.zero, 0, 0f);
                             Target.ApplyDamage(Dam);
+                            ModFxPool.Spawn("ShadowThornsFx", Target.transform.position, Player.isOwned ? 1 : 0);
+                            ModNetwork.SendWeaponFx(Player.netId, Target.transform.position, ModNetwork.WeaponFxShadowThorns);
                         }
                     }
                     return false;

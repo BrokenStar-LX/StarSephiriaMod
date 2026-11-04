@@ -203,18 +203,14 @@ namespace SPMod
                             {
                                 if (itemCategoryEntity.comboEffectPrefab.GetComponent<ComboEffectBase>() is ComboEffectBase ACADEMY)
                                 {
-                                    foreach (ComboEffectBase.ComboStat stat in ACADEMY.addStatByCombo)
-                                    {
-                                        if (stat.comboCount == 4)
-                                        {
-                                            stat.status =
-                                            [
-                                                "MAGIC_DAMAGE_BONUS/10",
-                                                "MAGIC_COST_REDUCE/10",
-                                            ];
-                                            break;
-                                        }
-                                    }
+                                    ACADEMY.addStatByCombo =
+                                    [
+                                        new(){ comboCount = 2, status = ["MP_REGEN/10", "MP_STEAL/5"] },
+                                        new(){ comboCount = 4, status = ["COOLDOWN_RECOVERY_SPEED/15"] },
+                                        new(){ comboCount = 6, status = ["MAGIC_DAMAGE_BONUS/10"] },
+                                        new(){ comboCount = 8, status = ["COOLDOWN_RECOVERY_SPEED/30"] },
+                                        new(){ comboCount = 10, status = ["MAGIC_DAMAGE_BONUS/20"] },
+                                    ];
                                 }
                             }//学院
                         }

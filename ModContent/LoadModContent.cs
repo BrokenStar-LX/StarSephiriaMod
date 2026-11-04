@@ -1636,8 +1636,8 @@ namespace SPMod.ModContent
                 Charm_RemovePotion Effect = Action.resourcePrefab.AddComponent<Charm_RemovePotion>();
                 Effect.isWeaponRelatedCharm = false;
                 Effect.effectsString = [ new("ModCharmEffect_RemovePotion") ];
-                Effect.stats = [Tools.SetStatusGroup("FINAL_DAMAGE", 5, 10)];
-                Effect.maxLevel = 1;
+                Effect.stats = [Tools.SetStatusGroup("FINAL_DAMAGE", 8, 12, 16)];
+                Effect.maxLevel = 2;
                 Effect.isUniqueEffect = true;
                 Effect.enabled = false;
             }),//瓦格纳的玻璃瓶
@@ -1689,6 +1689,161 @@ namespace SPMod.ModContent
             "Bolt_Special_Poison3", "Bolt_Special_Poison4", "Bolt_Special_Poison5")
         .SetAttackSucceededFxSprites("EffectFx", "JellyFish_Bullet_FX0", "JellyFish_Bullet_FX1", "JellyFish_Bullet_FX2",
             "JellyFish_Bullet_FX3", "JellyFish_Bullet_FX4", "JellyFish_Bullet_FX5", "JellyFish_Bullet_FX6");
+
+        public static readonly ModBullet VacuumBurstBullet = new ModBullet("VacuumBurstBullet", () =>
+        {
+            ItemEntity? AirBook = ItemDatabase.FindItemById(3000);
+            Charm_Magic? AirCharm = AirBook?.resourcePrefab?.GetComponent<Charm_Magic>();
+            ActiveSkill_Bolt? Bolt = AirCharm?.ContainedMagic?.magicPrefab?.GetComponent<ActiveSkill_Bolt>();
+            return Bolt?.boltBulletPrefab;
+        })
+        .SetBullet(Action =>
+        {
+            Action.pierceCreatureCount = 1;
+            Action.attackSucceededFxPrefab = null;
+            Action.createFxPrefab = null;
+            if (Action.DestroyModule != null) Action.DestroyModule.destroyFxPrefab = null;
+        })
+        .SetSpeedScale(2f)
+        .SetSpriteFrames("Bullet", "VacuumBurstBullet0", "VacuumBurstBullet1", "VacuumBurstBullet2", "VacuumBurstBullet3", "VacuumBurstBullet4");
+
+        public static readonly ModBullet WindBladeBullet = new ModBullet("WindBladeBullet", () =>
+        {
+            if (Tools.GetPro("AirSlashMini_Flame", out GameObject? Pro) && Pro != null) return Pro;
+            if (StarSephiriaPatches.Projectile.TryGetValue("AirSlashMini_Flame", out GameObject? Direct) && Direct != null) return Direct;
+            if (Tools.GetPro("AirSlashMini", out GameObject? Fallback) && Fallback != null) return Fallback;
+            if (StarSephiriaPatches.Projectile.TryGetValue("AirSlashMini", out GameObject? FallbackDirect) && FallbackDirect != null) return FallbackDirect;
+            return null;
+        })
+        .SetBullet(Action =>
+        {
+            if (Action.bulletChildParticle != null)
+            {
+                Action.bulletChildParticle.gameObject.SetActive(false);
+                Action.bulletChildParticle = null;
+            }
+        })
+        .SetSpeedScale(1.5f)
+        .SetSpriteFrames("Bullet",
+            "ScabardOfExorcism_MiniFireBullet0", "ScabardOfExorcism_MiniFireBullet1",
+            "ScabardOfExorcism_MiniFireBullet2", "ScabardOfExorcism_MiniFireBullet3",
+            "ScabardOfExorcism_MiniFireBullet4", "ScabardOfExorcism_MiniFireBullet5")
+        .SetAttackSucceededFxSprites("EffectFx",
+            "FireSpear_SlashFX00", "FireSpear_SlashFX01",
+            "FireSpear_SlashFX02", "FireSpear_SlashFX03",
+            "FireSpear_SlashFX04", "FireSpear_SlashFX05",
+            "FireSpear_SlashFX06")
+        .SetDestroyFxSprites("EffectFx",
+            "ScabardOfExorcism_MiniFireFX0", "ScabardOfExorcism_MiniFireFX1",
+            "ScabardOfExorcism_MiniFireFX2", "ScabardOfExorcism_MiniFireFX3",
+            "ScabardOfExorcism_MiniFireFX4", "ScabardOfExorcism_MiniFireFX5",
+            "ScabardOfExorcism_MiniFireFX6", "ScabardOfExorcism_MiniFireFX7");
+
+        private static void ApplyCastTemplate(ActiveSkillEntity Entity)
+        {
+            ActiveSkillEntity? AirSkill = ItemDatabase.FindItemById(3000)?.resourcePrefab?.GetComponent<Charm_Magic>()?.ContainedMagic;
+            ActiveSkillEntity? FireSkill = ItemDatabase.FindItemById(3012)?.resourcePrefab?.GetComponent<Charm_Magic>()?.ContainedMagic;
+            ActiveSkillEntity? CastTemplate = null;
+            if (AirSkill?.chagingFxByTier is { Length: > 0 } AirFx && AirFx[0] != null) CastTemplate = AirSkill;
+            else if (FireSkill?.chagingFxByTier is { Length: > 0 } FireFx && FireFx[0] != null) CastTemplate = FireSkill;
+            if (CastTemplate == null) return;
+
+            Entity.chagingFxByTier = CastTemplate.chagingFxByTier;
+            Entity.completeChargeFxByTier = CastTemplate.completeChargeFxByTier;
+            Entity.castingCircleOverride = CastTemplate.castingCircleOverride;
+            Entity.castGroundOverride = CastTemplate.castGroundOverride;
+            Entity.requireCastingAnimation = CastTemplate.requireCastingAnimation;
+            Entity.magicDashCurveType = CastTemplate.magicDashCurveType;
+            Entity.magicDashDirectionType = CastTemplate.magicDashDirectionType;
+            Entity.magicDashTime = CastTemplate.magicDashTime;
+            Entity.magicDashSpeed = CastTemplate.magicDashSpeed;
+            Entity.magicDashAngle = CastTemplate.magicDashAngle;
+        }
+
+        public static readonly ModActiveSkill VacuumBurst = new ModActiveSkill("VacuumBurst", typeof(ActiveSkill_VacuumBurst))
+        .SetSkill<ActiveSkill_VacuumBurst>(Skill =>
+        {
+            Skill.boltBulletPrefab = VacuumBurstBullet.Template;
+            Skill.damageId = "[Star's Sephiria Mod]VacuumBurst";
+            Skill.relatedDamage = "WindDamage";
+            Skill.elementalType = Wind;
+            Skill.defaultDamageByLevel = [6f, 9f, 12f, 15f, 18f];
+            Skill.damagePercentByLevel = [50f, 75f, 100f, 125f, 150f];
+            Skill.ExplosionOffsetYPercent = 0.25f;
+            Skill.effectString = new LocalizedString("ModSkill_VacuumBurst_Effect");
+            Skill.specsString = new LocalizedString("ModSkill_VacuumBurst_Specs");
+            Skill.specsValueString = new LocalizedString("ModSkill_VacuumBurst_SpecsValue");
+        })
+        .SetEntity(Entity =>
+        {
+            Entity.rarity = EItemRarity.Legend;
+            Entity.magicClasses = [EMagicClass.Air];
+            Entity.mpCostsByLevel = [12, 14, 16, 18, 20];
+            Entity.cooldownTime = 20f;
+            Entity.ammo = 1;
+            Entity.castingType = ECastingType.SingleShot;
+            Entity.chargingTime = 0.5f;
+            Entity.maxChargingPower = 3;
+            Entity.magicLabelColor = WindColor;
+            Entity.icon = Tools.LoadModSprite("Skill_VacuumBurst");
+            ApplyCastTemplate(Entity);
+        });
+
+        public static readonly ModActiveSkill WindBlade = new ModActiveSkill("WindBlade", typeof(ActiveSkill_WindBlade))
+        .SetSkill<ActiveSkill_WindBlade>(Skill =>
+        {
+            Skill.boltBulletPrefab = WindBladeBullet.Template;
+            Skill.damageId = "[Star's Sephiria Mod]WindBlade";
+            Skill.relatedDamage = "WindDamage";
+            Skill.elementalType = Wind;
+            Skill.defaultDamageByLevel = [10f, 15f, 20f, 25f, 30f];
+            Skill.damagePercentByLevel = [70f, 105f, 140f, 175f, 210f];
+            Skill.fireInterval = 0.08f;
+            Skill.effectString = new LocalizedString("ModSkill_WindBlade_Effect");
+            Skill.specsString = new LocalizedString("ModSkill_WindBlade_Specs");
+            Skill.specsValueString = new LocalizedString("ModSkill_WindBlade_SpecsValue");
+        })
+        .SetEntity(Entity =>
+        {
+            Entity.rarity = EItemRarity.Uncommon;
+            Entity.magicClasses = [EMagicClass.Air];
+            Entity.mpCostsByLevel = [6, 7, 8, 9, 10];
+            Entity.cooldownTime = 1f;
+            Entity.ammo = 8;
+            Entity.castingType = ECastingType.SingleShot;
+            Entity.chargingTime = 0.5f;
+            Entity.maxChargingPower = 3;
+            Entity.magicLabelColor = WindColor;
+            Entity.icon = Tools.LoadModSprite("Skill_WindBlade");
+            ApplyCastTemplate(Entity);
+        });
+
+        public static readonly ModActiveSkill WindyWeather = new ModActiveSkill("WindyWeather", typeof(ActiveSkill_WindyWeather))
+        .SetSkill<ActiveSkill_WindyWeather>(Skill =>
+        {
+            Skill.damageId = "[Star's Sephiria Mod]WindyWeather";
+            Skill.relatedDamage = "WindDamage";
+            Skill.elementalType = Wind;
+            Skill.defaultDamageByLevel = [6f, 12f, 18f, 24f, 30f];
+            Skill.damagePercentByLevel = [20f, 40f, 60f, 80f, 100f];
+            Skill.effectString = new LocalizedString("ModSkill_WindyWeather_Effect");
+            Skill.specsString = new LocalizedString("ModSkill_WindyWeather_Specs");
+            Skill.specsValueString = new LocalizedString("ModSkill_WindyWeather_SpecsValue");
+        })
+        .SetEntity(Entity =>
+        {
+            Entity.rarity = EItemRarity.Rare;
+            Entity.magicClasses = [EMagicClass.Air];
+            Entity.mpCostsByLevel = [18, 20, 22, 24, 26];
+            Entity.cooldownTime = 25f;
+            Entity.ammo = 1;
+            Entity.castingType = ECastingType.SingleShot;
+            Entity.chargingTime = 0.5f;
+            Entity.maxChargingPower = 3;
+            Entity.magicLabelColor = WindColor;
+            Entity.icon = Tools.LoadModSprite("Skill_WindyWeather");
+            ApplyCastTemplate(Entity);
+        });
 
         // 模组攻击数据
         public static List<ModFireData> WindGreatSword_Basic =
