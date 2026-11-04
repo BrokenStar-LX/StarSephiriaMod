@@ -511,7 +511,7 @@ namespace SPMod
                 Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
                 Damage *= Mult;
                 Vector3 Pos = Target.transform.position;
-                Bullet.Pool.Spawn(Pro, Target.transform.position, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]落石", Damage, 0, 0f, Player, Player.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, Target.transform.position, Pos, null, null, 0f, EDamageElementalType.Physical);
+                Bullet.Pool.Spawn(Pro, Target.transform.position, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]FallingRock", Damage, 0, 0f, Player, Player.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, Target.transform.position, Pos, null, null, 0f, EDamageElementalType.Physical);
             }
         }
 
@@ -683,7 +683,7 @@ namespace SPMod
                     {
                         if (Target == Player) return false;
 
-                        string Id = "[Star's Sephiria Mod]影荆棘";
+                        string Id = "[Star's Sephiria Mod]ShadowThorns";
                         float EffectDamage = Player.GetCustomStatUnsafe(TextFile.DamageReduction) * Player.GetCustomStatUnsafe(TextFile.Thorns) * 0.01f;
                         EffectDamage *= Player.GetCustomStatUnsafe(TextFile.PhysicalDamage) * 0.01f;
                         EffectDamage *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
@@ -1347,7 +1347,7 @@ namespace SPMod
                                 EffectTime.time = NewTime;
                                 Vector3 Pos = Player.transform.position;
                                 Vector3 Vec = __instance.owner.aimedPositionClientside - Player.transform.position;
-                                string DamageId = "[Star's Sephiria Mod]霜针花园";
+                                string DamageId = "[Star's Sephiria Mod]GardenofNeedleIce";
                                 float Damage = Player.GetCustomStatUnsafe(TextFile.IceDamage) * 2f;
                                 Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.MagicDamageBonus) * 0.01f;
                                 Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.MPSkillDamage) * 0.01f;
@@ -3236,7 +3236,7 @@ namespace SPMod
                             Dam *= Player.GetCustomStatUnsafe(TextFile.PhysicalDamage) * 0.01f;
                             Dam *= 1f + Player.GetCustomStatUnsafe(TextFile.WoundDamage) * 0.01f;
                             Dam *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                            DamageInstance damageInstance = DamageInstance.GetDamage(Player, "[Star's Sephiria Mod]撕裂", avatar.transform.position, 4294967295L, Dam, EDamageType.ElementalEffectDamage, EDamageFromType.None, Vector2.zero, 0, 0f);
+                            DamageInstance damageInstance = DamageInstance.GetDamage(Player, "[Star's Sephiria Mod]Rend", avatar.transform.position, 4294967295L, Dam, EDamageType.ElementalEffectDamage, EDamageFromType.None, Vector2.zero, 0, 0f);
                             damageInstance.SetCustomColor(changeElementalToChaos: true, Buff.color);
                             avatar.ApplyDamage(damageInstance);
                         }
@@ -3428,7 +3428,7 @@ namespace SPMod
                                         Damage *= Mult;
                                         Vector2 Vec = (motionTo - motionFrom).normalized;
                                         Vector2 Dir = RotateVector(Vec, 10f * i);
-                                        Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]冰晶", Damage, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Dir * 5f, null, null, 0f, EDamageElementalType.Ice);
+                                        Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]IceCrystal", Damage, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Dir * 5f, null, null, 0f, EDamageElementalType.Ice);
                                     }
                                 }
                             }
@@ -3849,7 +3849,7 @@ namespace SPMod
                                     float EffectDamage = damage * __instance.damageMultiplier * finalDamageMultiplier * ShootMult;
                                     EffectDamage *= 1f + DirectWeaponDamage * 0.01f;
                                     EffectDamage *= 1f + UseEffect * 0.24f;
-                                    Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]胡萝卜飞弹", EffectDamage, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Vec * 5f, null, onAttack, 0f, elementalType);
+                                    Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]CarrotMissile", EffectDamage, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Vec * 5f, null, onAttack, 0f, elementalType);
                                     a.forceFinalCombo = __instance.forceFinalCombo;
                                     a.useChaosDamageColor = true;
                                     a.chaosDamageColor = __instance.chaosDamageColor;
@@ -4184,7 +4184,7 @@ namespace SPMod
                                     BaseCount += 1;
                                     BasicValue -= 20;
                                 }
-                                Bullet a = Bullet.Pool.Spawn(Pro, owner.transform.position, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]飞盾", Damage, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, motionFrom, motionTo, null, null, 0f, EDamageElementalType.Physical);
+                                Bullet a = Bullet.Pool.Spawn(Pro, owner.transform.position, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]FlyingShield", Damage, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, motionFrom, motionTo, null, null, 0f, EDamageElementalType.Physical);
                                 a.pierceCreatureCount = BaseCount;
                                 a.TurnOnHoming(true, null, 1f);
                             }
@@ -4280,7 +4280,7 @@ namespace SPMod
                                     {
                                         Vector3 OrigPos = (Vector3)motionFrom;
                                         Vector2 Vec = (motionTo - motionFrom).normalized;
-                                        Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]冰刃", Damage * 1.8f, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Vec * 5f, null, onAttack, 0f, EDamageElementalType.Ice);
+                                        Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]IceBlade", Damage * 1.8f, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Vec * 5f, null, onAttack, 0f, EDamageElementalType.Ice);
                                         a.forceFinalCombo = __instance.forceFinalCombo;
                                         a.speedScale = 1.25f;
                                         onCreateAttack?.Invoke(0, a);
@@ -4295,7 +4295,7 @@ namespace SPMod
                                         {
                                             Vector2 Vec = (motionTo - motionFrom).normalized;
                                             Vector2 Dir = RotateVector(Vec, 10f * i);
-                                            Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]冰晶", Damage * 0.6f, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Dir * 5f, null, onAttack, 0f, EDamageElementalType.Ice);
+                                            Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]IceCrystal", Damage * 0.6f, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Dir * 5f, null, onAttack, 0f, EDamageElementalType.Ice);
                                             a.forceFinalCombo = __instance.forceFinalCombo;
                                             a.speedScale = 0.75f;
                                             onCreateAttack?.Invoke(0, a);
@@ -4327,7 +4327,7 @@ namespace SPMod
 
                                     Vector2 Vec = (motionTo - motionFrom).normalized;
                                     Vector2 Dir = RotateVector(Vec, 24f * i);
-                                    Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]冰川剑气", DValue * DMult, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Dir * 5f, null, onAttack, 0f, EDamageElementalType.Ice);
+                                    Bullet a = Bullet.Pool.Spawn(Pro, OrigPos, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]GlacierSwordQi", DValue * DMult, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, OrigPos, OrigPos + (Vector3)Dir * 5f, null, onAttack, 0f, EDamageElementalType.Ice);
                                     a.forceFinalCombo = __instance.forceFinalCombo;
                                     a.speedScale = 1.5f;
                                     onCreateAttack?.Invoke(0, a);
@@ -4355,7 +4355,7 @@ namespace SPMod
                                 Damage *= 1f + owner.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
                                 Damage *= 1f + DirectWeaponDamage * 0.01f;
                                 Vector2 Vec = (motionTo - motionFrom).normalized;
-                                Bullet a = Bullet.Pool.Spawn(Pro, motionFrom + Vec, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]电卷云", Damage, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, motionFrom + Vec, motionTo + Vec, null, onAttack, 0f, EDamageElementalType.Lightning);
+                                Bullet a = Bullet.Pool.Spawn(Pro, motionFrom + Vec, true, EDamageFromType.DirectAttack, "[Star's Sephiria Mod]Thunderhead", Damage, 0, 0f, owner, owner.GetHostileFactionLayers(EDamageFromType.DirectAttack), 0.3f, motionFrom + Vec, motionTo + Vec, null, onAttack, 0f, EDamageElementalType.Lightning);
                                 a.speedScale *= 0.5f;
                                 a.TurnOnHoming(true, null, 0.1f);
                                 a.pierceCreatureCount = 99;

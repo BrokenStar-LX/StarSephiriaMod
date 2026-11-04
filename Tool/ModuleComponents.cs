@@ -23,8 +23,6 @@ namespace SPMod.Tool
     {
         public uint AssetId = 0u;
     }
-
-    /// <summary>ModFxPool 生成 FX 的可见度状态：多人设置给出的透明度会和 SetColor 的 alpha 相乘。</summary>
     public class ModFxVisibility : MonoBehaviour
     {
         public Color BaseColor = Color.white;
@@ -86,6 +84,26 @@ namespace SPMod.Tool
     public class ModBulletTemplate : ModSpawnTemplate
     {
         // 子弹模板标记
+    }
+    public class ModBulletSpeed : MonoBehaviour
+    {
+        public float Scale = 1f;
+        private Bullet? bullet;
+
+        private void Awake()
+        {
+            bullet = GetComponent<Bullet>();
+        }
+
+        private void OnEnable()
+        {
+            if (bullet != null) bullet.speedScale = Scale;
+        }
+
+        private void Update()
+        {
+            if (bullet != null && bullet.speedScale != Scale) bullet.speedScale = Scale;
+        }
     }
     public class ModSpriteMap : MonoBehaviour
     {
@@ -253,7 +271,7 @@ namespace SPMod.Tool
                 {
                     Vector3 Pos = Weapon.FirePosition(0);
                     Vector3 Vec = Vector3.Normalize(Target.transform.position - Pos);
-                    string Id = "[Star's Sephiria Mod]光棱镜";
+                    string Id = "[Star's Sephiria Mod]LightPrism";
                     float Damage = Tools.BaseStatToMax(Player) * 2f;
                     float Mult = 1f + Player.GetCustomStatUnsafe(TextFile.MagicDamageBonus) * 0.01f;
                     Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.MPSkillDamage) * 0.01f;
@@ -867,6 +885,17 @@ namespace SPMod.Tool
                 });
             }
 
+            /// <summary>给子弹模板挂固定速度倍率；Bullet.OnSpawn 会把 speedScale 重置，所以用组件持续补回。</summary>
+            public ModBullet SetSpeedScale(float scale)
+            {
+                return Then(T =>
+                {
+                    ModBulletSpeed Speed = T.GetComponent<ModBulletSpeed>();
+                    if (Speed == null) Speed = T.AddComponent<ModBulletSpeed>();
+                    Speed.Scale = scale;
+                });
+            }
+
             public ModBullet SetSpriteSet(string path, params string[] spriteNames)
             {
                 return Then(T =>
@@ -902,6 +931,64 @@ namespace SPMod.Tool
                 });
             }
 
+            /// <summary>按顺序直接替换子弹动画帧，不依赖模板原 sprite 名。</summary>
+            public ModBullet SetSpriteFrames(string path, params string[] spriteNames)
+            {
+                return Then(T =>
+                {
+                    List<Sprite> Frames = [];
+                    foreach (string SpriteName in spriteNames)
+                    {
+                        Sprite? Frame = Tools.LoadModSpriteForPath(path, SpriteName);
+                        if (Frame != null) Frames.Add(Frame);
+                    }
+                    if (Frames.Count == 0)
+                    {
+                        StarSephiriaMod.LogError($"[ModBullet]{Name} 没有加载到子弹贴图");
+                        return;
+                    }
+                    Sprite[] Array = Frames.ToArray();
+                    if (ApplyDirectFrames(T, Array)) return;
+                    if (!ApplyFallbackAnimator(T, Array))
+                        StarSephiriaMod.LogError($"[ModBullet]{Name} 未找到任何 SpriteRenderer，子弹贴图未替换");
+                });
+            }
+
+            private static bool ApplyDirectFrames(GameObject Root, Sprite[] Frames)
+            {
+                bool Replaced = false;
+                foreach (SimpleAnimator2D Anim in Root.GetComponentsInChildren<SimpleAnimator2D>(true)) { Anim.sprites = Frames; Replaced = true; }
+                foreach (SimpleAnimator2D_FX Anim in Root.GetComponentsInChildren<SimpleAnimator2D_FX>(true)) { Anim.sprites = Frames; Replaced = true; }
+                foreach (BulletSimpleAnimator Anim in Root.GetComponentsInChildren<BulletSimpleAnimator>(true)) { Anim.sprites = Frames; Replaced = true; }
+                return Replaced;
+            }
+
+            private static bool ApplyFallbackAnimator(GameObject Root, Sprite[] Frames)
+            {
+                SpriteRenderer? Target = null;
+                SpriteRenderer? First = null;
+                foreach (SpriteRenderer Renderer in Root.GetComponentsInChildren<SpriteRenderer>(true))
+                {
+                    First ??= Renderer;
+                    if (Renderer.GetComponent<Animator2D_Basic>() != null)
+                    {
+                        Target = Renderer;
+                        break;
+                    }
+                }
+                Target ??= First;
+                if (Target == null) return false;
+
+                foreach (Animator2D_Basic Old in Root.GetComponentsInChildren<Animator2D_Basic>(true)) Old.enabled = false;
+                BulletSimpleAnimator Anim = Target.GetComponent<BulletSimpleAnimator>();
+                if (Anim == null) Anim = Target.gameObject.AddComponent<BulletSimpleAnimator>();
+                Anim.sprites = Frames;
+                Anim.spriteRenderer = Target;
+                Anim.loop = true;
+                Target.sprite = Frames[0];
+                return true;
+            }
+
             private static int ReplaceDirect(GameObject Root, Dictionary<string, Sprite> Map)
             {
                 int Replaced = 0;
@@ -919,6 +1006,7 @@ namespace SPMod.Tool
                 }
                 foreach (SimpleAnimator2D Anim in Root.GetComponentsInChildren<SimpleAnimator2D>(true)) Replace(Anim.sprites);
                 foreach (SimpleAnimator2D_FX Anim in Root.GetComponentsInChildren<SimpleAnimator2D_FX>(true)) Replace(Anim.sprites);
+                foreach (BulletSimpleAnimator Anim in Root.GetComponentsInChildren<BulletSimpleAnimator>(true)) Replace(Anim.sprites);
                 return Replaced;
             }
 
@@ -1493,6 +1581,128 @@ namespace SPMod.Tool
                     }
                 }
                 return ModItem;
+            }
+        }
+
+        public class ModActiveSkill
+        {
+            private static int NextSkillId = 10000;
+            public string Name;
+            public Type SkillType;
+            public bool UniqueEffect = true;
+            public GameObject? Prefab { get; private set; }
+            public ActiveSkill? Skill { get; private set; }
+            public ActiveSkillEntity? Entity { get; private set; }
+            private readonly List<Action<ActiveSkill>> SkillBuilders = [];
+            private readonly List<Action<ActiveSkillEntity>> EntityBuilders = [];
+            private readonly List<Action<GameObject>> PrefabBuilders = [];
+            private int? SkillId;
+            private string? NameKey;
+            private string? FlavorKey;
+            private Sprite? Icon;
+
+            public ModActiveSkill(string name, Type skillType)
+            {
+                if (!typeof(ActiveSkill).IsAssignableFrom(skillType))
+                    throw new ArgumentException($"{skillType.FullName} 不是 ActiveSkill 的子类", nameof(skillType));
+                Name = name;
+                SkillType = skillType;
+            }
+            public ModActiveSkill(string name) : this(name, typeof(ActiveSkill_Arrow)) { }
+
+            public ModActiveSkill SetId(int id)
+            {
+                SkillId = id;
+                return this;
+            }
+            public ModActiveSkill SetNameKey(string key)
+            {
+                NameKey = key;
+                return this;
+            }
+            public ModActiveSkill SetFlavorKey(string key)
+            {
+                FlavorKey = key;
+                return this;
+            }
+            public ModActiveSkill SetIcon(Sprite icon)
+            {
+                Icon = icon;
+                return this;
+            }
+            public ModActiveSkill SetIcon(string spriteName)
+            {
+                Icon = Tools.LoadModSprite(spriteName);
+                return this;
+            }
+            public ModActiveSkill SetUniqueEffect(bool unique)
+            {
+                UniqueEffect = unique;
+                return this;
+            }
+            public ModActiveSkill SetPrefab(Action<GameObject> set)
+            {
+                PrefabBuilders.Add(set);
+                return this;
+            }
+            public ModActiveSkill SetSkill<T>(Action<T> set) where T : ActiveSkill
+            {
+                if (!typeof(T).IsAssignableFrom(SkillType))
+                    throw new ArgumentException($"{typeof(T).FullName} 与 {SkillType.FullName} 不匹配");
+                SkillBuilders.Add(Skill => { if (Skill is T Target) set(Target); });
+                return this;
+            }
+            public ModActiveSkill SetEntity(Action<ActiveSkillEntity> set)
+            {
+                EntityBuilders.Add(set);
+                return this;
+            }
+
+            public ActiveSkillEntity Create()
+            {
+                if (Entity != null) return Entity;
+                GameObject NewPrefab = new($"ModActiveSkill_{Name}");
+                NewPrefab.SetActive(false);
+                NewPrefab.AddComponent<ModSpawnTemplate>();
+                uint AssetId = LoadModContent.LoadModAssetId();
+                ModAssetId Asset = NewPrefab.AddComponent<ModAssetId>();
+                Asset.AssetId = AssetId;
+                StarSephiriaMod.registered[AssetId] = NewPrefab;
+                StarSephiriaMod.RegisterModPrefab(NewPrefab);
+                Object.DontDestroyOnLoad(NewPrefab);
+
+                ActiveSkill NewSkill = (ActiveSkill)NewPrefab.AddComponent(SkillType);
+                foreach (Action<ActiveSkill> Build in SkillBuilders) Build(NewSkill);
+                foreach (Action<GameObject> Build in PrefabBuilders) Build(NewPrefab);
+
+                ActiveSkillEntity NewEntity = ScriptableObject.CreateInstance<ActiveSkillEntity>();
+                NewEntity.name = $"ModActiveSkill_{Name}";
+                NewEntity.id = SkillId ?? NextSkillId++;
+                NewEntity.aName = new LocalizedString(NameKey ?? $"ModSkill_{Name}");
+                NewEntity.aFlavorText = new LocalizedString(FlavorKey ?? $"ModSkill_{Name}_Flavor");
+                NewEntity.icon = Icon ?? Tools.LoadModSprite($"Skill_{Name}");
+                NewEntity.magicPrefab = NewPrefab;
+                NewEntity.enabled = true;
+                foreach (Action<ActiveSkillEntity> Build in EntityBuilders) Build(NewEntity);
+
+                Prefab = NewPrefab;
+                Skill = NewSkill;
+                Entity = NewEntity;
+                return NewEntity;
+            }
+
+            public void BindCharm(ItemEntity Item, int MaxLevel, params string[] EffectsString)
+            {
+                ActiveSkillEntity NewEntity = Create();
+                Charm_Magic Charm = Item.resourcePrefab.GetComponent<Charm_Magic>();
+                if (Charm == null) Charm = Item.resourcePrefab.AddComponent<Charm_Magic>();
+                Charm.skill = NewEntity;
+                Charm.maxLevel = MaxLevel;
+                Charm.isWeaponRelatedCharm = false;
+                Charm.isUniqueEffect = UniqueEffect;
+                if (EffectsString.Length > 0)
+                    Charm.effectsString = EffectsString.Select(Key => new LocalizedString(Key)).ToArray();
+                Charm.enabled = false;
             }
         }
 
@@ -3272,12 +3482,22 @@ namespace SPMod.Tool
             /// <summary>sortingLayer/sortingOrder 用来把 FX 放到更高的排序层（游戏里 Background→Ground→Default→FX→UI）。留空则保持 Default/0。</summary>
             public static void Register(string key, int prewarm, int max, float fps, bool loop, string sortingLayer, int sortingOrder, params string[] frameNames)
             {
+                RegisterFromPath(key, "EffectFx", prewarm, max, fps, loop, sortingLayer, sortingOrder, frameNames);
+            }
+
+            public static void RegisterFromPath(string key, string path, int prewarm, int max, float fps, bool loop, params string[] frameNames)
+            {
+                RegisterFromPath(key, path, prewarm, max, fps, loop, "", 0, frameNames);
+            }
+
+            public static void RegisterFromPath(string key, string path, int prewarm, int max, float fps, bool loop, string sortingLayer, int sortingOrder, params string[] frameNames)
+            {
                 if (Pools.ContainsKey(key)) return;
 
                 var frames = new List<Sprite>();
                 foreach (string name in frameNames)
                 {
-                    Sprite? sp = Tools.LoadModSpriteForPath("EffectFx", name);
+                    Sprite? sp = Tools.LoadModSpriteForPath(path, name);
                     if (sp != null) frames.Add(sp);
                 }
                 if (frames.Count == 0)

@@ -12,6 +12,7 @@
     <None Remove="Localization\ko-KR.json" />
     <None Remove="Localization\zh-CN.json" />
     <None Remove="Localization\zh-TW.json" />
+    <None Remove="Localization\ja-JP.json" />
     <None Remove="ModContent\ComboEffect_Comet.prefab" />
     <None Remove="ModContent\modassetbundle" />
     <None Remove="Sprites\Weapon\**\*.png" />
@@ -32,6 +33,12 @@
     <None Remove="Sprites\Fruits_StarApple1.png" />
     <None Remove="Sprites\HardIcon.png" />
     <None Remove="Sprites\Item_AlchemistsFlask.png" />
+    <None Remove="Sprites\Item_VacuumBurst.png" />
+    <None Remove="Sprites\Skill_VacuumBurst.png" />
+    <None Remove="Sprites\Item_WindBlade.png" />
+    <None Remove="Sprites\Skill_WindBlade.png" />
+    <None Remove="Sprites\Item_WindyWeather.png" />
+    <None Remove="Sprites\Skill_WindyWeather.png" />
     <None Remove="Sprites\Item_Amber.png" />
     <None Remove="Sprites\Item_AmplifierComponent.png" />
     <None Remove="Sprites\Item_ArcaneBookMark.png" />
@@ -183,6 +190,12 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Sprites\Item_AlchemistsFlask.png" />
+    <EmbeddedResource Include="Sprites\Item_VacuumBurst.png" />
+    <EmbeddedResource Include="Sprites\Skill_VacuumBurst.png" />
+    <EmbeddedResource Include="Sprites\Item_WindBlade.png" />
+    <EmbeddedResource Include="Sprites\Skill_WindBlade.png" />
+    <EmbeddedResource Include="Sprites\Item_WindyWeather.png" />
+    <EmbeddedResource Include="Sprites\Skill_WindyWeather.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -213,6 +226,7 @@
     <EmbeddedResource Include="Localization\ko-KR.json" />
     <EmbeddedResource Include="Localization\zh-CN.json" />
     <EmbeddedResource Include="Localization\zh-TW.json" />
+    <EmbeddedResource Include="Localization\ja-JP.json" />
     <EmbeddedResource Include="Sprites\Categories\Fruits_Pomegranate0.png" />
     <EmbeddedResource Include="Sprites\Categories\Fruits_Pomegranate1.png" />
     <EmbeddedResource Include="Sprites\Item_AmplifierComponent.png" />

@@ -6,7 +6,7 @@ namespace SPMod.ModContent
 {
     public class Charm_ActivelyRetaliate : Charm_StatusInstance, IAttackableCharm
     {
-        private readonly string DamageId = "[Star's Sephiria Mod]影武者";
+        private readonly string DamageId = "[Star's Sephiria Mod]ShadowWarrior";
         public float[] MultByLevel = [45, 90, 135, 180];
         public Timer CooldownTimer = new(0.2f);
         public float DamageMult = 1f;

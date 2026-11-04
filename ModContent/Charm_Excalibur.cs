@@ -12,7 +12,7 @@ namespace SPMod.ModContent
         public Timer CooldownTimer2 = new(0.1f);
         public GameObject? Shoot = null;
         public NewWeaponFireData? EffectData = null;
-        public string DamageId = "[Star's Sephiria Mod]湖中剑";
+        public string DamageId = "[Star's Sephiria Mod]Excalibur";
         public bool UseAddTimer = false;
         public bool UseEffect = false;
         private float ClientPhaseEnd = 0f;

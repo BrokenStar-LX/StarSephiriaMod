@@ -10,7 +10,7 @@ namespace SPMod.ModContent
         private readonly MethodInfo AttackField_Plasma = AccessTools.Method(typeof(CharacterDebuff_Plasma), "Attack");
 
         public float[] ChanceByLevel = [8f, 16f, 24f, 32f];
-        public string Id = "[Star's Sephiria Mod]瓶中闪电";
+        public string Id = "[Star's Sephiria Mod]BottledLightning";
         public override Loc.KeywordValue[] BuildKeywords(UnitAvatar avatar, int level, int virtualLevelOffset, bool showAllLevel, bool ignoreAvatarStatus)
         {
             return

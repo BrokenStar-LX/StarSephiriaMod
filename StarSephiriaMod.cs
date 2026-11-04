@@ -1868,7 +1868,7 @@ namespace SPMod
 
             if (Player.IsWeaponUseNet(WeaponIDs.CrimsonVortex))
             {
-                if (ID.EqualsAny(TextFile.CrimsonVortex))
+                if (ID.EqualsAny(TextFile.WoundStack))
                 {
                     Result += (int)(Player.GetCustomStatUnsafe(TextFile.DebuffDamage) / 10f);
                     if (Result > 96) Result = 96;

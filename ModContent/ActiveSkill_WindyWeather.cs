@@ -5,6 +5,10 @@ using static SPMod.Tool.ModuleComponents;
 
 namespace SPMod.ModContent
 {
+    /// <summary>
+    /// 大风天：持续 15 秒，每秒对全屏敌人造成风属性伤害并施加风蚀�?
+    /// 期间随机在屏幕上播放水母弹粒子作为天气特效�?
+    /// </summary>
     public class ActiveSkill_WindyWeather : ActiveSkill
     {
         public string damageId = "[Star's Sephiria Mod]WindyWeather";
@@ -12,11 +16,15 @@ namespace SPMod.ModContent
         public string relatedDamage = "WindDamage";
         public float[] damagePercentByLevel = [20f, 40f, 60f, 80f, 100f];
         public EDamageElementalType elementalType = EffectConstant.Wind;
+        public float duration = 15f;
+        public float tickInterval = 1f;
         public float damageRadius = 20f;
         public float fxRadius = 10f;
+        public int fxPerSecond = 10;
 
         private bool Over = false;
         private float calculatedDamage;
+
         public override int GetPossibleMaxLevel()
         {
             return Mathf.Max(base.GetPossibleMaxLevel(), defaultDamageByLevel.Length, damagePercentByLevel.Length);
@@ -49,7 +57,10 @@ namespace SPMod.ModContent
             WaitForSeconds wait = new(0.1f);
             while(!Over)
             {
-                PlayFx(GetRandomFxPosition(NetworkCaster));
+                for (int j = 0; j < perTick; j++)
+                {
+                    PlayFx(GetRandomFxPosition(NetworkCaster));
+                }
                 yield return wait;
             }
         }
@@ -77,7 +88,7 @@ namespace SPMod.ModContent
                         tick.flag = damageId;
                         target.ApplyDamage(tick);
                         if (Random.Range(0, 100f) < 50f)
-                            target.ApplyDebuff(LoadModContent.WindErosion.Prefab, caster);
+                        target.ApplyDebuff(LoadModContent.WindErosion.Prefab, caster);
                     }
                 }
                 yield return wait;

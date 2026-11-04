@@ -28,9 +28,9 @@ namespace SPMod.ModContent
 
         private void AddDamage(UnitAvatar avatar, DamageInstance instance)
         {
-            if (instance.id == "Ability_Thorns" || instance.id == "[Star's Sephiria Mod]反击")
+            if (instance.id == "Ability_Thorns" || instance.id == "[Star's Sephiria Mod]Counterattack")
             {
-                string Id = "[Star's Sephiria Mod]坎坷命运";
+                string Id = "[Star's Sephiria Mod]BumpyFate";
                 var Dam = DamageInstance.GetDamage(NetworkAvatar, Id, avatar.transform.position, 4294967295L, CalculateDamage(this), EDamageType.Slice, EDamageFromType.None, Vector2.zero, 0, 0f);
                 avatar.ApplyDamage(Dam);
             }
