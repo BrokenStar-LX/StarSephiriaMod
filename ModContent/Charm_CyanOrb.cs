@@ -76,7 +76,7 @@ namespace SPMod.ModContent
 
         private void PlayFx(Vector3 position)
         {
-            var fx = ModuleComponents.ModFxPool.Spawn("CyanOrb", position);
+            var fx = ModuleComponents.ModFxPool.Spawn("CyanOrb", position, Avatar != null && Avatar.isOwned ? 1 : 0);
             fx?.SetScale(Vector3.one * 3f);
             fx?.SetColor(new Color(1f, 1f, 1f, 0.1f));
         }

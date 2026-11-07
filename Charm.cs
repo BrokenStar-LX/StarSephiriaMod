@@ -1081,5 +1081,20 @@ namespace SPMod
                 }
             }
         }
+
+        [HarmonyPatch(typeof(Charm_GrowthParry))]
+        public static class Charm_GrowthParry_Patch
+        {
+            [HarmonyPatch("GetDamage")]
+            [HarmonyPrefix]
+            static bool GetDamage_Prefix(Charm_GrowthParry __instance, UnitAvatar avatar, ref float __result)
+            {
+                if (!ModConfig.Instance.ModifyCharm) return true;
+
+                float Mult = __instance.parryDamageByLevel.SafeRandomAccess(__instance.CurrentLevelToIdx()) * 0.01f;
+                __result = Tools.BaseStatToMax(avatar) * Mult;
+                return false;
+            }
+        }  
     }
 }

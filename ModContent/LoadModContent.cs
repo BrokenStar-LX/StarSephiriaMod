@@ -160,6 +160,7 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_Heidi2", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_BlazingHelbanus", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_YuisShortDagger", true, MagicColor),
+            new ModKeyWord("ModWeaponEffect_YuisShortDagger2", true, MagicColor),
             new ModKeyWord("ModWeaponEffect_AdamahOath", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_BeastMarksSwordHou", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_WinterSmithsDraftblade", true, IceColor),
@@ -237,6 +238,7 @@ namespace SPMod.ModContent
             new ModDamageKey("IceSpike", DamageIdEntity.ECategory.Weapon),
             new ModDamageKey("AdditionalWeaponDamageWind", DamageIdEntity.ECategory.Weapon),
             new ModDamageKey("PoisonDetonation", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("EnchantedBlade", DamageIdEntity.ECategory.Weapon),
 
             //能力
             new ModDamageKey("KingsPower", DamageIdEntity.ECategory.Ability),
@@ -257,6 +259,7 @@ namespace SPMod.ModContent
             new ModEffectHUD("Rosion", true, true),
             new ModEffectHUD("Charge", true, true),
             new ModEffectHUD("ThunderBeast", false, true),
+            new ModEffectHUD("YuisShortDagger", true, true),
         ];
         //模组减益列表
         public static List<ModCharacterDebuff> ModDeBuffData =
@@ -431,14 +434,10 @@ namespace SPMod.ModContent
                         Tools.SetStatusGroup("DEFENSE", 4, 6, 8, 10)
                     }
             }, // 兔子头盔
-            { 1162, new List<StatusGroup> { Tools.SetStatusGroup("HIGHEST_ELEMENTAL_DAMAGE", 2, 4) } }, // 诱惑的鱼饵
-            { 1163, new List<StatusGroup> { Tools.SetStatusGroup("EVASION", 500, 1000, 1500, 2000) } }, // 魔法眼镜
-            { 1164, new List<StatusGroup>
-                    {
-                        Tools.SetStatusGroup("MAX_HP", 3, 6, 9, 12),
-                        Tools.SetStatusGroup("CRITICAL_DAMAGE_RATE", 5, 10, 15, 20)
-                    }
-            }, // 稻草人偶
+            { 1162, [ Tools.SetStatusGroup("HIGHEST_ELEMENTAL_DAMAGE", 2, 4) ] }, // 诱惑的鱼饵
+            { 1163, [ Tools.SetStatusGroup("EVASION", 500, 1000, 1500, 2000) ] }, // 魔法眼镜
+            { 1164, [ Tools.SetStatusGroup("MAX_HP", 3, 6, 9, 12), Tools.SetStatusGroup("CRITICAL_DAMAGE_RATE", 5, 10, 15, 20) ] }, // 稻草人偶
+            { 1166, [ Tools.SetStatusGroup("MAGIC_CRITICAL", 1000, 2000, 3000) ] }, // 宝石盔甲
             { 1181, new List<StatusGroup>
                     {
                         Tools.SetStatusGroup("PHYSICAL_DAMAGE", 2, 4, 6, 8, 10, 12, 14, 16, 18, 20),
@@ -1367,7 +1366,7 @@ namespace SPMod.ModContent
                 Effect.enabled = false;
             }),//神秘盒子
 
-            new ModItem("MysteryBox_Random", EItemRarity.Rare)
+            new ModItem("MysteryBox_Random", EItemRarity.Uncommon)
             .CustomCreateCharm([], Action =>
             {
                 Action.activeType = EItemActiveType.Hidden;

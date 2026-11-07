@@ -34,6 +34,7 @@
     <None Remove="Sprites\HardIcon.png" />
     <None Remove="Sprites\Item_AlchemistsFlask.png" />
     <None Remove="Sprites\Item_VacuumBurst.png" />
+    <None Remove="Sprites\ModEffectHUD_YuisShortDagger.png" />
     <None Remove="Sprites\Skill_VacuumBurst.png" />
     <None Remove="Sprites\Item_WindBlade.png" />
     <None Remove="Sprites\Skill_WindBlade.png" />
@@ -191,6 +192,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Sprites\Item_AlchemistsFlask.png" />
     <EmbeddedResource Include="Sprites\Item_VacuumBurst.png" />
+    <EmbeddedResource Include="Sprites\ModEffectHUD_YuisShortDagger.png" />
     <EmbeddedResource Include="Sprites\Skill_VacuumBurst.png" />
     <EmbeddedResource Include="Sprites\Item_WindBlade.png" />
     <EmbeddedResource Include="Sprites\Skill_WindBlade.png" />

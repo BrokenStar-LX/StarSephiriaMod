@@ -112,6 +112,15 @@ namespace SPMod.Tool
             }
         }
 
+        public static void UpdateModEffectTime(this UnitAvatar __instance, ref Timer Target, Action<UnitAvatar>? Effect = null, Action<UnitAvatar>? End = null)
+        {
+            Effect?.Invoke(__instance);
+            if (Target.Update(Time.deltaTime))
+            {
+                End?.Invoke(__instance);
+            }
+        }
+
         public static StatusGroup SetStatusGroup(string statName, params int[] values)
         {
             return new StatusGroup

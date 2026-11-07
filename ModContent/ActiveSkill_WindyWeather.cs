@@ -54,13 +54,14 @@ namespace SPMod.ModContent
 
         private IEnumerator ClientFxRoutine()
         {
+            int Count = 0;
             WaitForSeconds wait = new(0.1f);
             while(!Over)
             {
-                for (int j = 0; j < perTick; j++)
-                {
-                    PlayFx(GetRandomFxPosition(NetworkCaster));
-                }
+                Count += 1;
+                if (Count > 200)
+                    yield break;
+                PlayFx(GetRandomFxPosition(NetworkCaster));
                 yield return wait;
             }
         }

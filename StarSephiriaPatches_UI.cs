@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Text;
 using TMPro;
 using Unity.Mathematics;
@@ -707,9 +708,15 @@ namespace SPMod
             public static GameObject? HPValueText;
             public static float OldLife = -1;
             public static float ExMaxLife = 0;
-            private static UnitAvatar? LastNameAvatar;
-            private static UnitAvatar? LastNameTarget;
-            private static string LastNameText = "";
+            private sealed class BossNameState
+            {
+                public UnitAvatar? Avatar;
+                public UnitAvatar? Target;
+                public string Text = "";
+            }
+
+            // 每个血条单独记录，避免多 Boss 时互相覆盖
+            private static readonly ConditionalWeakTable<UI_BossHPBar, BossNameState> NameStates = new();
             private static UI_BossHPBar? CachedBar;
             private static UnitAI_BossBasic? CachedBossAI;
             private static UnitAvatar? CachedBossAvatar;
@@ -782,18 +789,25 @@ namespace SPMod
                     {
                         CurrentTarget = TargetIdentity.GetComponent<UnitAvatar>();
                     }
-                    if (bossAI.Avatar != LastNameAvatar || CurrentTarget != LastNameTarget)
+                    BossNameState State = NameStates.GetOrCreateValue(__instance);
+                    bool BossChanged = bossAI.Avatar != State.Avatar;
+                    bool TargetChanged = CurrentTarget != null && CurrentTarget != State.Target;
+
+                    // 空结果不改变已显示的目标；只有换了 Boss 才允许清空
+                    if (CurrentTarget != null) State.Target = CurrentTarget;
+                    else if (BossChanged) State.Target = null;
+
+                    if (BossChanged || TargetChanged)
                     {
-                        LastNameAvatar = bossAI.Avatar;
-                        LastNameTarget = CurrentTarget;
+                        State.Avatar = bossAI.Avatar;
                         string NameText = KeywordDatabase.Convert(bossAI.Avatar.Name, false, false);
-                        if (CurrentTarget != null)
+                        if (State.Target != null)
                         {
-                            NameText += " -> " + CurrentTarget.Name;
+                            NameText += " -> " + GetTargetName(State.Target);
                         }
-                        if (LastNameText != NameText)
+                        if (State.Text != NameText)
                         {
-                            LastNameText = NameText;
+                            State.Text = NameText;
                             __instance.nameText.text = NameText;
                         }
                     }
@@ -837,6 +851,15 @@ namespace SPMod
                 if (Value < 100000000)
                     return Value.ToString("#0");
                 return Value.ToString("E2");
+            }
+
+            /// <summary>同伴等没有 defaultNameKey 的单位 Name 是空串，用本地化“同伴”兜底。</summary>
+            private static string GetTargetName(UnitAvatar Target)
+            {
+                string TargetName = Target.Name;
+                if (!string.IsNullOrEmpty(TargetName)) return TargetName;
+                if (Target.NetworkLeader is PlayerAvatar) return Tools.GetLocalization("Companion");
+                return Target.name.Replace("(Clone)", "");
             }
 
             [HarmonyPatch("OnClosed")]

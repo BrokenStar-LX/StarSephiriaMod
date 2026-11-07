@@ -22,6 +22,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using static AvatarStatsHooker;
 using static ComboEffect_Debuff;
+using static Miracle;
 using static SPMod.ModContent.LoadModContent;
 using static SPMod.MonsterAI.ArmadilloGolem;
 using static SPMod.Tool.ModuleComponents;
@@ -563,9 +564,11 @@ namespace SPMod
                     {
                         if ((int)invulnerableCountField.GetValue(__instance) <= 0)
                         {
-                            float Mult = 0.2f;
+                            float Mult = 0.25f;
                             if (Hard >= 4) Mult *= 1.6f;
-                            __instance.HealPercent(Mult);
+                            float AddMult = DungeonPatchs.HardModAddLife;
+                            if (!ModConfig.BossRushMode) AddMult *= 1.5f;
+                            __instance.HealPercent(Mult * AddMult);
                         }
                     }
                 }
@@ -578,14 +581,9 @@ namespace SPMod
                         {
                             float AddMult = DungeonPatchs.HardModAddLife;
                             if (!ModConfig.BossRushMode) AddMult *= 1.5f;
-                            if (__instance.monsterType == EMonsterType.Boss)
+                            if (TName != "QQBoss" && TName != "QQQBoss")
                             {
-                                if (TName != "QQBoss" && TName != "QQQBoss")
-                                {
-                                    float ExtraMult = 0.15f * Hard * AddMult;
-                                    if (!ModConfig.BossRushMode) ExtraMult *= 1.5f;
-                                    AddMult += ExtraMult;
-                                }
+                                AddMult *= 1.6f;
                             }
                             __instance.AddMaxHp(__instance.MaxHp * AddMult);
                         }
@@ -608,7 +606,8 @@ namespace SPMod
                                     case "ModItemEntity_RedDogSymbolA":
                                     case "ModItemEntity_RedDogSymbolB":
                                     case "ModItemEntity_RedDogSymbolC":
-                                        __instance.Inventory.AddItem(new ItemMetadata(ItemDatabase.GenerateInstanceID(new Random(__instance.randomID)), ItemDatabase.FindItemById(ModItem.id), 1));
+                                        __instance.Inventory.AddItem(new ItemMetadata(ItemDatabase.GenerateInstanceID(new Random(__instance.randomID)),
+                                            ItemDatabase.FindItemById(ModItem.id), 1));
                                         break;
                                 }
                             }
@@ -671,7 +670,7 @@ namespace SPMod
                         if (AddPlayerStack > 0)
                         {
                             string HPKey = (__instance.monsterType == EMonsterType.Miniboss || __instance.monsterType == EMonsterType.Boss)
-                            ? "minibossBonusHpByPlayerNumber" : "enemyBonusHpByPlayerNumber";
+                                ? "minibossBonusHpByPlayerNumber" : "enemyBonusHpByPlayerNumber";
 
                             float Orig = PlayerStack * KeywordDatabase.GetConstValue(HPKey, true) / 100f;
                             float Base = __instance.MaxHp / (1 + Orig);
@@ -1401,34 +1400,37 @@ namespace SPMod
 
                 if (StarSephiriaMod.BrownRabbit2Hit.TryGetValue(__instance.Name, out Timer time))
                 {
-                    if (time.Update(Time.deltaTime))
+                    if (__instance.IsInBattle)
                     {
-                        DamageInstance damage = DamageInstance.GetDamage(null, "[Star's Sephiria Mod]被动受伤", __instance.transform.position, __instance.GetHostileFactionLayers(EDamageFromType.None), 1, EDamageType.Slice, EDamageFromType.None, Vector2.zero, 0, 0f);
-                        var Field = OnEvadeField;
-                        if (Field != null)
+                        if (time.Update(Time.deltaTime))
                         {
-                            var Action = (Action<DamageInstance>)Field.GetValue(__instance);
-                            Action?.Invoke(damage);
+                            DamageInstance damage = DamageInstance.GetDamage(null, "[Star's Sephiria Mod]被动受伤", __instance.transform.position, __instance.GetHostileFactionLayers(EDamageFromType.None), 1, EDamageType.Slice, EDamageFromType.None, Vector2.zero, 0, 0f);
+                            var Field = OnEvadeField;
+                            if (Field != null)
+                            {
+                                var Action = (Action<DamageInstance>)Field.GetValue(__instance);
+                                Action?.Invoke(damage);
+                            }
+                            Field = OnCounterField;
+                            if (Field != null)
+                            {
+                                var Action = (Action<DamageInstance>)Field.GetValue(__instance);
+                                Action?.Invoke(damage);
+                            }
+                            Field = OnParryField;
+                            if (Field != null)
+                            {
+                                var Action = (Action<DamageInstance>)Field.GetValue(__instance);
+                                Action?.Invoke(damage);
+                            }
+                            Field = OnGuardSucceededField;
+                            if (Field != null)
+                            {
+                                var Action = (Action<DamageInstance, bool>)Field.GetValue(__instance);
+                                Action?.Invoke(damage, true);
+                            }
+                            StarSephiriaMod.BrownRabbit2Hit[__instance.Name] = new Timer(6f);
                         }
-                        Field = OnCounterField;
-                        if (Field != null)
-                        {
-                            var Action = (Action<DamageInstance>)Field.GetValue(__instance);
-                            Action?.Invoke(damage);
-                        }
-                        Field = OnParryField;
-                        if (Field != null)
-                        {
-                            var Action = (Action<DamageInstance>)Field.GetValue(__instance);
-                            Action?.Invoke(damage);
-                        }
-                        Field = OnGuardSucceededField;
-                        if (Field != null)
-                        {
-                            var Action = (Action<DamageInstance, bool>)Field.GetValue(__instance);
-                            Action?.Invoke(damage, true);
-                        }
-                        StarSephiriaMod.BrownRabbit2Hit[__instance.Name] = new Timer(6f);
                     }
                 }
                 else if (Tools.CostumeSkinUse(__instance.Name, "BrownRabbit_2"))
@@ -1459,6 +1461,19 @@ namespace SPMod
                 {
                     End.DestroyEffectHUD("LightningsWrath_ThunderBeast");
                 });
+
+                if (WeaponPatch.YuisShortDaggerEffect.TryGetValue(__instance, out var YSDEffect))
+                {
+                    __instance.UpdateModEffectTime(ref YSDEffect.EffectTimer, Effect =>
+                    {
+                        float Ratio = YSDEffect.EffectTimer.Ratio;
+                        Effect.SetEffectHUDFillAmount("YuisShortDagger_EnchantedBlade", 1f - Ratio);
+                    }, End =>
+                    {
+                        WeaponPatch.YuisShortDaggerEffect.SafeRemove(__instance);
+                        End.DestroyEffectHUD("YuisShortDagger_EnchantedBlade");
+                    });
+                }
 
                 if (GuardDeBuff.TryGetValue(__instance, out Counter GuardCount))
                 {

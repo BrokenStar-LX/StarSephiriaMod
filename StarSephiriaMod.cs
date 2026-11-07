@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using Mirror;
 using Newtonsoft.Json;
+using SPMod.ModContent;
 using SPMod.Tool;
 using System;
 using System.Collections.Generic;
@@ -62,6 +63,7 @@ namespace SPMod
 
         protected override void OnModLoaded()
         {
+            ModNetwork.RegisterHandlers();
             if (!_isPatched)
             {
                 InitializeHarmonyAndMod();
@@ -82,10 +84,13 @@ namespace SPMod
             HorayModAPI.OnLoadPassiveDatabase += OnLoadPassiveDatabase;
             HorayModAPI.OnAllDatabasesReady += OnAllDatabasesReady;
             HorayModAPI.OnPlayerAvatarSpawnedServerside += OnPlayerAvatarSpawnedServerside;
+            HorayModAPI.OnStartGameServerside += Multiplayer.ApplyLiveConnectionLimits;
+            Multiplayer.ApplyLiveConnectionLimits();
         }
 
         protected override void OnModUnloaded()
         {
+            DungeonPatchs.StageEntity_GrasslandTown_Patch.RestoreOverrides();
             HorayModAPI.OnLoadWeaponDatabase -= OnLoadWeaponDatabase;
             HorayModAPI.OnLoadMiracleDatabase -= OnLoadMiracleDatabase;
             HorayModAPI.OnLoadStatusDatabase -= OnLoadStatusDatabase;
@@ -96,6 +101,7 @@ namespace SPMod
             HorayModAPI.OnLoadPassiveDatabase -= OnLoadPassiveDatabase;
             HorayModAPI.OnAllDatabasesReady -= OnAllDatabasesReady;
             HorayModAPI.OnPlayerAvatarSpawnedServerside -= OnPlayerAvatarSpawnedServerside;
+            HorayModAPI.OnStartGameServerside -= Multiplayer.ApplyLiveConnectionLimits;
             if (_languageSubscribed)
             {
                 LocalizationManager.Instance.OnLanguageChanged -= OnLanguageChanged;
@@ -718,14 +724,6 @@ namespace SPMod
         public static Dictionary<int, float> CrossBowRoldTime = [];
         public static Dictionary<int, int> CrossBowMagazineCount = [];
         public static Dictionary<int, int> CrossBowMagazineCapacity = [];
-        private void AddBaseStats(WeaponEntity Weapon, int Delta)
-        {
-            foreach (string Stat in BaseStatsName)
-            {
-                if (Stat == TextFile.WindDamage) continue;
-                Weapon.SetAddonStat(Stat, Delta);
-            }
-        }
         private void OnLoadWeaponDatabase()
         {
             if (ModConfig.Instance.EnableWeaponModifier)
@@ -733,8 +731,171 @@ namespace SPMod
                 //—— 剑盾 ——
                 WeaponDatabase.Modify(WeaponIDs.WanderingAshes, Weapon => Weapon.ChangeAddon<WeaponAddon_DashAttack>(Addon => Addon.dashAttackDamageBonus = 0));//灰烬飘扬
                 WeaponDatabase.Modify(WeaponIDs.TheIndomitable, Weapon => Weapon.ChangeAddon<WeaponAddon_BasicAttack>(Addon => Addon.basicAttackDamageBonus = 25));//无垠原野
-                WeaponDatabase.Modify(WeaponIDs.CarrotSword, Weapon => AddBaseStats(Weapon, 5));//胡萝卜剑
-                WeaponDatabase.Modify(WeaponIDs.CarrotSword2, Weapon => AddBaseStats(Weapon, 5));//胡萝卜剑2
+                WeaponDatabase.Modify(WeaponIDs.CarrotSword, Weapon =>
+                {
+                    if (Weapon.mainWeaponPrefab != null)
+                    {
+                        if (Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+                        {
+                            List<WeaponAddon> Addons = [];
+                            WeaponAddonCommon_StatusUnsafe Effect = Target.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                            Effect.parent = Target;
+                            Effect.effectText = Target.addons[0].effectText;
+                            Effect.status =
+                            [
+                                new()
+                                {
+                                    statId = TextFile.PhysicalDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.FireDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.IceDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.LightningDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.WindDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                            ];
+                            Addons.Add(Effect);
+                            Target.addons = Addons.ToArray();
+                        }
+                    }
+                });//胡萝卜剑
+                WeaponDatabase.Modify(WeaponIDs.CarrotSword2, Weapon =>
+                {
+                    if (Weapon.mainWeaponPrefab != null)
+                    {
+                        if (Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+                        {
+                            List<WeaponAddon> Addons = [];
+                            WeaponAddonCommon_StatusUnsafe Effect = Target.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                            Effect.parent = Target;
+                            Effect.effectText = Target.addons[0].effectText;
+                            Effect.status =
+                            [
+                                new()
+                                {
+                                    statId = TextFile.PhysicalDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.FireDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.IceDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.LightningDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.WindDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                            ];
+                            Addons.Add(Effect);
+                            Addons.Add(Target.addons[1]);
+                            Target.addons = Addons.ToArray();
+                        }
+                    }
+                });//胡萝卜剑2
+                WeaponDatabase.Modify(WeaponIDs.Excallion, Weapon =>
+                {
+                    if (Weapon.mainWeaponPrefab != null)
+                    {
+                        if (Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+                        {
+                            List<WeaponAddon> Addons = [];
+                            WeaponAddonCommon_StatusUnsafe Effect = Target.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                            Effect.parent = Target;
+                            Effect.effectText = Target.addons[0].effectText;
+                            Effect.status =
+                            [
+                                new()
+                                {
+                                    statId = TextFile.PhysicalDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.FireDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.IceDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.LightningDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                                new()
+                                {
+                                    statId = TextFile.WindDamage,
+                                    value = 5,
+                                    displayMultiplier = 1f,
+                                    displaySymbol = "",
+                                },
+                            ];
+                            Addons.Add(Effect);
+
+                            WeaponAddonCommon_StatusUnsafe Effect2 = Target.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                            Effect2.parent = Target;
+                            Effect2.effectText = Target.addons[1].effectText;
+                            Addons.Add(Effect2);
+                            Target.addons = Addons.ToArray();
+                        }
+                    }
+                });//大葱剑
                 WeaponDatabase.Modify(WeaponIDs.Rapier2, Weapon =>
                 {
                     Weapon.SetAddonStat(TextFile.AttackSpeed, 0);
@@ -742,7 +903,6 @@ namespace SPMod
                 });//闪光的细剑
                 WeaponDatabase.Modify(WeaponIDs.GlacialBlade, Weapon => Weapon.SetAddonStat(TextFile.AirSlashHaste, 0));//冰川之刃
                 WeaponDatabase.Modify(WeaponIDs.Superconductor, Weapon => Weapon.SetAddonStat("SWEEPCOSTREDUCTION", 50));//超导体
-                WeaponDatabase.Modify(WeaponIDs.Excallion, Weapon => Weapon.SetAddonStat(TextFile.MagicDamageBonus, 0));//大葱剑
                 WeaponDatabase.Modify(WeaponIDs.BlindingSilence, Weapon =>
                 {
                     Weapon.SetAddonStat(TextFile.ElectricEarringDamage, 0);
@@ -1114,8 +1274,8 @@ namespace SPMod
 
             foreach (ModWeapon Data in ModWeaponData)
                 Data.CreateWeapon();
-            _ = WindDagger_Vortex.Data;//预创建涡旋投射物 prefab，保证各端 AssetId 分配顺序一致
-            _ = WindGreatSword_Tornado.Data;//预创建龙卷风伤害体 prefab，保证各端 AssetId 分配顺序一致
+            _ = WindDagger_Vortex.Data;
+            _ = WindGreatSword_Tornado.Data;
             Skin.GetAddAllModSkin();
         }
 
@@ -1375,6 +1535,11 @@ namespace SPMod
                     Charm_EnhancedPotionCork Effect = item.resourcePrefab.GetComponent<Charm_EnhancedPotionCork>();
                     Effect.hpRatio = 100;
                     Effect.potionBonus = 20;
+                });// 强化药水盖
+                ItemDatabase.Modify(1170, item =>
+                {
+                    Charm_KirinHorn Effect = item.resourcePrefab.GetComponent<Charm_KirinHorn>();
+                    Effect.stats = [];
                 });// 强化药水盖
                 ItemDatabase.Modify(1172, item =>
                 {
@@ -1743,6 +1908,7 @@ namespace SPMod
                 if (!KeyWordToStatusName.ContainsKey(KeyWord))
                     KeyWordToStatusName.Add(KeyWord, Data.Status.id);
             }
+            WeaponPatch.SpecialProjectile_FuryMP_Patch.CreateWindBulletTemplate();
             ModFxPool.Register("CyanOrb", prewarm: 4, max: 16, fps: 30, loop: false, "CyanOrb_1", "CyanOrb_2", "CyanOrb_3", "CyanOrb_4", "CyanOrb_5", "CyanOrb_6", "CyanOrb_7", "CyanOrb_8");
             ModFxPool.Register("AirValveGround", prewarm: 2, max: 8, fps: 18, loop: false,
                 "AirArrow_FX_Ground00", "AirArrow_FX_Ground01", "AirArrow_FX_Ground02", "AirArrow_FX_Ground03", "AirArrow_FX_Ground04", "AirArrow_FX_Ground05", "AirArrow_FX_Ground06");
@@ -1820,14 +1986,6 @@ namespace SPMod
                     Result += (int)MathF.Floor(Player.GetCustomStatUnsafe(TextFile.MPRegen) / Value);
                 }
             }//消耗MP伤害
-
-            if (Player.IsWeaponUseNet(WeaponIDs.CarrotSword, WeaponIDs.CarrotSword2, WeaponIDs.Excallion))
-            {
-                if (ID.EqualsAny(TextFile.WindDamage))
-                {
-                    Result += 5;
-                }
-            }//胡萝卜剑系列 风属性
 
             if (Player.IsWeaponUseNet(WeaponIDs.Excallion))
             {

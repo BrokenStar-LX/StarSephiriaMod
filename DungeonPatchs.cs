@@ -25,6 +25,11 @@ namespace SPMod
         public static float Seed = 0;
         public static Dictionary<string, List<string>> NoAddExp = [];
 
+        public const string PartyKey = "__BossRushParty__";
+        public static string CurrentBossFloor = "";
+        public static string CurrentBossFloorGuid = "";
+        private static bool GroupTeleportResolved = false;
+
         public static Dictionary<string, bool> DefeatMoleElite = [];
         public static bool UseSpawnerMoleElite = false;
 
@@ -152,14 +157,17 @@ namespace SPMod
                 DefeatLibraryBossDictionary = [];
                 DefeatDeepCaveBossDictionary = [];
                 NoAddExp = [];
+
+                DefeatMoleElite[PartyKey] = false;
+                DefeatMolelandBossDictionary[PartyKey] = DefeatMolelandBossList.ToList();
+                DefeatGrasslandBossDictionary[PartyKey] = DefeatGrasslandBossList.ToList();
+                DefeatLibraryBossDictionary[PartyKey] = DefeatLibraryBossList.ToList();
+                DefeatDeepCaveBossDictionary[PartyKey] = DefeatDeepCaveBossList.ToList();
+
                 foreach (PlayerSpawner PlayerSp in PlayerSpawner.MultiplayerList)
                 {
                     string Player = PlayerSp.PlayerAvatar.Name;
-                    DefeatMoleElite.Add(Player, false);
-                    DefeatMolelandBossDictionary.Add(Player, DefeatMolelandBossList.ToList());
-                    DefeatGrasslandBossDictionary.Add(Player, DefeatGrasslandBossList.ToList());
-                    DefeatLibraryBossDictionary.Add(Player, DefeatLibraryBossList.ToList());
-                    DefeatDeepCaveBossDictionary.Add(Player, DefeatDeepCaveBossList.ToList());
+                    NoAddExp[Player] = [];
                     if (UseName == "LocalMoveFloor")
                     {
                         PlayerSp.PlayerAvatar.AddOrphanedStatusInstance(StatusDatabase.CreateStatusEntity("INVENTORY_SLOT/10"));
@@ -168,6 +176,9 @@ namespace SPMod
                 }
                 UseSpawnerMoleElite = false;
                 LastFloor = false;
+                CurrentBossFloor = "";
+                CurrentBossFloorGuid = "";
+                GroupTeleportResolved = false;
                 AllTeleport = null;
                 TeleportPlayerList.Clear();
             }
@@ -225,8 +236,15 @@ namespace SPMod
                     DefeatGrasslandBossDictionary = [];
                     DefeatLibraryBossDictionary = [];
                     DefeatDeepCaveBossDictionary = [];
+                    NoAddExp = [];
+                    CurrentBossFloor = "";
+                    CurrentBossFloorGuid = "";
+                    GroupTeleportResolved = false;
+                    AllTeleport = null;
+                    TeleportPlayerList.Clear();
 
-                    string Player = SaveManager.CurrentRun.GetString("[Star's Sephiria Mod]BossRush_Player", "");
+                    // 旧存档的 BossRush_Player 只用于单人存档；进度现在统一存在 PartyKey 下
+                    string Player = PartyKey;
                     UseSpawnerMoleElite = SaveManager.CurrentRun.GetBool("[Star's Sephiria Mod]BossRush_MoleList_MoleElite", false);
                     StarSephiriaMod.LogInfoDungeon($"是否已生成精英鼹鼠：{UseSpawnerMoleElite}");
 
@@ -316,35 +334,193 @@ namespace SPMod
         public static void PlayerAddInBossRushMod()
         {
             StarSephiriaMod.LogInfoDungeon($"检测到有玩家加入");
-            foreach (string Player in StarSephiriaMod.CostumeType.Keys)
-            {
-                if (!DefeatMoleElite.ContainsKey(Player))
-                {
-                    DefeatMoleElite.Add(Player, false);
-                    DefeatMolelandBossDictionary.Add(Player, DefeatMolelandBossList.ToList());
-                    DefeatGrasslandBossDictionary.Add(Player, DefeatGrasslandBossList.ToList());
-                    DefeatLibraryBossDictionary.Add(Player,DefeatLibraryBossList.ToList());
-                    DefeatDeepCaveBossDictionary.Add(Player, DefeatDeepCaveBossList.ToList());
-                    StarSephiriaMod.LogInfoDungeon($"初始化{Player}的数据");
-                }
-            }
+            EnsurePartyState();
         }
         public static void PlayerReduceInBossRushMod()
         {
             StarSephiriaMod.LogInfoDungeon($"检测到有玩家退出");
-            foreach (string Player in DefeatMoleElite.Keys)
+            foreach (string Player in NoAddExp.Keys.ToList())
             {
                 if (!StarSephiriaMod.CostumeType.ContainsKey(Player))
                 {
-                    DefeatMoleElite.SafeRemove(Player);
-                    DefeatMolelandBossDictionary.SafeRemove(Player);
-                    DefeatGrasslandBossDictionary.SafeRemove(Player);
-                    DefeatLibraryBossDictionary.SafeRemove(Player);
-                    DefeatDeepCaveBossDictionary.SafeRemove(Player);
-                    StarSephiriaMod.LogInfoDungeon($"删除{Player}的数据");
+                    NoAddExp.Remove(Player);
+                    StarSephiriaMod.LogInfoDungeon($"删除{Player}的经验记录");
                 }
             }
         }
+        private static List<string> PartyList(Dictionary<string, List<string>> Dict)
+        {
+            if (!Dict.TryGetValue(PartyKey, out List<string>? List) || List == null)
+            {
+                List = [];
+                Dict[PartyKey] = List;
+            }
+            return List;
+        }
+
+        private static void EnsurePartyState()
+        {
+            if (!DefeatMolelandBossDictionary.ContainsKey(PartyKey))
+                DefeatMolelandBossDictionary[PartyKey] = DefeatMolelandBossList.ToList();
+            if (!DefeatGrasslandBossDictionary.ContainsKey(PartyKey))
+                DefeatGrasslandBossDictionary[PartyKey] = DefeatGrasslandBossList.ToList();
+            if (!DefeatLibraryBossDictionary.ContainsKey(PartyKey))
+                DefeatLibraryBossDictionary[PartyKey] = DefeatLibraryBossList.ToList();
+            if (!DefeatDeepCaveBossDictionary.ContainsKey(PartyKey))
+                DefeatDeepCaveBossDictionary[PartyKey] = DefeatDeepCaveBossList.ToList();
+            if (!DefeatMoleElite.ContainsKey(PartyKey))
+                DefeatMoleElite[PartyKey] = false;
+        }
+
+        private static string? PickBoss(Dictionary<string, List<string>> Dict, bool random)
+        {
+            List<string> List = PartyList(Dict);
+            if (List.Count == 0) return null;
+
+            int idx = 0;
+            if (random)
+            {
+                idx = Mathf.FloorToInt(Seed * List.Count);
+                if (idx >= List.Count) idx = List.Count - 1;
+                if (idx < 0) idx = 0;
+            }
+            return List[idx];
+        }
+
+        private static bool IsBossFloor(string FloorName)
+        {
+            return DefeatMolelandBossList.Contains(FloorName)
+                || DefeatGrasslandBossList.Contains(FloorName)
+                || DefeatLibraryBossList.Contains(FloorName)
+                || DefeatDeepCaveBossList.Contains(FloorName);
+        }
+
+        private static void UpdateCurrentBossFloor(string FloorName, string FloorGuid)
+        {
+            if (IsBossFloor(FloorName))
+            {
+                CurrentBossFloor = FloorName;
+                CurrentBossFloorGuid = FloorGuid;
+            }
+            else
+            {
+                CurrentBossFloor = "";
+                CurrentBossFloorGuid = "";
+            }
+        }
+
+        /// <summary>BossSpawner 结算完成时调用：以 BossSpawner 所在楼层为准，避免分体 BOSS（如 MadArmadillo）判定不到。</summary>
+        public static void NotifySpawnerBossDefeated(BossSpawner Spawner)
+        {
+            if (Spawner == null || Spawner.parent == null) return;
+            FloorData? Data = Spawner.parent.DataOnServer;
+            if (Data == null || !IsBossFloor(Data.name)) return;
+
+            CurrentBossFloor = Data.name;
+            CurrentBossFloorGuid = Data.guid;
+
+            // 精英鼹鼠和 MolelandBOSS2Floor 是同一个房间：
+            // 击败精英只记录精英，保留该楼层的BOSS进度，之后还要回来打真正的BOSS
+            if (Data.name == MolelandBOSS2Floor && Spawner.bossObject is Unit_MoleElite)
+            {
+                MarkMoleEliteDefeated();
+                return;
+            }
+
+            MarkCurrentBossFloorCleared();
+        }
+
+        private static void MarkMoleEliteDefeated()
+        {
+            CurrentBossFloor = "";
+            CurrentBossFloorGuid = "";
+            bool Changed = !UseSpawnerMoleElite;
+            UseSpawnerMoleElite = true;
+            if (!DefeatMoleElite.TryGetValue(PartyKey, out bool Elite) || !Elite)
+            {
+                DefeatMoleElite[PartyKey] = true;
+                Changed = true;
+            }
+            if (!Changed) return;
+
+            StarSephiriaMod.LogInfoDungeon($"BossRush：已击败精英鼹鼠，保留 {MolelandBOSS2Floor} 的BOSS进度");
+            SaveBossRushState();
+        }
+
+        private static void MarkCurrentBossFloorCleared()
+        {
+            string Floor = CurrentBossFloor;
+            CurrentBossFloor = "";
+            CurrentBossFloorGuid = "";
+            if (string.IsNullOrEmpty(Floor)) return;
+
+            bool Changed = false;
+            if (DefeatMolelandBossDictionary.TryGetValue(PartyKey, out List<string>? Mole) && Mole != null && Mole.Remove(Floor)) Changed = true;
+            if (DefeatGrasslandBossDictionary.TryGetValue(PartyKey, out List<string>? Grass) && Grass != null && Grass.Remove(Floor)) Changed = true;
+            if (DefeatLibraryBossDictionary.TryGetValue(PartyKey, out List<string>? Library) && Library != null && Library.Remove(Floor)) Changed = true;
+            if (DefeatDeepCaveBossDictionary.TryGetValue(PartyKey, out List<string>? DeepCave) && DeepCave != null && DeepCave.Remove(Floor)) Changed = true;
+
+            if (Floor == MolelandBOSS2Floor)
+            {
+                if (!DefeatMoleElite.ContainsKey(PartyKey))
+                    DefeatMoleElite[PartyKey] = false;
+                DefeatMoleElite[PartyKey] = true;
+                Changed = true;
+            }
+
+            if (Changed)
+            {
+                StarSephiriaMod.LogInfoDungeon($"BossRush：已击败 {Floor}");
+                SaveBossRushState();
+            }
+        }
+
+        private static void GrantFloorEntryReward(PlayerAvatar avatar, string FloorName)
+        {
+            if (avatar == null || string.IsNullOrEmpty(FloorName)) return;
+
+            if (!NoAddExp.TryGetValue(avatar.Name, out List<string> Floor))
+            {
+                Floor = [];
+                NoAddExp[avatar.Name] = Floor;
+            }
+            if (Floor.Contains(FloorName)) return;
+
+            avatar.AddMoney(100.IntMult(1f + avatar.GetCustomStatUnsafe(TextFile.MoneyDrop) * 0.01f));
+            LevelController Level = avatar.GetComponent<LevelController>();
+            int Add = StarSephiriaMod.CustomExpTable[Level.currentLevel - 1];
+            if (Level.currentLevel - 2 > 0)
+            {
+                Add -= StarSephiriaMod.CustomExpTable[Level.currentLevel - 2];
+            }
+            float Value = HardModAddLife * (1f + HardModAddLife * 2);
+            if (Value > 0f)
+            {
+                float Mult = 1f + avatar.GetCustomStatUnsafe(TextFile.EXPDrop) * 0.01f;
+                Level?.AddExp(Add.IntMult(Value * 0.15f * Mult));
+            }
+            Floor.Add(FloorName);
+        }
+
+        private static void SaveBossRushState()
+        {
+            if (!NetworkServer.active || NetworkServer.connections.Count > 1) return;
+            SaveData Run = SaveManager.CurrentRun;
+            if (Run == null) return;
+
+            Run.SetBool("[Star's Sephiria Mod]BossRush_MoleList_MoleElite", UseSpawnerMoleElite);
+            Run.SetBool("[Star's Sephiria Mod]BossRush_DefeatMoleElite", DefeatMoleElite.TryGetValue(PartyKey, out bool Elite) && Elite);
+            foreach (string Mole in DefeatMolelandBossList)
+                Run.SetBool("[Star's Sephiria Mod]BossRush_DefeatMole_" + Mole, !PartyList(DefeatMolelandBossDictionary).Contains(Mole));
+            foreach (string Grass in DefeatGrasslandBossList)
+                Run.SetBool("[Star's Sephiria Mod]BossRush_DefeatGrass_" + Grass, !PartyList(DefeatGrasslandBossDictionary).Contains(Grass));
+            foreach (string Library in DefeatLibraryBossList)
+                Run.SetBool("[Star's Sephiria Mod]BossRush_DefeatLibrary_" + Library, !PartyList(DefeatLibraryBossDictionary).Contains(Library));
+            foreach (string DeepCave in DefeatDeepCaveBossList)
+                Run.SetBool("[Star's Sephiria Mod]BossRush_DefeatDeepCave_" + DeepCave, !PartyList(DefeatDeepCaveBossDictionary).Contains(DeepCave));
+            Run.SetBool("[Star's Sephiria Mod]BossRush_LastFloor", LastFloor);
+        }
+
         public static Dictionary<string, GameObject> AllBossList = [];
 
         [HarmonyPatch(typeof(DungeonManager))]
@@ -438,6 +614,8 @@ namespace SPMod
 
             private static bool CheckAllPlayerReady(DungeonManager Dungeon, PlayerAvatar avatar, string floorGuid, string spawnPoint)
             {
+                if (AllTeleport == null) GroupTeleportResolved = false;
+
                 if (TeleportPlayerList.Contains(avatar))
                 {
                     TeleportPlayerList.Remove(avatar);
@@ -512,16 +690,39 @@ namespace SPMod
             {
                 yield return new WaitForSeconds(0.5f);
                 if (AllTeleport == null) yield break;
-                foreach (var spawner in PlayerSpawner.MultiplayerList)
-                {
-                    var Player = spawner.PlayerAvatar;
-                    if (Player == null || Player.IsDead) continue;
 
-                    TeleportPlayerList.Add(Player);
-                    Dungeon.MoveFloor(Player, floorGuid, spawnPoint, 0);
+                PlayerAvatar? Leader = PlayerSpawner.MultiplayerList.Count > 0 ? PlayerSpawner.MultiplayerList[0].PlayerAvatar : null;
+                if (Leader == null)
+                {
+                    AllTeleport = null;
+                    yield break;
                 }
-                AllTeleport = null;
-                yield break;
+
+                string TargetFloor = floorGuid;
+                string TargetSpawn = spawnPoint;
+                try
+                {
+                    AddBossToFirstFloorTeleport(Dungeon, Leader, ref TargetFloor, ref TargetSpawn);
+
+                    Dungeon.generatedFloors.TryGetValue(TargetFloor, out FloorData TargetData);
+                    string TargetFloorName = TargetData != null ? TargetData.name : "";
+
+                    GroupTeleportResolved = true;
+                    foreach (var spawner in PlayerSpawner.MultiplayerList)
+                    {
+                        var Player = spawner.PlayerAvatar;
+                        if (Player == null || Player.IsDead || Player.isInDungeon <= 0) continue;
+
+                        TeleportPlayerList.Add(Player);
+                        Dungeon.MoveFloor(Player, TargetFloor, TargetSpawn, 0);
+                        GrantFloorEntryReward(Player, TargetFloorName);
+                    }
+                }
+                finally
+                {
+                    GroupTeleportResolved = false;
+                    AllTeleport = null;
+                }
             }
 
             private static bool AddBossToFirstFloorTeleport(DungeonManager __instance, PlayerAvatar avatar, ref string floorGuid, ref string spawnPoint)
@@ -529,10 +730,10 @@ namespace SPMod
                 try
                 {
                     if (!__instance.isServer) return true;
+                    if (GroupTeleportResolved) return true;
 
                     Dictionary<string, string> FloorKey = [];
                     Dictionary<string, string> FloorNameToKey = [];
-                    // 简化楼层查找逻辑
                     foreach (var kvp in __instance.generatedFloors.ToList())
                     {
                         if (!FloorKey.ContainsKey(kvp.Key))
@@ -545,145 +746,79 @@ namespace SPMod
                         }
                     }
 
-                    // Boss关传送逻辑
                     if(FloorKey.TryGetValue(floorGuid, out string FloorName) && avatar != null)
                     {
                         if (ModConfig.BossRushMode)
                         {
-                            if (PlayerSpawner.MultiplayerList.Count != DefeatMoleElite.Count)
-                            {
-                                if (PlayerSpawner.MultiplayerList.Count > DefeatMoleElite.Count)
-                                    PlayerAddInBossRushMod();
-                                else
-                                    PlayerReduceInBossRushMod();
-                            }
-
-                            var MoleList = DefeatMolelandBossDictionary;
-                            var GrassList = DefeatGrasslandBossDictionary;
-                            var Library = DefeatLibraryBossDictionary;
-                            var DeepCave = DefeatDeepCaveBossDictionary;
-                            if (MoleList.Count + GrassList.Count + Library.Count + DeepCave.Count <= 0)
-                            {
-                                StarSephiriaMod.LogInfoDungeon($"Boss列表数据异常，跳过BossRush传送逻辑");
-                                return true;
-                            }
-
-                            if (DefeatMoleElite.TryGetValue(avatar.Name, out bool falg) && !falg)
-                            {
-                                if (DefeatMolelandBossList.Contains(FloorName))
-                                {
-                                    DefeatMoleElite[avatar.Name] = true;
-                                    if (NetworkServer.connections.Count <= 1)
-                                        SaveManager.CurrentRun.SetBool("[Star's Sephiria Mod]BossRush_DefeatMoleElite", true);
-                                    if (FloorNameToKey.TryGetValue(MolelandBOSS2Floor, out var targetGuid)) floorGuid = targetGuid;
-                                }
-                            }
-                            else if (MoleList.TryGetValue(avatar.Name, out var MoleBossList) && MoleBossList.Contains(FloorName))
-                            {
-                                MoleBossList.Remove(FloorName);
-                                if (NetworkServer.connections.Count <= 1)
-                                    SaveManager.CurrentRun.SetBool($"[Star's Sephiria Mod]BossRush_DefeatMole_{FloorName}", true);
-                            }
+                            EnsurePartyState();
 
                             if (FloorName == MolelandRestFloor)
                             {
-                                if (UseSpawnerMoleElite != true)
+                                if (!UseSpawnerMoleElite)
                                 {
                                     UseSpawnerMoleElite = true;
-                                    if (NetworkServer.connections.Count <= 1)
-                                        SaveManager.CurrentRun.SetBool("[Star's Sephiria Mod]BossRush_MoleList_MoleElite", true);
+                                    SaveBossRushState();
                                 }
-                                if (MoleList.TryGetValue(avatar.Name, out var MoleBossList) && MoleBossList.Count > 0)
+
+                                string? To;
+                                if (!(DefeatMoleElite.TryGetValue(PartyKey, out bool Elite) && Elite))
+                                    To = MolelandBOSS2Floor;
+                                else
+                                    To = PickBoss(DefeatMolelandBossDictionary, random: false);
+
+                                if (To != null && FloorNameToKey.TryGetValue(To, out var targetGuid))
+                                    floorGuid = targetGuid;
+                                if (avatar.isServer) avatar.HealPercent(60f);
+                            }
+                            else if (FloorName == GrasslandRestFloor)
+                            {
+                                // 城镇 → 图书馆入口：还有没打的草原 Boss 就继续打，避免跳过
+                                string? To = PickBoss(DefeatGrasslandBossDictionary, random: true);
+                                if (To != null && FloorNameToKey.TryGetValue(To, out var targetGuid))
+                                    floorGuid = targetGuid;
+                            }
+                            else if (FloorName == LibraryRestFloor)
+                            {
+                                string? To = PickBoss(DefeatLibraryBossDictionary, random: true);
+                                if (To != null && FloorNameToKey.TryGetValue(To, out var targetGuid))
                                 {
-                                    string To = MoleList[avatar.Name][0];
-                                    MoleList[avatar.Name].Remove(To);
-                                    if (FloorNameToKey.TryGetValue(To, out var targetGuid)) floorGuid = targetGuid;
-                                    if (NetworkServer.connections.Count <= 1)
-                                        SaveManager.CurrentRun.SetBool($"[Star's Sephiria Mod]BossRush_DefeatMole_{To}", true);
-                                    if (avatar.isServer) avatar.HealPercent(60f);
+                                    floorGuid = targetGuid;
+                                    if (To == LibraryBoss1Floor && spawnPoint == "FLOORSTARTING2")
+                                        spawnPoint = "FLOORSTARTING";
                                 }
                             }
-
-                            if(GrassList.TryGetValue(avatar.Name, out var GrassBossList) && GrassBossList.Contains(FloorName))
+                            else if (FloorName == DeepCaveRestFloor)
                             {
-                                GrassBossList.Remove(FloorName);
-                                if (NetworkServer.connections.Count <= 1)
-                                    SaveManager.CurrentRun.SetBool($"[Star's Sephiria Mod]BossRush_DefeatGrass_{FloorName}", true);
-                            }
-                            bool BossFloor = (FloorName == GrasslandRestFloor && GrassList.TryGetValue(avatar.Name, out var GrassBossList2) && GrassBossList2.Count > 0);
-                            if (FloorName == GrasslandMiniBossToBossFloor || FloorName == GrasslandMiniBossToBossFloor2 || BossFloor)
-                            {
-                                if (!GrassList.TryGetValue(avatar.Name, out var GrassBossList3) || GrassBossList3.Count == 0)
-                                    return true;
-
-                                int idx = Mathf.FloorToInt(Seed * GrassBossList3.Count);
-                                if (idx >= GrassBossList3.Count) idx = GrassBossList3.Count - 1;
-
-                                string To = GrassBossList3[idx];
-                                GrassBossList3.Remove(To);
-                                if (FloorNameToKey.TryGetValue(To, out var targetGuid)) floorGuid = targetGuid;
-                                if (NetworkServer.connections.Count <= 1)
-                                    SaveManager.CurrentRun.SetBool($"[Star's Sephiria Mod]BossRush_DefeatGrass_{To}", true);
+                                string? To = PickBoss(DefeatDeepCaveBossDictionary, random: false);
+                                if (To != null && FloorNameToKey.TryGetValue(To, out var targetGuid))
+                                    floorGuid = targetGuid;
                             }
 
-                            if (Library.TryGetValue(avatar.Name, out var LibBossList) && LibBossList.Contains(FloorName))
+                            if (FloorKey.TryGetValue(floorGuid, out string FinalFloorName))
                             {
-                                LibBossList.Remove(FloorName);
-                                if (NetworkServer.connections.Count <= 1)
-                                    SaveManager.CurrentRun.SetBool($"[Star's Sephiria Mod]BossRush_DefeatLibrary_{FloorName}", true);
-                            }
-                            if (FloorName == LibraryRestFloor && Library.TryGetValue(avatar.Name, out var LibBossList2) && LibBossList2.Count > 0)
-                            {
-                                int idx = Mathf.FloorToInt(Seed * LibBossList2.Count);
-                                if (idx >= LibBossList2.Count) idx = LibBossList2.Count - 1;
-                                string To = LibBossList2[idx];
-                                LibBossList2.Remove(To);
-                                if (FloorNameToKey.TryGetValue(To, out var targetGuid)) floorGuid = targetGuid;
-                                if (NetworkServer.connections.Count <= 1)
-                                    SaveManager.CurrentRun.SetBool($"[Star's Sephiria Mod]BossRush_DefeatLibrary_{To}", true);
-                                if (To == LibraryBoss1Floor && spawnPoint == "FLOORSTARTING2") spawnPoint = "FLOORSTARTING";
-                            }
-
-                            if (DeepCave.TryGetValue(avatar.Name, out var CaveBossList) && CaveBossList.Contains(FloorName))
-                            {
-                                LastFloor = true;
-                                if (NetworkServer.connections.Count <= 1)
-                                    SaveManager.CurrentRun.SetBool("[Star's Sephiria Mod]BossRush_LastFloor", true);
-
-                                CaveBossList.Remove(FloorName);
-                                if (NetworkServer.connections.Count <= 1)
-                                    SaveManager.CurrentRun.SetBool($"[Star's Sephiria Mod]BossRush_DefeatDeepCave_{FloorName}", true);
-                            }
-                            if (FloorName == DeepCaveRestFloor && DeepCave.TryGetValue(avatar.Name, out var CaveBossList2) && CaveBossList2.Count > 0)
-                            {
-                                string To = CaveBossList2[0];
-                                CaveBossList2.Remove(To);
-                                if (FloorNameToKey.TryGetValue(To, out var targetGuid)) floorGuid = targetGuid;
-                                if (NetworkServer.connections.Count <= 1)
-                                    SaveManager.CurrentRun.SetBool($"[Star's Sephiria Mod]BossRush_DefeatDeepCave_{To}", true);
-                            }
-                            if (NoAddExp.TryGetValue(avatar.Name, out List<string> Floor))
-                            {
-                                FloorKey.TryGetValue(floorGuid, out FloorName);
-                                if (!Floor.Contains(FloorName))
+                                bool EliteDefeated = DefeatMoleElite.TryGetValue(PartyKey, out bool EliteFlag) && EliteFlag;
+                                if (!EliteDefeated
+                                    && DefeatMolelandBossList.Contains(FinalFloorName)
+                                    && FinalFloorName != MolelandBOSS2Floor
+                                    && FloorNameToKey.TryGetValue(MolelandBOSS2Floor, out var eliteGuid))
                                 {
-                                    avatar.AddMoney(100.IntMult(1f + avatar.GetCustomStatUnsafe(TextFile.MoneyDrop) * 0.01f));
-                                    LevelController Level = avatar.GetComponent<LevelController>();
-                                    int Add = StarSephiriaMod.CustomExpTable[Level.currentLevel - 1];
-                                    if (Level.currentLevel - 2 > 0)
-                                    {
-                                        Add -= StarSephiriaMod.CustomExpTable[Level.currentLevel - 2];
-                                    }
-                                    float Value = HardModAddLife * (1f + HardModAddLife * 2);
-                                    if (Value > 0f)
-                                    {
-                                        float Mult = 1f + avatar.GetCustomStatUnsafe(TextFile.EXPDrop) * 0.01f;
-                                        Level?.AddExp(Add.IntMult(Value * 0.15f * Mult));
-                                    }
-                                    NoAddExp[avatar.Name].Add(FloorName);
+                                    floorGuid = eliteGuid;
+                                    FinalFloorName = MolelandBOSS2Floor;
+                                }
+
+                                PlayerAvatar? Leader = PlayerSpawner.MultiplayerList.Count > 0 ? PlayerSpawner.MultiplayerList[0].PlayerAvatar : null;
+                                if (IsBossFloor(FinalFloorName) || Leader == null || avatar == Leader)
+                                    UpdateCurrentBossFloor(FinalFloorName, floorGuid);
+
+                                if (FinalFloorName == DeepCaveLizardFloor || FinalFloorName == DeepCaveBirdFloor)
+                                {
+                                    LastFloor = true;
+                                    SaveBossRushState();
                                 }
                             }
-                            else NoAddExp.Add(avatar.Name, [FloorName]);
+
+                            FloorKey.TryGetValue(floorGuid, out string RewardFloorName);
+                            GrantFloorEntryReward(avatar, RewardFloorName);
                         }
                     }
                     return true;
@@ -715,7 +850,21 @@ namespace SPMod
                 if(RemovePlayer != null)
                     DPSData.SafeRemove(RemovePlayer);
                 StarSephiriaMod.InitializeModStat(name);
+                PlayerReduceInBossRushMod();
                 StarSephiriaMod.LogInfo($"删除{name}的各项数据记录");
+            }
+        }
+
+        /// <summary>Boss Rush 地图节点固定成商店，RedMerchant 环境下换成红色商人。</summary>
+        private static void SetMerchantType(FloorData Target)
+        {
+            if ((bool)DungeonManager.Instance && DungeonManager.Instance.dungeonEnvironment.TryGetValue("RedMerchant", out var value) && value > 0)
+            {
+                Target.generateMerchantType = 2;
+            }
+            else
+            {
+                Target.generateMerchantType = 1;
             }
         }
 
@@ -755,7 +904,6 @@ namespace SPMod
                     {
                         FloorGenerator component = array[i].GetComponent<FloorGenerator>();
                         dictionary[component.floorThreatType].Add(component);
-                        //StarSephiriaMod.LogInfoDungeon($"—输出随机层列表：{component.floorThreatType}");
                     }
 
                     // 分类固定事件楼层预置体，并收集BOSS类型
@@ -768,22 +916,21 @@ namespace SPMod
                         {
                             BossList.Add(Cpmponent);
                         }
-                        //StarSephiriaMod.LogInfoDungeon($"—输出固定层列表：{Cpmponent.floorThreatType} ： {Cpmponent.floorMainEventType}");
                     }
 
                     int num = 0;
                     Random rngChoice = new(seed);// 用于事件/节点选择
-                    Random rngSeed = new(seed + 1);// 用于生成楼层 seed
-                    Random rngPos = new(seed + 10);// 用于位置偏移
-                    Random rngDisturb = new(seed + 20);// 用于干扰/扰动
-                    Random rngMerchant = new(seed + 99);// 用于商店
-                    Random rngHidden = new(seed + 1000);// 用于隐藏房
-                    Random rngHardBoss = new(seed + 20);// 你原来的 Boss 硬化随机
+                    Random rngSeed = new(seed + 1);// 用于打乱节点位置
+                    Random rngPos = new(seed + 10);// 用于楼层 seed
+                    Random rngDisturb = new(seed + 20);// 用于位置抖动
+                    Random rngMerchant = new(seed + 99);// 用于困难战斗干扰
+                    Random rngHidden = new(seed + 1000);// 用于 Boss 硬化与隐藏房
+                    Random rngHardBoss = new(seed + 20);// 用于战斗区楼层判定
                     // 创建第一个楼层（起始点）
                     FloorData floorData = new()
                     {
                         guid = Guid.NewGuid().ToString(),
-                        name = __instance.firstFloor.name,
+                        name = __instance.firstFloor.FloorDataName,
                         stageName = __instance.name,
                         seed = rngPos.Next(),
                         globalY = stageOrder,
@@ -799,14 +946,6 @@ namespace SPMod
 
                     List<FloorData> 生成列表 = [floorData];
 
-                    // 创建标准主要事件类型列表
-                    List<EFloorMainEventType> list5 = [];
-                    EFloorMainEventType[] possibleMainEvents = __instance.unknownNormalEvents;
-                    for (i = 0; i < possibleMainEvents.Length; i++)
-                    {
-                        list5.Add(possibleMainEvents[i]);
-                    }
-
                     // 初始化唯一楼层生成器字典
                     Dictionary<EFloorMainEventType, List<FloorGenerator>> dictionary3 = [];
                     foreach (FloorGenerator floorGenerator in __instance.uniqueFloorPrefabs)
@@ -816,7 +955,6 @@ namespace SPMod
                             dictionary3[floorGenerator.floorMainEventType] = [];
                         }
                         dictionary3[floorGenerator.floorMainEventType].Add(floorGenerator);
-                        //StarSephiriaMod.LogInfoDungeon($"—输出唯一楼层列表：{floorGenerator.floorMainEventType}");
                     }
 
                     // 步骤数组
@@ -830,7 +968,6 @@ namespace SPMod
                     // 遍历每个步骤生成楼层
                     int stepsLength = __instance.steps.Length;
                     int ActualLevels = 0;
-                    List<int> LayerMapping = [];
                     List<FloorData> hiddenCandidates = [];
                     for (int Stack = 0; Stack < stepsLength; Stack++)
                     {
@@ -839,22 +976,14 @@ namespace SPMod
                         {
                             Last = 1;
                         }
-                        if (Stack == 0 || Stack == 1)
+                        if ((Stack == 0 || Stack == 1) && !createAnvil)
+                            continue;
+                        if (Stack == 2 && LastFloor)
                         {
-                            if (!createAnvil)
-                                continue;
+                            LastFloor = false;
+                            if (PlayerSpawner.MultiplayerList.Count <= 1) SaveManager.CurrentRun.SetBool("[Star's Sephiria Mod]BossRush_LastFloor", false);
+                            continue;
                         }
-                        if (Stack == 2)
-                        {
-                            if (LastFloor)
-                            {
-                                LastFloor = false;
-                                if (PlayerSpawner.MultiplayerList.Count <= 1) SaveManager.CurrentRun.SetBool("[Star's Sephiria Mod]BossRush_LastFloor", false);
-                                continue;
-                            }
-                        }
-
-                        LayerMapping.Add(ActualLevels);
 
                         // 计算当前步骤的难度
                         float num3 = Stack / (float)Last;
@@ -865,7 +994,7 @@ namespace SPMod
 
                         // 过滤当前步骤可能的主要事件类型
                         List<EFloorMainEventType> MiniBossALLEvents = [];
-                        possibleMainEvents = __instance.steps[Stack].possibleMainEvents;
+                        EFloorMainEventType[] possibleMainEvents = __instance.steps[Stack].possibleMainEvents;
 
                         for (i = 0; i < possibleMainEvents.Length; i++)
                         {
@@ -1009,13 +1138,10 @@ namespace SPMod
                             else
                             {
                                 float 节点偏移X = Offset.SafeRandomAccess(k, ArrayExtensions.ERandomAccessType.Clamp);
-                                if (Stack == 0 || Stack == 1)
+                                if ((Stack == 0 || Stack == 1) && createAnvil)
                                 {
-                                    if (createAnvil)
-                                    {
-                                        floorGenerator2 = dictionary3[EFloorMainEventType.Anvil].GetRandom(rngChoice);
-                                        FloorEventType = EFloorMainEventType.Anvil;
-                                    }
+                                    floorGenerator2 = dictionary3[EFloorMainEventType.Anvil].GetRandom(rngChoice);
+                                    FloorEventType = EFloorMainEventType.Anvil;
                                 }
                                 if (FloorType == EFloorThreatType.Boss && FloorEventType != EFloorMainEventType.None)
                                 {
@@ -1069,41 +1195,26 @@ namespace SPMod
                     {
                         Random hiddenRand = new(seed + 1000);
                         List<FloorData> pool = hiddenCandidates.ToList();
-                        for (int t = 0; t < 1; t++)
-                        {
-                            int index = hiddenRand.Next(pool.Count);
-                            FloorData Target = pool[index];
-                            Target.hiddenRoomCount = 1;
-                            pool.RemoveAt(index); // 防止重复选到同一个
-                        }
+
+                        pool[hiddenRand.Next(pool.Count)].hiddenRoomCount = 1;
+
+                        // 两个商人节点，第二个同时是旅人
                         pool = hiddenCandidates.ToList();
-                        for (int t = 0; t < 2; t++)
-                        {
-                            int index = hiddenRand.Next(pool.Count);
-                            FloorData Target = pool[index];
-                            if ((bool)DungeonManager.Instance && DungeonManager.Instance.dungeonEnvironment.TryGetValue("RedMerchant", out var value) && value > 0)
-                            {
-                                Target.generateMerchantType = 2;
-                            }
-                            else
-                            {
-                                Target.generateMerchantType = 1;
-                            }
-                            if (t == 1) Target.hasTraveler = true;
-                            pool.RemoveAt(index); // 防止重复选到同一个
-                        }
+                        FloorData FirstMerchant = pool[hiddenRand.Next(pool.Count)];
+                        SetMerchantType(FirstMerchant);
+                        pool.Remove(FirstMerchant);
+                        FloorData SecondMerchant = pool[hiddenRand.Next(pool.Count)];
+                        SetMerchantType(SecondMerchant);
+                        SecondMerchant.hasTraveler = true;
+                        pool.Remove(SecondMerchant);
+
                         pool = hiddenCandidates.ToList();
-                        for (int t = 0; t < 2; t++)
-                        {
-                            int index = hiddenRand.Next(pool.Count);
-                            FloorData Target = pool[index];
-                            Target.randomRoomCount += t + 1;
-                        }
+                        pool[hiddenRand.Next(pool.Count)].randomRoomCount += 1;
+                        pool[hiddenRand.Next(pool.Count)].randomRoomCount += 2;
                     }
                     // 建立楼层之间的连接关系
-                    for (int a = 0; a < array3.Length - 1; a++)
+                    for (int a = 0; a < ActualLevels && a < array3.Length - 1; a++)
                     {
-                        if (a >= LayerMapping.Count) continue;
                         for (int b = 0; b < array3[a].Count; b++)
                         {
                             List<string> LineList = [];
@@ -1152,29 +1263,62 @@ namespace SPMod
         [HarmonyPatch(typeof(StageEntity_GrasslandTown))]
         public static class StageEntity_GrasslandTown_Patch
         {
+            private static readonly Dictionary<string, (StageEntity_GrasslandTown Stage, GrasslandTownEventEntity[] Events, int ClearCount)> TownBackups = [];
+            private static readonly Dictionary<string, GrasslandTownEventEntity> SyntheticEvents = [];
+
+            /// <summary>离开 Boss Rush / 卸载模组时把城镇资产改回原样。</summary>
+            public static void RestoreOverrides()
+            {
+                foreach (var Backup in TownBackups.Values)
+                {
+                    if (Backup.Stage == null) continue;
+                    Backup.Stage.nodeEvents = Backup.Events;
+                    Backup.Stage.eventCountToClear = Backup.ClearCount;
+                }
+                TownBackups.Clear();
+                SyntheticEvents.Clear();
+            }
+
+            private static void ApplyOverrides(StageEntity_GrasslandTown Stage)
+            {
+                if (!TownBackups.TryGetValue(Stage.name, out var Backup) || Backup.Stage != Stage)
+                {
+                    Backup = (Stage, Stage.nodeEvents, Stage.eventCountToClear);
+                    TownBackups[Stage.name] = Backup;
+                }
+                // 打一个事件就能解锁下方 Boss 节点
+                Stage.eventCountToClear = 1;
+            }
+
             [HarmonyPatch("GenerateStage")]
             [HarmonyPrefix]
             static bool GenerateStage_Prefix(StageEntity_GrasslandTown __instance, DungeonManager dungeon, int seed, int stageOrder, bool createMiracle, bool createAnvil, bool enhancedDisturbance, string bossGenerateParameter, int hardModeAllBoss, ref FloorData[] __result)
             {
+                if (!ModConfig.BossRushMode)
+                {
+                    RestoreOverrides();
+                    return true;
+                }
                 try
                 {
-                    if (!ModConfig.BossRushMode) return true;
+                    ApplyOverrides(__instance);
 
-                    int num = 0;
-                    int num2 = 0;
-                    Random random = new(seed);
-                    Random random2 = new(seed);
-                    Random random3 = new(seed);
-                    Random random4 = new(seed);
-                    FloorData floorData = new()
+                    Random rngSeed = new(seed + 1);
+                    Random rngPos = new(seed + 10);
+                    int GlobalX = 0;
+                    List<FloorData> Result = [];
+                    List<FloorData> Options = [];
+
+                    // 起始层
+                    FloorData Head = new()
                     {
                         guid = Guid.NewGuid().ToString(),
-                        name = __instance.firstFloor.name,
+                        name = __instance.firstFloor.FloorDataName,
                         stageName = __instance.name,
-                        seed = random.Next(),
+                        seed = rngPos.Next(),
                         globalY = stageOrder,
-                        globalX = num2++,
-                        nodeProgress = num,
+                        globalX = GlobalX++,
+                        nodeProgress = 0,
                         prefabAssetId = __instance.firstFloor.GetComponent<NetworkIdentity>().assetId,
                         hasTraveler = false,
                         difficulty = __instance.firstDifficulty,
@@ -1182,311 +1326,184 @@ namespace SPMod
                         threatType = __instance.firstFloor.floorThreatType,
                         disturbance = ""
                     };
-                    num++;
-                    int num3 = 1;
-                    List<FloorData> list = [floorData];
-                    List<FloorData> list2 = [];
-                    List<FloorData> list3 = [];
-                    List<FloorData> list4 = [];
-                    List<EFloorMainEventType> list5 = new(__instance.mainEventTypes);
-                    List<EFloorMainEventType> list6 = new(__instance.subEventTypes);
-                    int num4 = __instance.eventCount - list5.Count;
-                    for (int i = 0; i < num4; i++)
+                    Result.Add(Head);
+
+                    int Progress = 1;
+
+                    // 复制城镇原本保留的 MiniBoss 房，只改奖励类型
+                    GrasslandTownEventEntity? MiniBossEvent = __instance.nodeEvents.FirstOrDefault(Event => Event != null
+                        && Event.threatType == EFloorThreatType.MiniBoss
+                        && Event.floorPrefab != null);
+                    if (MiniBossEvent != null)
                     {
-                        int num5 = random.Next(0, list6.Count);
-                        list5.Add(list6[num5]);
-                        list6.RemoveAt(num5);
-                    }
-                    int num6 = __instance.eventCount;
-                    List<GrasslandTownEventEntity> list7 = [];
-                    List<GrasslandTownEventEntity> list8 = [];
-                    List<GrasslandTownEventEntity> list9 = [];
-                    foreach (GrasslandTownEventEntity grasslandTownEventEntity in __instance.nodeEvents)
-                    {
-                        if (grasslandTownEventEntity.isAnvilFirstReward)
+                        EFloorMainEventType[] RewardTypes = [EFloorMainEventType.EXP, EFloorMainEventType.Charm, EFloorMainEventType.Enchant, EFloorMainEventType.StoneTablet];
+                        foreach (EFloorMainEventType Type in RewardTypes)
                         {
-                            list9.Add(grasslandTownEventEntity);
-                        }
-                        if (grasslandTownEventEntity.isEssential)
-                        {
-                            list7.Add(grasslandTownEventEntity);
-                        }
-                        else
-                        {
-                            list8.Add(grasslandTownEventEntity);
+                            GrasslandTownEventEntity Event = GetSyntheticEvent(__instance, Type.ToString(), "UI_WorldMap_Event_" + Type, "UI_WorldMap_Event_" + Type + "_Description", MiniBossEvent.floorPrefab, EFloorThreatType.MiniBoss);
+                            AddOption(__instance, Event, MiniBossEvent.floorPrefab, EFloorThreatType.MiniBoss, Type, false, stageOrder, rngSeed, rngPos, ref Progress, ref GlobalX, Options, Result);
                         }
                     }
-                    List<FloorData> list10 = [];
-                    List<FloorData> list11 = [];
-                    int num7 = 0;
-                    for (int k = list5.Count - 1; k >= 0; k--)
+                    else
                     {
-                        EFloorMainEventType efloorMainEventType = list5[k];
-                        if (efloorMainEventType == EFloorMainEventType.Anvil)
-                        {
-                            if (list9.Count == 0)
-                            {
-                                list5.RemoveAt(k);
-                            }
-                            else
-                            {
-                                int num8 = random.Next(0, list9.Count);
-                                GrasslandTownEventEntity grasslandTownEventEntity2 = list9[num8];
-                                int num9 = random.Next();
-                                FloorGenerator floorPrefab = grasslandTownEventEntity2.floorPrefab;
-                                FloorData floorData2 = new()
-                                {
-                                    guid = Guid.NewGuid().ToString(),
-                                    name = floorPrefab.name,
-                                    stageName = __instance.name,
-                                    seed = num9,
-                                    globalX = num2++,
-                                    globalY = stageOrder,
-                                    nodeProgress = num3,
-                                    prefabAssetId = floorPrefab.GetComponent<NetworkIdentity>().assetId,
-                                    mainEventType = efloorMainEventType,
-                                    threatType = grasslandTownEventEntity2.threatType,
-                                    difficulty = random.Next(__instance.firstDifficulty, __instance.lastDifficulty + 1),
-                                    nodeAnchoredPositionX = random3.Next(-15, 15),
-                                    nodeAnchoredPositionY = num3 * -__instance.distanceBetweenNodes + random3.Next(-15, 15),
-                                    disturbance = ((grasslandTownEventEntity2.threatType == EFloorThreatType.HardBattle) ? __instance.disturbanceList.GetRandom(random4) : ""),
-                                    questBoardEventId = grasslandTownEventEntity2.id,
-                                    isAnvilFirstReward = grasslandTownEventEntity2.isAnvilFirstReward
-                                };
-                                list10.Add(floorData2);
-                                if (floorPrefab.ExplorationActivated)
-                                {
-                                    list2.Add(floorData2);
-                                    list3.Add(floorData2);
-                                    list4.Add(floorData2);
-                                }
-                                FloorGenerator random5 = __instance.townRewardFloors.GetRandom(random);
-                                FloorData floorData3 = new()
-                                {
-                                    guid = Guid.NewGuid().ToString(),
-                                    name = random5.name,
-                                    stageName = __instance.name,
-                                    seed = num9,
-                                    globalX = num2++,
-                                    globalY = stageOrder,
-                                    nodeProgress = num3,
-                                    prefabAssetId = random5.GetComponent<NetworkIdentity>().assetId,
-                                    mainEventType = efloorMainEventType,
-                                    threatType = grasslandTownEventEntity2.threatType,
-                                    difficulty = random.Next(__instance.firstDifficulty, __instance.lastDifficulty + 1),
-                                    nodeAnchoredPositionX = random3.Next(-15, 15),
-                                    nodeAnchoredPositionY = num3 * -__instance.distanceBetweenNodes + random3.Next(-15, 15),
-                                    disturbance = "",
-                                    isHidden = true,
-                                    isAnvilFirstReward = grasslandTownEventEntity2.isAnvilFirstReward
-                                };
-                                list11.Add(floorData3);
-                                floorData2.connectionToOtherFloors = [floorData3.guid];
-                                num3++;
-                                list7.Remove(grasslandTownEventEntity2);
-                                list8.Remove(grasslandTownEventEntity2);
-                                list5.RemoveAt(k);
-                                num7++;
-                            }
-                        }
-                    }
-                    num6 -= num7;
-                    foreach (GrasslandTownEventEntity grasslandTownEventEntity3 in list7)
-                    {
-                        int num10 = random.Next(0, list5.Count);
-                        EFloorMainEventType efloorMainEventType2 = list5[num10];
-                        list5.RemoveAt(num10);
-                        int num11 = random.Next();
-                        FloorGenerator floorPrefab2 = grasslandTownEventEntity3.floorPrefab;
-                        FloorData floorData4 = new()
-                        {
-                            guid = Guid.NewGuid().ToString(),
-                            name = floorPrefab2.name,
-                            stageName = __instance.name,
-                            seed = num11,
-                            globalX = num2++,
-                            globalY = stageOrder,
-                            nodeProgress = num3,
-                            prefabAssetId = floorPrefab2.GetComponent<NetworkIdentity>().assetId,
-                            mainEventType = efloorMainEventType2,
-                            threatType = grasslandTownEventEntity3.threatType,
-                            difficulty = random.Next(__instance.firstDifficulty, __instance.lastDifficulty + 1),
-                            nodeAnchoredPositionX = random3.Next(-15, 15),
-                            nodeAnchoredPositionY = num3 * -__instance.distanceBetweenNodes + random3.Next(-15, 15),
-                            disturbance = ((grasslandTownEventEntity3.threatType == EFloorThreatType.HardBattle) ? __instance.disturbanceList.GetRandom(random4) : ""),
-                            questBoardEventId = grasslandTownEventEntity3.id,
-                            isAnvilFirstReward = grasslandTownEventEntity3.isAnvilFirstReward
-                        };
-                        list10.Add(floorData4);
-                        if (floorPrefab2.ExplorationActivated)
-                        {
-                            list2.Add(floorData4);
-                            list3.Add(floorData4);
-                            list4.Add(floorData4);
-                        }
-                        FloorGenerator random6 = __instance.townRewardFloors.GetRandom(random);
-                        FloorData floorData5 = new()
-                        {
-                            guid = Guid.NewGuid().ToString(),
-                            name = random6.name,
-                            stageName = __instance.name,
-                            seed = num11,
-                            globalX = num2++,
-                            globalY = stageOrder,
-                            nodeProgress = num3,
-                            prefabAssetId = random6.GetComponent<NetworkIdentity>().assetId,
-                            mainEventType = efloorMainEventType2,
-                            threatType = grasslandTownEventEntity3.threatType,
-                            difficulty = random.Next(__instance.firstDifficulty, __instance.lastDifficulty + 1),
-                            nodeAnchoredPositionX = random3.Next(-15, 15),
-                            nodeAnchoredPositionY = num3 * -__instance.distanceBetweenNodes + random3.Next(-15, 15),
-                            disturbance = "",
-                            isHidden = true,
-                            isAnvilFirstReward = grasslandTownEventEntity3.isAnvilFirstReward
-                        };
-                        list11.Add(floorData5);
-                        floorData4.connectionToOtherFloors = [floorData5.guid];
-                        num3++;
+                        StarSephiriaMod.LogError("[BossRush]城镇没有可用的 MiniBoss 事件房");
                     }
 
-                    num6 -= list7.Count;
-                    for (int l = 0; l < num6; l++)
+                    // 2 个商店 + 2 个隐藏房
+                    if (Options.Count > 0)
                     {
-                        int num12 = random.Next(0, list5.Count);
-                        EFloorMainEventType efloorMainEventType3 = list5[num12];
-                        list5.RemoveAt(num12);
-                        int num13 = random.Next(0, list8.Count);
-                        GrasslandTownEventEntity grasslandTownEventEntity4 = list8[num13];
-                        list8.RemoveAt(num13);
-                        int num14 = random.Next();
-                        FloorGenerator floorPrefab3 = grasslandTownEventEntity4.floorPrefab;
-                        FloorData floorData6 = new()
+                        Random rngPick = new(seed + 99);
+                        List<FloorData> Pool = Options.ToList();
+                        for (int i = 0; i < 2 && Pool.Count > 0; i++)
                         {
-                            guid = Guid.NewGuid().ToString(),
-                            name = floorPrefab3.name,
-                            stageName = __instance.name,
-                            seed = num14,
-                            globalX = num2++,
-                            globalY = stageOrder,
-                            nodeProgress = num3,
-                            prefabAssetId = floorPrefab3.GetComponent<NetworkIdentity>().assetId,
-                            mainEventType = efloorMainEventType3,
-                            threatType = grasslandTownEventEntity4.threatType,
-                            difficulty = random.Next(__instance.firstDifficulty, __instance.lastDifficulty + 1),
-                            nodeAnchoredPositionX = random3.Next(-15, 15),
-                            nodeAnchoredPositionY = num3 * -__instance.distanceBetweenNodes + random3.Next(-15, 15),
-                            disturbance = ((grasslandTownEventEntity4.threatType == EFloorThreatType.HardBattle) ? __instance.disturbanceList.GetRandom(random4) : ""),
-                            questBoardEventId = grasslandTownEventEntity4.id,
-                            isAnvilFirstReward = grasslandTownEventEntity4.isAnvilFirstReward
-                        };
-                        list10.Add(floorData6);
-                        if (floorPrefab3.ExplorationActivated)
-                        {
-                            list2.Add(floorData6);
-                            list3.Add(floorData6);
-                            list4.Add(floorData6);
+                            FloorData Merchant = Pool[rngPick.Next(Pool.Count)];
+                            SetMerchantType(Merchant);
+                            Pool.Remove(Merchant);
                         }
-                        FloorGenerator random7 = __instance.townRewardFloors.GetRandom(random);
-                        FloorData floorData7 = new()
+                        Pool = Options.ToList();
+                        for (int i = 0; i < 2 && Pool.Count > 0; i++)
                         {
-                            guid = Guid.NewGuid().ToString(),
-                            name = random7.name,
-                            stageName = __instance.name,
-                            seed = num14,
-                            globalX = num2++,
-                            globalY = stageOrder,
-                            nodeProgress = num3,
-                            prefabAssetId = random7.GetComponent<NetworkIdentity>().assetId,
-                            mainEventType = efloorMainEventType3,
-                            threatType = grasslandTownEventEntity4.threatType,
-                            difficulty = random.Next(__instance.firstDifficulty, __instance.lastDifficulty + 1),
-                            nodeAnchoredPositionX = random3.Next(-15, 15),
-                            nodeAnchoredPositionY = num3 * -__instance.distanceBetweenNodes + random3.Next(-15, 15),
-                            disturbance = "",
-                            isHidden = true,
-                            isAnvilFirstReward = grasslandTownEventEntity4.isAnvilFirstReward
-                        };
-                        list11.Add(floorData7);
-                        floorData6.connectionToOtherFloors = [floorData7.guid];
-                        num3++;
+                            FloorData Hidden = Pool[rngPick.Next(Pool.Count)];
+                            Hidden.hiddenRoomCount += 1;
+                            Pool.Remove(Hidden);
+                        }
                     }
-                    Random random8 = new(seed + 97);
-                    list10.Shuffle(random8);
-                    list.AddRange(list10);
-                    list.AddRange(list11);
 
-                    List<FloorData> filteredList = [list[0]];
-                    foreach (FloorData FData in list)
+                    // 必需楼层（隐藏）
+                    foreach (FloorGenerator Floor in __instance.essentialFloorPrefabs)
                     {
-                        if (FData.threatType == EFloorThreatType.MiniBoss)
-                        {
-                            FData.mainEventType = EFloorMainEventType.EXP;
-                            if ((bool)DungeonManager.Instance && DungeonManager.Instance.dungeonEnvironment.TryGetValue("RedMerchant", out var value) && value > 0)
-                            {
-                                FData.generateMerchantType = 2;
-                            }
-                            else
-                            {
-                                FData.generateMerchantType = 1;
-                            }
-                            filteredList.Add(FData);
-                        }
-                    }
-                    list = filteredList;
-                    foreach (FloorGenerator floorGenerator in __instance.essentialFloorPrefabs)
-                    {
-                        FloorData floorData8 = new()
+                        FloorData FloorData = new()
                         {
                             guid = Guid.NewGuid().ToString(),
-                            name = floorGenerator.name,
+                            name = Floor.name,
                             stageName = __instance.name,
-                            seed = random.Next(),
-                            prefabAssetId = floorGenerator.GetComponent<NetworkIdentity>().assetId,
+                            seed = rngSeed.Next(),
+                            prefabAssetId = Floor.GetComponent<NetworkIdentity>().assetId,
                             hasTraveler = false,
                             isHidden = true,
                             globalY = stageOrder,
-                            globalX = num2++,
+                            globalX = GlobalX++,
                             nodeProgress = -1,
                             nodeAnchoredPositionX = -1280f,
                             nodeAnchoredPositionY = 0f,
                             disturbance = ""
                         };
-                        list.Add(floorData8);
+                        Result.Add(FloorData);
                     }
-                    int Stack = 0;
-                    foreach (FloorGenerator BossFloors in __instance.bossFloors)
+
+                    // Boss 楼层：除最后一个外隐藏，最后一个作为公告板下方的 Boss 节点
+                    for (int BossIndex = 0; BossIndex < __instance.bossFloors.Length; BossIndex++)
                     {
-                        StarSephiriaMod.LogInfoDungeon(BossFloors.name);
-                        FloorData floorData9 = new()
+                        FloorGenerator BossFloors = __instance.bossFloors[BossIndex];
+                        FloorData FloorData = new()
                         {
                             guid = Guid.NewGuid().ToString(),
                             name = BossFloors.name,
                             stageName = __instance.name,
-                            seed = random.Next(),
+                            seed = rngSeed.Next(),
                             globalY = stageOrder,
-                            globalX = num2++,
-                            nodeProgress = num,
+                            globalX = GlobalX++,
+                            nodeProgress = 1,
                             prefabAssetId = BossFloors.GetComponent<NetworkIdentity>().assetId,
                             hasTraveler = false,
+                            isHidden = BossIndex < __instance.bossFloors.Length - 1,
                             difficulty = __instance.lastDifficulty,
                             mainEventType = BossFloors.floorMainEventType,
                             threatType = BossFloors.floorThreatType,
                             nodeAnchoredPositionX = 0,
-                            nodeAnchoredPositionY = num * -__instance.distanceBetweenNodes + random3.Next(-15, 15),
+                            nodeAnchoredPositionY = -__instance.distanceBetweenNodes + rngPos.Next(-15, 15),
                             disturbance = ""
                         };
-                        list.Add(floorData9);
-                        Stack += 1;
+                        Result.Add(FloorData);
                     }
-                    __result = list.ToArray();
+
+                    __result = Result.ToArray();
                     return false;
                 }
                 catch (Exception ex)
                 {
-                    StarSephiriaMod.LogError($"[StageEntity_Choice]自定义生成失败: {ex}");
+                    StarSephiriaMod.LogError($"[StageEntity_GrasslandTown]自定义生成失败: {ex}");
                     return true;
                 }
             }
+
+            private static void AddOption(StageEntity_GrasslandTown Stage, GrasslandTownEventEntity Event, FloorGenerator Prefab, EFloorThreatType Threat, EFloorMainEventType MainEventType, bool AnvilFirst, int StageOrder, Random RngSeed, Random RngPos, ref int Progress, ref int GlobalX, List<FloorData> Options, List<FloorData> Result)
+            {
+                int EventSeed = RngSeed.Next();
+                int NodeProgress = Progress++;
+                FloorData Node = new()
+                {
+                    guid = Guid.NewGuid().ToString(),
+                    name = Prefab.name,
+                    stageName = Stage.name,
+                    seed = EventSeed,
+                    globalX = GlobalX++,
+                    globalY = StageOrder,
+                    nodeProgress = NodeProgress,
+                    prefabAssetId = Prefab.GetComponent<NetworkIdentity>().assetId,
+                    hasTraveler = false,
+                    difficulty = RngSeed.Next(Stage.firstDifficulty, Stage.lastDifficulty + 1),
+                    mainEventType = MainEventType,
+                    threatType = Threat,
+                    nodeAnchoredPositionX = RngPos.Next(-15, 15),
+                    nodeAnchoredPositionY = NodeProgress * -Stage.distanceBetweenNodes + RngPos.Next(-15, 15),
+                    disturbance = Threat == EFloorThreatType.HardBattle ? Stage.disturbanceList.GetRandom(RngPos) : "",
+                    questBoardEventId = Event.id,
+                    isAnvilFirstReward = AnvilFirst
+                };
+
+                FloorGenerator RewardPrefab = Stage.townRewardFloors.GetRandom(RngSeed);
+                FloorData Reward = new()
+                {
+                    guid = Guid.NewGuid().ToString(),
+                    name = RewardPrefab.name,
+                    stageName = Stage.name,
+                    seed = EventSeed,
+                    globalX = GlobalX++,
+                    globalY = StageOrder,
+                    nodeProgress = NodeProgress,
+                    prefabAssetId = RewardPrefab.GetComponent<NetworkIdentity>().assetId,
+                    hasTraveler = false,
+                    isHidden = true,
+                    difficulty = Node.difficulty,
+                    mainEventType = Node.mainEventType,
+                    threatType = Threat,
+                    nodeAnchoredPositionX = RngPos.Next(-15, 15),
+                    nodeAnchoredPositionY = NodeProgress * -Stage.distanceBetweenNodes + RngPos.Next(-15, 15),
+                    disturbance = "",
+                    isAnvilFirstReward = AnvilFirst
+                };
+
+                Node.connectionToOtherFloors = [Reward.guid];
+                Result.Add(Node);
+                Result.Add(Reward);
+                Options.Add(Node);
+            }
+
+            private static GrasslandTownEventEntity GetSyntheticEvent(StageEntity_GrasslandTown Stage, string Key, string NameKey, string DescriptionKey, FloorGenerator Prefab, EFloorThreatType Threat)
+            {
+                string CacheKey = Stage.name + ":" + Key;
+                if (SyntheticEvents.TryGetValue(CacheKey, out GrasslandTownEventEntity? Cached) && Cached != null)
+                    return Cached;
+
+                GrasslandTownEventEntity Event = ScriptableObject.CreateInstance<GrasslandTownEventEntity>();
+                Event.id = "BossRush_" + Key;
+                Event.eventName = new LocalizedString(NameKey);
+                Event.eventDescription = new LocalizedString(DescriptionKey);
+                Event.threatType = Threat;
+                Event.floorPrefab = Prefab;
+                Event.isEssential = false;
+                Event.isAnvilFirstReward = false;
+                Event.eventObjectiveType = GrasslandTownEventEntity.EEventObjectiveType.ClearBattle;
+                Event.targetObjectiveCount = 1;
+                Event.objectiveText = new LocalizedString(DescriptionKey);
+
+                List<GrasslandTownEventEntity> Events = new(Stage.nodeEvents);
+                Events.Add(Event);
+                Stage.nodeEvents = Events.ToArray();
+                SyntheticEvents[CacheKey] = Event;
+                return Event;
+            }
+
         }
 
         [HarmonyPatch(typeof(BossSpawner))]
@@ -1544,6 +1561,14 @@ namespace SPMod
                     StarSephiriaMod.LogError($"[BossSpawner][OnStartServer_Prefix]出错: {ex.Message}");
                     return true;
                 }
+            }
+
+            [HarmonyPatch("ServerEndBossDramaticDie")]
+            [HarmonyPostfix]
+            static void ServerEndBossDramaticDie_Postfix(BossSpawner __instance)
+            {
+                if (!ModConfig.BossRushMode || !__instance.isServer) return;
+                DungeonPatchs.NotifySpawnerBossDefeated(__instance);
             }
 
             [HarmonyPatch("ApplyClearProgressionLocal")]

@@ -10,6 +10,7 @@ using System.Reflection;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
+using static HarmonyLib.Code;
 using static SPMod.StarSephiriaMod;
 using static SPMod.StarSephiriaPatches;
 using static SPMod.Tool.ModuleComponents;
@@ -45,6 +46,7 @@ namespace SPMod
         public static Dictionary<UnitAvatar, bool> BlazingHelbanusSpeed = [];
         public static Dictionary<UnitAvatar, int> YuisShortDaggerMagic = [];
         public static Dictionary<UnitAvatar, float> YuisShortDaggerTime = [];
+        public static Dictionary<UnitAvatar, YuisShortDaggerData> YuisShortDaggerEffect = [];
         public static Dictionary<UnitAvatar, Timer> FiaolasJudgmentStaffBuff = [];
         public static Dictionary<UnitAvatar, int> PristineFormAttackCount = [];
         public static Dictionary<UnitAvatar, float> TomeOfMimicryEffect = [];
@@ -388,6 +390,14 @@ namespace SPMod
                     if (victim is UnitAvatar Target)
                         Target.ApplyDebuff(CombatManager.Instance.electricDebuffPrefab, Player);
                 }//耀目的寂静
+                if (Player.IsWeapon(YuisShortDagger) && __instance.entityId == YuisShortDagger)
+                {
+                    if (YuisShortDaggerEffect.TryGetValue(Player, out var YSDEffect))
+                    {
+                        if (victim is UnitAvatar Target)
+                            YSDEffect.GetAttack(Target);
+                    }
+                }
             }
 
             [HarmonyPatch("BasicAttackCreated")]
@@ -733,8 +743,7 @@ namespace SPMod
                 }
                 if (__instance.critFury)
                 {
-                    if (__instance.entityId != TomeOfMimicry)
-                        MaxStack += 3;
+                    MaxStack += 3;
                 }
                 if (__instance.currentFury > MaxStack)
                 {
@@ -1152,9 +1161,19 @@ namespace SPMod
             static void OnEndCastMagicServerside_Postfix(WeaponSimple_Katana __instance)
             {
                 if (!ModConfig.Instance.EnableWeaponModifier) return;
-                if (YuisShortDaggerMagic.ContainsKey(__instance.Networkowner.unitAvatar))
+
+                UnitAvatar Player = __instance.Networkowner.unitAvatar;
+                if (YuisShortDaggerMagic.ContainsKey(Player))
                 {
-                    YuisShortDaggerMagic[__instance.Networkowner.unitAvatar] = 0;
+                    int Value = YuisShortDaggerMagic[Player];
+                    YuisShortDaggerMagic[Player] = 0;
+
+                    if (!YuisShortDaggerEffect.ContainsKey(Player))
+                    {
+                        YuisShortDaggerEffect.Add(Player, new(Player, Value));
+                        Player.CreateEffectHUD("YuisShortDagger", "YuisShortDagger_EnchantedBlade");
+                        Player.SetEffectHUDValue("YuisShortDagger_EnchantedBlade", Value.ToString());
+                    }
                 }
             }
 
@@ -1284,6 +1303,26 @@ namespace SPMod
         public static class WeaponSimple_SwordAndShield_Patches
         {
             private static GameObject? GardenofNeedleIceBullet = null;
+
+            [HarmonyPatch("JudgeAllElementalStateOnServer")]
+            [HarmonyPrefix]
+            static bool JudgeAllElementalStateOnServer_Prefix(WeaponSimple_SwordAndShield __instance)
+            {
+                if (!NetworkServer.active || !__instance.isAllElementalEnabled) return true;
+                if (__instance.entityId != WeaponIDs.PrismaticMagic) return true;
+
+                UnitAvatar? Player = __instance.Networkowner?.unitAvatar;
+                if (Player == null) return true;
+
+                int Wind = Player.GetCustomStatUnsafe(TextFile.WindDamage);
+                int Max = Tools.BaseStatToMax(Player);
+                if (Wind != Max) return true;
+
+                int Chaos = (int)WeaponSimple_SwordAndShield.EAllElementalState.Chaos;
+                if (__instance.NetworkcurrentAllElementalState != Chaos)
+                    __instance.NetworkcurrentAllElementalState = Chaos;
+                return false;
+            }
 
             [HarmonyPatch("Update")]
             [HarmonyPostfix]
@@ -2576,6 +2615,48 @@ namespace SPMod
         [HarmonyPatch(typeof(SpecialProjectile_FuryMP))]
         public static class SpecialProjectile_FuryMP_Patch
         {
+            private static GameObject? WindBulletTemplate;
+            public static void CreateWindBulletTemplate()
+            {
+                if (WindBulletTemplate != null) return;
+
+                WeaponSimple? Simple = WeaponDatabase.FindWeaponById(WeaponIDs.AcademyMagicSwordLiberation)?.mainWeaponPrefab?.GetComponent<WeaponSimple>();
+                if (Simple != null)
+                {
+                    foreach (WeaponAddon Addon in Simple.addons)
+                    {
+                        if (Addon is not WeaponAddonCommon_ChangeWeaponAction Change) continue;
+                        if (Change.fireData is not NewWeaponFireData_SpecialProjectile Special) continue;
+                        if (Special.projectilePrefab == null || !Special.projectilePrefab.TryGetComponent(out SpecialProjectile_FuryMP Fury)) continue;
+
+                        GameObject? Source = Fury.bulletPrefab_Fire ?? Fury.bulletPrefab_Physical;
+                        if (Source == null) continue;
+
+                        WindBulletTemplate = new ModBullet("FuryMPWindBullet", Source)
+                            .SetBullet(B =>
+                            {
+                                if (B.bulletChildParticle != null && B.bulletChildParticle.TryGetComponent(out ParticleSystem Particle))
+                                {
+                                    ParticleSystem.MainModule Main = Particle.main;
+                                    Main.startColor = EffectConstant.WindColor;
+                                }
+                            })
+                            .SetSpriteFrames("Bullet", "Dagger_Mana_Bullet_0png2")
+                            .EndCreate();
+                        return;
+                    }
+                }
+                LogError("[FuryMPWindBullet] 找不到 FuryMP 子弹模板");
+            }
+
+            [HarmonyPatch("Initialize")]
+            [HarmonyPostfix]
+            static void Initialize_Postfix(SpecialProjectile_FuryMP __instance)
+            {
+                if (__instance.elementalType == EffectConstant.Wind && WindBulletTemplate != null)
+                    __instance.bulletPrefab_Physical = WindBulletTemplate;
+            }
+
             [HarmonyPatch("SetUsedMP")]
             [HarmonyPrefix]
             static void SetUsedMP_Prefix(SpecialProjectile_FuryMP __instance, ref int usedMP)
@@ -3705,6 +3786,8 @@ namespace SPMod
                                 burstRound = 4;
                                 damage *= 0.2f + Tools.BaseStatToAverage(owner) * 0.01f * 0.8f;
                                 burstIntervalMiliseconds /= 2;
+                                if (elementalType == EffectConstant.Wind)
+                                    elementalType = EDamageElementalType.Chaos;
                             }
                             Action<int, ProjectileBase> originalCallback = onCreateAttack;
                             onCreateAttack = (index, projectile) =>
@@ -4389,30 +4472,9 @@ namespace SPMod
                             float Mult = damage / owner.GetCustomStatUnsafe(TextFile.PhysicalDamage);
                             elementalType = EDamageElementalType.Fire;
                             damage = owner.GetCustomStatUnsafe(TextFile.FireDamage);
-                            damage = damage.WeaponDamageMult(__instance.damageMultiplier, 5f);
+                            damage = damage.WeaponDamageMult(__instance.damageMultiplier, 5.75f);
                             damage *= Mult;
-                            float FlameSwordAdd = 1f + owner.GetCustomStatUnsafe(TextFile.FlameSwordDamage) * 0.01f;
-                            FlameSwordAdd *= 1f + owner.GetCustomStatUnsafe(TextFile.FlameSwordLuck) * 0.33f * 0.01f;
-                            FlameSwordAdd *= 1f + owner.GetCustomStatUnsafe(TextFile.FlameSwordAdditionalAttack) * 0.33f;
-                            damage *= FlameSwordAdd;
-                            swingMultiplier = 5f * FlameSwordAdd;
-                            float Crit = owner.GetCustomStatUnsafe(TextFile.FlameSwordCritical) * 0.01f;
-                            int CritDamage = owner.GetCustomStatUnsafe(TextFile.FlameSwordCritical);
-                            int IgnoreDefense = owner.GetCustomStatUnsafe(TextFile.FlameSwordCritical);
-                            if (onCreateAttack != null)
-                            {
-                                Action<int, ProjectileBase> originalCallback = onCreateAttack;
-                                onCreateAttack = (index, projectile) =>
-                                {
-                                    if (projectile is MeleeCollision Melee)
-                                    {
-                                        Melee.additionalCriticalChancePercent += Crit;
-                                        Melee.additionalCriticalDamageRate += CritDamage;
-                                        Melee.ignoreDefense += IgnoreDefense;
-                                    }
-                                    originalCallback?.Invoke(index, projectile);
-                                };
-                            }
+                            swingMultiplier = 5.75f;
                         }//索利斯·因贝尔
                         if (Type == MarkStabilization && Data.AttackType == "Special")
                         {

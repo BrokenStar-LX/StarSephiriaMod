@@ -1,13 +1,47 @@
 ﻿using HarmonyLib;
+using HeathenEngineering.SteamworksIntegration;
 using Mirror;
 using Mirror.FizzySteam;
 using SPMod.Tool;
+using System.Reflection;
+using UnityEngine;
 
 namespace SPMod
 {
     [HarmonyPatch]
     public static class Multiplayer
     {
+        public const int MaxConnections = 50;
+
+        /// <summary>
+        /// 工坊 DLL 在 MainWorld 才加载，主机在标题界面 StartHost 时 FizzySteamworks 已经把
+        /// NetworkManager.maxConnections 拷贝进 NextServer/LegacyServer，之后改 Mirror 的上限没用。
+        /// 进图后把 Mirror、Steam 传输、Steam 大厅三处的人数上限一起抬到 MaxConnections。
+        /// </summary>
+        public static void ApplyLiveConnectionLimits()
+        {
+            if (!NetworkServer.active) return;
+
+            NetworkServer.maxConnections = MaxConnections;
+            if (NetworkManager.singleton != null)
+                NetworkManager.singleton.maxConnections = MaxConnections;
+
+            FieldInfo? ServerField = AccessTools.Field(typeof(FizzySteamworks), "server");
+            object? Server = ServerField?.GetValue(null);
+            if (Server != null)
+            {
+                FieldInfo? MaxConnectionsField = AccessTools.Field(Server.GetType(), "maxConnections");
+                MaxConnectionsField?.SetValue(Server, MaxConnections);
+            }
+
+            LobbyManager? Manager = UnityEngine.Object.FindFirstObjectByType<LobbyManager>();
+            if (Manager != null && Manager.HasLobby && Manager.IsPlayerOwner)
+            {
+                LobbyData CurrentLobby = Manager.Lobby;
+                CurrentLobby.MaxMembers = MaxConnections;
+            }
+        }
+
         [HarmonyPatch(typeof(FizzySteamworks))]
         public static class FizzySteamworks_Patch
         {

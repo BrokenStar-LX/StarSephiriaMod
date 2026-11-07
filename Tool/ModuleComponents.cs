@@ -288,30 +288,39 @@ namespace SPMod.Tool
             }
         }
 
-        public class SuccessorBoltData
+        public class YuisShortDaggerData(UnitAvatar TargetPlayer, int ManaValue)
         {
-            public EDamageElementalType Elemental = EDamageElementalType.Normal;
-            public float Base = 0f;
-            public float Mult = 1f;
-            public int Count = 1;
-            public bool isMultiShot = false;
-            public int MultiShotCount = 1;
-            public float MultiShotMult = 1f;
-            public float CharmDamageMult = 1f;
+            public UnitAvatar Player = TargetPlayer;
+            public int Value = ManaValue;
+            public Timer EffectTimer = new(ManaValue * 0.1f);
+            public string DamageId = "[Star's Sephiria Mod]EnchantedBlade";
+            public void GetAttack(UnitAvatar Target)
+            {
+                float BaseDamage = Tools.BaseStatToMax(Player) * 5f;
+                BaseDamage *= 1f - EffectTimer.Ratio;
+                float Mult = 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
+                Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
+                Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.MPSkillDamage) * 0.01f;
+                float Damage = BaseDamage * Mult;
+                var Dam = DamageInstance.GetDamage(Player, DamageId, Target.transform.position, 4294967295L, Damage, EDamageType.Slice, EDamageFromType.DirectAttack, Vector2.zero, 0, 0f);
+                Dam.SetCustomColor(true, EffectConstant.MagicColor);
+                Target.ApplyDamage(Dam);
+            }
+        }
+
+        public class SuccessorBoltData(ActiveSkill_Bolt Bolt, float CharmMult = 1f, int ExAttackStack = 1)
+        {
+            public EDamageElementalType Elemental = Bolt.elementalType;
+            public float Base = Bolt.defaultDamageByLevel.SafeRandomAccess(Bolt.Level);
+            public float Mult = Bolt.damagePercentByLevel.SafeRandomAccess(Bolt.Level);
+            public int Count = (int)Bolt.fireCount * ExAttackStack;
+            public bool isMultiShot = (bool)isMultiShotField.GetValue(Bolt);
+            public int MultiShotCount = (int)multiShotCountField.GetValue(Bolt);
+            public float MultiShotMult = (float)multiShotDamageRatioField.GetValue(Bolt);
+            public float CharmDamageMult = CharmMult;
             public static FieldInfo isMultiShotField = AccessTools.Field(typeof(ActiveSkill_Bolt), "isMultiShot");
             public static FieldInfo multiShotCountField = AccessTools.Field(typeof(ActiveSkill_Bolt), "multiShotCount");
             public static FieldInfo multiShotDamageRatioField = AccessTools.Field(typeof(ActiveSkill_Bolt), "multiShotDamageRatio");
-            public SuccessorBoltData(ActiveSkill_Bolt Bolt, float CharmMult = 1f, int ExAttackStack = 1)
-            {
-                Elemental = Bolt.elementalType;
-                Base = Bolt.defaultDamageByLevel.SafeRandomAccess(Bolt.Level);
-                Mult = Bolt.damagePercentByLevel.SafeRandomAccess(Bolt.Level);
-                Count = (int)Bolt.fireCount * ExAttackStack;
-                isMultiShot = (bool)isMultiShotField.GetValue(Bolt);
-                MultiShotCount = (int)multiShotCountField.GetValue(Bolt);
-                MultiShotMult = (float)multiShotDamageRatioField.GetValue(Bolt);
-                CharmDamageMult = CharmMult;
-            }
         }
 
         public class CloudAttackData
@@ -1975,8 +1984,7 @@ namespace SPMod.Tool
                     if (NetId != null) Object.DestroyImmediate(NetId);
 
                     uint AssetId = LoadModContent.LoadModAssetId();
-                    ModAssetId? ModId = Projectile.GetComponent<ModAssetId>();
-                    if (ModId == null) ModId = Projectile.AddComponent<ModAssetId>();
+                    ModAssetId? ModId = Projectile.GetComponent<ModAssetId>() ?? Projectile.AddComponent<ModAssetId>();
                     ModId.AssetId = AssetId;
 
                     StarSephiriaMod.registered[AssetId] = Projectile;
