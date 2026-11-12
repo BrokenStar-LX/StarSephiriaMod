@@ -170,6 +170,7 @@ namespace SPMod.ModContent
             new ModKeyWord("Stat_WindSwordCount", false, Color.white).CreateStatus("WIND_SWORD_COUNT"),
             new ModKeyWord("Stat_WindSwordCritDamage", false, Color.white).CreateStatus("WIND_SWORD_CRIT_DAMAGE", "%"),
             new ModKeyWord("Stat_WindSwordMult", false, Color.white).CreateStatus("WIND_SWORD_MULT", "%"),
+            new ModKeyWord("Stat_AttackWeight", true, WeaponColor),
 
             new ModKeyWord("ModWeaponEffect_GreatswordOfExorcism", true, IceColor),
             new ModKeyWord("ModWeaponEffect_LegacyoftheIllusionist", true, WeaponColor),
@@ -191,6 +192,7 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_BeastMarksSwordHou", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_WinterSmithsDraftblade", true, IceColor),
             new ModKeyWord("ModWeaponEffect_SilenceofEverfrost", true, IceColor),
+            new ModKeyWord("ModWeaponEffect_WindForge", true, WindColor),
             new ModKeyWord("ModWeaponEffect_SilenceofEverfrost2", true, IceColor),
             new ModKeyWord("ModWeaponEffect_FiaolasJudgmentStaff", true, FireColor),
             new ModKeyWord("ModWeaponEffect_FiaolasJudgmentStaff2", true, FireColor),
@@ -217,6 +219,7 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_AirValve", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_Vortex", true, WindColor),
             new ModKeyWord("ModWeaponEffect_Tornado", true, WeaponColor),
+            new ModKeyWord("ModWeaponEffect_GaleQuell", true, WindColor),
 
             new ModKeyWord("Stealth", true, WeaponColor),
             new ModKeyWord("WindDamage", false, WindColor).StringToSprite("Wind").CreateStatus("WIND_DAMAGE").SetDetailed("Status_EachElementalDamage_DetailedValue"),
@@ -1715,7 +1718,7 @@ namespace SPMod.ModContent
                 Effect.isWeaponRelatedCharm = false;
                 Effect.effectsString = [ new("ModCharmEffect_WindSwordRunes") ];
                 Effect.EffectKeyword = "Stat_WindSwordCritDamage";
-                Effect.Value = 6;
+                Effect.Value = 8;
                 Effect.maxLevel = 0;
                 Effect.isUniqueEffect = false;
                 Effect.enabled = false;
@@ -1728,7 +1731,7 @@ namespace SPMod.ModContent
                 Effect.isWeaponRelatedCharm = false;
                 Effect.effectsString = [ new("ModCharmEffect_WindSwordRunes") ];
                 Effect.EffectKeyword = "Stat_WindSwordDamage";
-                Effect.Value = 10;
+                Effect.Value = 8;
                 Effect.maxLevel = 0;
                 Effect.isUniqueEffect = false;
                 Effect.enabled = false;
@@ -1750,7 +1753,7 @@ namespace SPMod.ModContent
             new ModItem("SkyrendEdge", EItemRarity.Uncommon)
             .CreateCharm(Tools.SetCategories("WINDSWORD"),
             [
-                Tools.SetStatusGroup("WIND_SWORD_MULT", 10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
+                Tools.SetStatusGroup("WIND_SWORD_MULT", 10, 20, 30, 40, 50, 60, 70, 80),
             ]),//裂空刃
 
             new ModItem("WindruleHilt", EItemRarity.Rare)
@@ -1820,6 +1823,7 @@ namespace SPMod.ModContent
             foreach (ModItem Data in ModItemEntityData)
                 Data.CreateItem();
         }
+
         //模组弹幕
         public static readonly ModBullet WindArrow = new ModBullet("WindArrow", () =>
         {
@@ -2019,6 +2023,9 @@ namespace SPMod.ModContent
         });
 
         // 模组攻击数据
+        public static ModFireData WindSword_WindForge = ModFireData.HaetaeStrike(WeaponIDs.FlameEaterHaetae).SetElement(Wind).SetDamage(1.2f)
+            .SetSwingSpriteFolder("Weapon.Sword_WindForge");
+
         public static List<ModFireData> WindGreatSword_Basic =
         [
             ModFireData.Basic(WeaponIDs.TheEmberforged, 0).SetSwingSpriteFolder("Weapon.GreatSword_Wind"),
@@ -2163,6 +2170,52 @@ namespace SPMod.ModContent
                 Weapon.addons = Addons.ToArray();
             }),
 
+            new ModWeapon("WindForge", WeaponIDs.WindForge, WeaponIDs.DefaultSwordandShield)
+            .SetEnhanceFrom(WeaponIDs.WindSword)
+            .SetSprite("Sword_Tier1", "ModWeapon_WindForge", "Weapon")
+            .SetSprite("Shield_Tier1", "ModWeapon_WindForge_Shield", "Weapon")
+            .SetSpecialAttack(0, WindSword_WindForge)
+            .CustomCreateWeapon(Weapon =>
+            {
+                if (Weapon is WeaponSimple_SwordAndShield Sword)
+                {
+                    Sword.attackWeightPerSwing = 0.25f;
+                    Sword.sweepMpCost = 3;
+                }
+
+                List<WeaponAddon> Addons = [];
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindSword_Effect");
+                Effect.status =
+                [
+                    new()
+                    {
+                        statId = TextFile.WindDamage,
+                        value = 5,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                ];
+                Addons.Add(Effect);
+
+                WeaponAddon_ForgeAttack Effect2 = Weapon.gameObject.AddComponent<WeaponAddon_ForgeAttack>();
+                Effect2.parent = Weapon;
+                Effect2.effectText = new LocalizedString("ModWeapon_WindForge_Effect");
+                Effect2.status =
+                [
+                    new()
+                    {
+                        statId = TextFile.CharmDamageBonus,
+                        value = 15,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                ];
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
             new ModWeapon("WindGreatSword", WeaponIDs.WindGreatSword, WeaponIDs.TheEmberforged)
             .SetEnhanceFrom(WeaponIDs.SteelGreatsword)
             .SetSprite("GreatSword_Fire_Minor", "ModWeapon_WindGreatSword", "Weapon")
@@ -2213,6 +2266,42 @@ namespace SPMod.ModContent
                 WeaponAddonCommon_StatusUnsafe Effect2 = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
                 Effect2.parent = Weapon;
                 Effect2.effectText = new LocalizedString("ModWeapon_Tornado_Effect");
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("GaleQuell", WeaponIDs.GaleQuell, WeaponIDs.TheEmberforged)
+            .SetEnhanceFrom(WeaponIDs.WindGreatSword)
+            .SetSprite("GreatSword_Fire_Minor", "ModWeapon_GaleQuell", "Weapon")
+            .SetSprite("GreatSword_Fire_Minor_Blade", "ModWeapon_GaleQuell_1", "Weapon")
+            .SetBasicAttacks(WindGreatSword_Basic.ToArray())
+            .SetSpecialAttack(0, WindGreatSword_Special)
+            .SetDashAttack(0, WindGreatSword_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = [];
+                WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
+                Effect.parent = Weapon;
+                Effect.DamageId = "[Star's Sephiria Mod]AdditionalWeaponDamageWind";
+                Effect.ValueName = TextFile.WindDamage;
+                Effect.DamageMult = 20;
+                Effect.elementalType = Wind;
+                Effect.effectText = new LocalizedString("ModWeapon_WindGreatSword_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddonCommon_StatusUnsafe Effect2 = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect2.parent = Weapon;
+                Effect2.effectText = new LocalizedString("ModWeapon_GaleQuell_Effect");
+                Effect2.status =
+                [
+                    new()
+                    {
+                        statId = TextFile.WindSwordGreatSword,
+                        value = 1,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                ];
                 Addons.Add(Effect2);
                 Weapon.addons = Addons.ToArray();
             }),

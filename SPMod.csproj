@@ -39,6 +39,7 @@
     <None Remove="Sprites\Item_WindruleHilt.png" />
     <None Remove="Sprites\Item_WindSword.png" />
     <None Remove="Sprites\Item_WindSword_Entity.png" />
+    <None Remove="Sprites\Item_WindSword_Entity2.png" />
     <None Remove="Sprites\Item_CrystalShard.png" />
     <None Remove="Sprites\Item_RunesAccurate.png" />
     <None Remove="Sprites\Item_RunesSharp.png" />
@@ -215,6 +216,7 @@
     <EmbeddedResource Include="Sprites\Item_WindruleHilt.png" />
     <EmbeddedResource Include="Sprites\Item_WindSword.png" />
     <EmbeddedResource Include="Sprites\Item_WindSword_Entity.png" />
+    <EmbeddedResource Include="Sprites\Item_WindSword_Entity2.png" />
     <EmbeddedResource Include="Sprites\Item_CrystalShard.png" />
     <EmbeddedResource Include="Sprites\Item_RunesAccurate.png" />
     <EmbeddedResource Include="Sprites\Item_RunesSharp.png" />

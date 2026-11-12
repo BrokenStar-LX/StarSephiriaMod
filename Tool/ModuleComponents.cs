@@ -14,6 +14,7 @@ using static Miracle;
 using static SPMod.Tool.ModuleComponents;
 using static Unity.VisualScripting.Member;
 using static UnityEngine.GraphicsBuffer;
+using static WeaponSkillSubAction;
 using Object = UnityEngine.Object;
 using StatusGroup = Charm_StatusInstance.StatusGroup;
 
@@ -149,16 +150,11 @@ namespace SPMod.Tool
             }
         }
 
-        public class Counter
+        public class Counter(int count, float T)
         {
             public int Count = 0;
-            public int MaxCount;
-            public Timer UseTimer;
-            public Counter(int count, float T)
-            {
-                MaxCount = count;
-                UseTimer = new Timer(T, true, true);
-            }
+            public int MaxCount = count;
+            public Timer UseTimer = new Timer(T, true, true);
             public bool Update(float Speed, out bool Take)
             {
                 Take = false;
@@ -168,15 +164,10 @@ namespace SPMod.Tool
             }
         }
 
-        public class CountingTimer
+        public class CountingTimer(int count, float T)
         {
-            public int Count;
-            public Timer UseTimer;
-            public CountingTimer(int count, float T)
-            {
-                Count = count;
-                UseTimer = new Timer(T);
-            }
+            public int Count = count;
+            public Timer UseTimer = new(T);
             public bool Update(float Speed)
             {
                 if (UseTimer.Update(Speed))
@@ -531,6 +522,76 @@ namespace SPMod.Tool
                 }
                 if (Player != null && Active.TryGetValue(Player!, out AirValveZone? Current) && Current == this)
                     Active.Remove(Player!);
+            }
+        }
+
+        public class ForgeAttackData(UnitAvatar player, UnitAvatar target, int count = 30)
+        {
+            public UnitAvatar Player = player;
+            public UnitAvatar Target = target;
+            public int Count = count;
+            public float Interval = 0.33f;
+            private float Timer;
+
+            public float GetDamage()
+            {
+                float Value = Player.GetCustomStatUnsafe(TextFile.WindDamage) * 0.6f;
+                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
+                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
+                return Value;
+            }
+
+            public bool Update(float DeltaTime)
+            {
+                if (Player == null || Player.IsDead) return true;
+                if (Target == null || Target.IsDead) return true;
+
+                Timer += DeltaTime;
+                while (Timer >= Interval && Count > 0)
+                {
+                    Timer -= Interval;
+                    Count--;
+                    Tick();
+                    if (Target == null || Target.IsDead) return true;
+                }
+                return Count <= 0;
+            }
+
+            private void Tick()
+            {
+                float Damage = GetDamage();
+                if (Damage <= 0f) return;
+
+                DamageInstance Dam = DamageInstance.GetDamage(Player, "Weapon_SpecialAttack", Target.transform.position, 4294967295L, Damage,
+                    EDamageType.Slice, EDamageFromType.DirectAttack, Vector2.zero, 0, 0f);
+                Dam.elementalType = EffectConstant.Wind;
+                Target.ApplyDamage(Dam);
+                PlayFx();
+            }
+
+            private static float FxHeight;
+            private static bool FxHeightSearched;
+
+            private static float GetFxHeight()
+            {
+                if (!FxHeightSearched)
+                {
+                    FxHeightSearched = true;
+                    Sprite? FxSprite = Tools.LoadModSpriteForPath("EffectFx", "WindForge_FX0");
+                    if (FxSprite != null)
+                        FxHeight = FxSprite.rect.height / Mathf.Max(1f, FxSprite.pixelsPerUnit);
+                }
+                return FxHeight;
+            }
+
+            private void PlayFx()
+            {
+                if (Target == null) return;
+                Vector3 Pos = Target.TopdownActor != null ? Target.TopdownActor.Position_Center : Target.transform.position;
+                Pos.y += GetFxHeight() * 0.25f;
+                if (NetworkClient.active)
+                    ModFxPool.Spawn("WindForge", Pos, Player.isOwned ? 1 : 0);
+                ModNetwork.SendWeaponFx(Player.netId, Pos, ModNetwork.WeaponFxWindForge);
             }
         }
 
@@ -1762,6 +1823,11 @@ namespace SPMod.Tool
             public static ModFireData Special(int WeaponId, int Index = 0)
             {
                 return new ModFireData(() => GetAt(GetWeapon(WeaponId)?.specialAttacks, Index));
+            }
+
+            public static ModFireData HaetaeStrike(int WeaponId)
+            {
+                return new ModFireData(() => (GetWeapon(WeaponId) as WeaponSimple_SwordAndShield)?.haetaeStrikeAttackFireData);
             }
 
             public static ModFireData QuickDraw(int WeaponId)

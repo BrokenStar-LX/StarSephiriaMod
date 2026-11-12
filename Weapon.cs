@@ -397,7 +397,7 @@ namespace SPMod
                         if (victim is UnitAvatar Target)
                             YSDEffect.GetAttack(Target);
                     }
-                }
+                }//优衣的短匕首
             }
 
             [HarmonyPatch("BasicAttackCreated")]

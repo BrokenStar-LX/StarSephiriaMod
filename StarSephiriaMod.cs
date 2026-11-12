@@ -1923,6 +1923,9 @@ namespace SPMod
             ModFxPool.Register("ShadowThornsFx", prewarm: 2, max: 8, fps: 18, loop: false, "FX", 0,
                 "ShadowThornsFx_1", "ShadowThornsFx_2", "ShadowThornsFx_3", "ShadowThornsFx_4",
                 "ShadowThornsFx_5", "ShadowThornsFx_6", "ShadowThornsFx_7", "ShadowThornsFx_8");
+            ModFxPool.Register("WindForge", prewarm: 2, max: 12, fps: 18, loop: false, "FX", 0,
+                "WindForge_FX0", "WindForge_FX1", "WindForge_FX2", "WindForge_FX3", "WindForge_FX4",
+                "WindForge_FX5", "WindForge_FX6", "WindForge_FX7", "WindForge_FX8");
             ModFxPool.RegisterFromPath("WindyWeatherParticle", "Bullet", 8, 32, 12f, false, "FX", 0,
                 "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
                 "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5");

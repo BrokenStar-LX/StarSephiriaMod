@@ -5,10 +5,10 @@ namespace SPMod.ModContent
 {
     public class Charm_ResonanceMagicCrystal : Charm_EnergyCrystalBase
     {
-        public int[] EnergyGainByLevel = [30, 60, 90];   // 命中获得：武器值 × 这个数值 的能量
+        public int[] EnergyGainByLevel = [15, 30, 45];   // 命中获得：武器值 × 这个数值 的能量
         public float MaxEnergy = 100f;                   // 能量上限
         public float DamageBonusPerEnergy = 2f;          // 满能量时的增伤倍率（200%）
-        public float MaxConsumePerHit = 50f;             // 每次最多消耗的能量（50 = 100% 增伤）
+        public float MaxConsumePerHit = 25f;
 
         private bool Consuming;
 

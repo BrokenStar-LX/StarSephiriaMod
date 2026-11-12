@@ -4,18 +4,16 @@ namespace SPMod.ModContent
 {
     public class Charm_EnergyStorageMagicCrystal : Charm_EnergyCrystalBase
     {
-        public int[] EnergyGainByLevel = [15, 30, 45];   // 命中获得：武器值 × 这个数值 的能量
+        public int[] EnergyGainByLevel = [20, 40, 60];   // 命中获得：武器值 × 这个数值 的能量
         public float MaxEnergy = 400f;                   // 能量上限
         public float EnergyPerDamage = 5f;               // 每 X 点能量
         public float DamagePerEnergy = 1f;               // 提高 1% 风之刃伤害（独立乘区）
-        public float DecayInterval = 0.2f;               // 流失间隔
+        public float DecayInterval = 0.2f;              // 流失间隔
         public float DecayPercent = 5f;                  // 每次流失当前能量的百分比
         public float DecayMin = 1f;                      // 每次至少流失 1 点
 
         private readonly Timer DecayTimer = new(0.2f);
-
         protected override float MaxEnergyValue => MaxEnergy;
-
         protected override int GetEnergyGainByLevel(int level)
         {
             return EnergyGainByLevel.SafeRandomAccess(LevelToIdx(level));

@@ -6,7 +6,7 @@ namespace SPMod.ModContent
     public class Charm_NaturalMagicCrystal : Charm_StatusInstance
     {
         public float CooldownTime = 5f;                    // 效果冷却
-        public int[] CooldownReduceByLevel = [10, 20, 30]; // 命中减少：武器值 × 这个数值% 的冷却
+        public int[] CooldownReduceByLevel = [12, 24, 36]; // 命中减少：武器值 × 这个数值% 的冷却
         public float DamagePerExtraCount = 50f;            // 每 1 点风之刃额外数量，伤害提高 50%
 
         private readonly Timer Cooldown = new(5f, resetOnTime: false);

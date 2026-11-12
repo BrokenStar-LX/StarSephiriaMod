@@ -46,6 +46,7 @@ namespace SPMod.Tool
 
         public const int WindSword = ModWeaponId;                   // 风语者
         public const int SpiralCloudBand = ModWeaponId + 1;         // 螺旋云带
+        public const int WindForge = ModWeaponId + 2;               // 铸风者
 
         // 大剑系列  
         public const int SteelGreatsword = 10;                      // 钢铁巨剑
@@ -84,7 +85,8 @@ namespace SPMod.Tool
         public const int ScatteredLonging = 1125;                   // 散落的眷恋
 
         public const int WindGreatSword = ModWeaponId + 1100;       // 罡风
-        public const int Tornado = ModWeaponId + 1101;              // 龙卷风
+        public const int Tornado = ModWeaponId + 1101;              // 扶摇
+        public const int GaleQuell = ModWeaponId + 1102;            // 镇风
 
         // 匕首系列
         public const int Dagger = 20;                               // 短剑

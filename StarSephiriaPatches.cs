@@ -410,13 +410,10 @@ namespace SPMod
                         GuardDeBuff.Add(Player, new Counter(20, 3f));
                         Player.CreateEffectHUD("Shield", "GuardDeBuff");
                     }
-                    if (GuardDeBuff.ContainsKey(Player))
+                    if (GuardDeBuff.TryGetValue(Player, out Counter? Guard))
                     {
-                        if (Perfect)
-                            GuardDeBuff[Player].Count += 1;
-                        else
-                            GuardDeBuff[Player].Count += 2;
-                        Player.SetEffectHUDValue("GuardDeBuff", GuardDeBuff[Player].Count.ToString());
+                        Guard.Count += Perfect ? 1 : 2;
+                        Player.SetEffectHUDValue("GuardDeBuff", Guard.Count.ToString());
                     }
                 }
                 OnBlockDamage(damage, Message);
@@ -1479,16 +1476,16 @@ namespace SPMod
 
                 if (GuardDeBuff.TryGetValue(__instance, out Counter GuardCount))
                 {
-                    if (GuardCount.Update(Time.deltaTime, out bool Take))
+                    bool Expired = GuardCount.Update(Time.deltaTime, out bool Take);
+                    if (Expired || Take)
                     {
+                        if (Take) UpdateGuardBroken(__instance);
                         GuardDeBuff.Remove(__instance);
                         __instance.DestroyEffectHUD("GuardDeBuff");
                     }
-                    if (Take)
+                    else
                     {
-                        UpdateGuardBroken(__instance);
-                        GuardDeBuff.Remove(__instance);
-                        __instance.DestroyEffectHUD("GuardDeBuff");
+                        __instance.SetEffectHUDFillAmount("GuardDeBuff", 1f - GuardCount.UseTimer.Ratio);
                     }
                 }
 

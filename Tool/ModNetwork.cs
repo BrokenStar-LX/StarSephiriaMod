@@ -35,6 +35,7 @@ namespace SPMod.Tool
         public const byte KindWeaponTime = 4;
         public const byte SwingFxMoment = 0;
         public const byte WeaponFxShadowThorns = 2;
+        public const byte WeaponFxWindForge = 3;
 
         private const string ModId = "stars-sephiriamod";
         private const string RpcCharm = ModId + ":charm";
@@ -131,6 +132,7 @@ namespace SPMod.Tool
                 ModuleComponents.AirValveZone.FxTrigger => "AirValveGround",
                 ModuleComponents.AirValveZone.FxPulse => "AirValve",
                 WeaponFxShadowThorns => "ShadowThornsFx",
+                WeaponFxWindForge => "WindForge",
                 _ => "",
             };
             if (Key.Length > 0)
