@@ -114,6 +114,7 @@ namespace SPMod
                     Dictionary<string, ItemCategoryEntity> itemCategories = (Dictionary<string, ItemCategoryEntity>)itemCategoriesField.GetValue(null);
                     foreach (ItemCategoryEntity Data in ModItemCategoryData)
                     {
+                        Data.enableSound = itemCategories["DARKCLOUD"].enableSound;
                         itemCategories[Data.id] = Data;
                     }
                     foreach (int DisableId in DisableCharm)

@@ -5,7 +5,7 @@ public class ModConfigData
 {
     public bool IsTestMode { get; set; } = false;
     public bool DisplayDisabledItems { get; set; } = false;
-    public bool DebugLogging { get; set; } = false;
+    public bool DebugLogging { get; set; } = true;
     public bool DebugLoggingWeapon { get; set; } = false;
     public bool DebugLoggingDungeon { get; set; } = false;
     public bool DebugLoggingBoss { get; set; } = false;

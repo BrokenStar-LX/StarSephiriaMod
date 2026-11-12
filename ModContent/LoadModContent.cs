@@ -51,6 +51,7 @@ namespace SPMod.ModContent
         public static List<ModMiracle> ModMiraclesData =
         [
             new ModMiracle("Bard", "HURRICANE").SetStat("WIND_DAMAGE/5=Positive", "WIND_EROSION_DAMAGE/25=Positive").EndCreate(),
+            new ModMiracle("SwordDancer", "WINDSWORD").SetStat("CHARM_DAMAGE_BONUS/15=Positive", "CRITICAL_DAMAGE_RATE/20=Positive").EndCreate(),
             new ModMiracle("Shaman", "CURSE").SetStat("DEBUFF_DAMAGE/20=Positive", "DEBUFF_DURATION/40=Positive").EndCreate(),
             new ModMiracle("Negotiator", "SAVVY").SetStat("NEGOTIATION/10=Positive", "LEAF_DROP/40=Positive").EndCreate(),
             new ModMiracle("Knight", "WEAPON").SetStat("BASIC_ATTACK_DAMAGE/20=Positive", "SPECIAL_ATTACK_DAMAGE/20=Positive").EndCreate(),
@@ -86,10 +87,12 @@ namespace SPMod.ModContent
             .SetStat(new ComboStat() { comboCount = 2, status = ["DASH_RECOVERY_SPEED/10", "DASH_ATTACK_DAMAGE/20"] })
             .SetStat(new ComboStat() { comboCount = 4, status = ["DASH_COUNT/1", "DASH_ATTACK_DAMAGE/20"] })
             .EndCreate(),
+
             new ModItemCategory("FORTUNE", "Fortune", "Pomegranate")
             .SetStat(new ComboStat() { comboCount = 2, status = ["BOSS_REWARD_DICE/1"] })
             .SetStat(new ComboStat() { comboCount = 4, status = ["EXTRA_ITEM_CHOICES/1"] })
             .EndCreate(),
+
             new ModItemCategory("HURRICANE", "Hurricane", "FlowerButterflyFruit")
             .SetCustomComboEffect(Combo =>
             {
@@ -110,6 +113,23 @@ namespace SPMod.ModContent
                     new() { comboCount = 4, status = ["WIND_DAMAGE/6"] },
                     new() { comboCount = 8, status = ["WIND_DAMAGE/8"] },
                     new() { comboCount = 10, status = ["WIND_EROSION_MULT/24"]},
+                ];
+                Effect.enabled = false;
+            })
+            .EndCreate(),
+
+            new ModItemCategory("WINDSWORD", "WindSword", "Lime")
+            .SetCustomComboEffect(Combo =>
+            {
+                ComboEffect_WindSword Effect = Combo.AddComponent<ComboEffect_WindSword>();
+                Effect.defaultEffect = new LocalizedString("ModComboEffect_WindSword_Default");
+                Effect.ActivateComboCount = 2;
+                Effect.addStatByCombo =
+                [
+                    new() { comboCount = 4, status = ["WIND_SWORD_DAMAGE/8"] },
+                    new() { comboCount = 6, status = ["WIND_SWORD_DAMAGE/12"] },
+                    new() { comboCount = 8, status = ["WIND_SWORD_SPEED/20"] },
+                    new() { comboCount = 10, status = ["WIND_SWORD_COUNT/2"]},
                 ];
                 Effect.enabled = false;
             })
@@ -137,13 +157,19 @@ namespace SPMod.ModContent
             new ModKeyWord("Stat_AllPlayerElementalDamage", true, ElementalColor).CreateStatus("ALL_PLAYER_ELEMENTAL_DAMAGE"),
             new ModKeyWord("Stat_AllPlayerCrit", true, CritColor).CreateStatus("ALL_PLAYER_CRIT", "%"),
             new ModKeyWord("Stat_StrikeBack", true, DefenseColor).UseKeyWordSprite("Thorns").CreateStatus("STRIKE_BACK", "%"),
-            new ModKeyWord("Stat_WindErosionDamage", false, WindColor).CreateStatus("WIND_EROSION_DAMAGE", "%"),
-            new ModKeyWord("Stat_WindErosionMult", false, WindColor).CreateStatus("WIND_EROSION_MULT", "%"),
-            new ModKeyWord("Stat_WindErosionCount", false, WindColor).CreateStatus("WIND_EROSION_COUNT"),
-            new ModKeyWord("Stat_WindErosionLuck", false, WindColor).CreateStatus("WIND_EROSION_LUCK", "%"),
-            new ModKeyWord("Stat_WindErosionDot", false, WindColor).CreateStatus("WIND_EROSION_DOT"),
-            new ModKeyWord("Stat_WindErosionOverFlow", false, WindColor).CreateStatus("WIND_EROSION_OVER_FLOW"),
+            new ModKeyWord("Stat_WindErosionDamage", false, Color.white).CreateStatus("WIND_EROSION_DAMAGE", "%"),
+            new ModKeyWord("Stat_WindErosionMult", false, Color.white).CreateStatus("WIND_EROSION_MULT", "%"),
+            new ModKeyWord("Stat_WindErosionCount", false, Color.white).CreateStatus("WIND_EROSION_COUNT"),
+            new ModKeyWord("Stat_WindErosionLuck", false, Color.white).CreateStatus("WIND_EROSION_LUCK", "%"),
+            new ModKeyWord("Stat_WindErosionDot", false, Color.white).CreateStatus("WIND_EROSION_DOT"),
+            new ModKeyWord("Stat_WindErosionOverFlow", false, Color.white).CreateStatus("WIND_EROSION_OVER_FLOW"),
             new ModKeyWord("Stat_DrinkPotionStack", true, ElementalColor).CreateStatus("DRINK_POTION_STACK"),
+            new ModKeyWord("Stat_WindSwordDamage", false, Color.white).CreateStatus("WIND_SWORD_DAMAGE", "%"),
+            new ModKeyWord("Stat_WindSwordSpeed", false, Color.white).CreateStatus("WIND_SWORD_SPEED", "%"),
+            new ModKeyWord("Stat_WindSwordRange", false, Color.white).CreateStatus("WIND_SWORD_RANGE", "%"),
+            new ModKeyWord("Stat_WindSwordCount", false, Color.white).CreateStatus("WIND_SWORD_COUNT"),
+            new ModKeyWord("Stat_WindSwordCritDamage", false, Color.white).CreateStatus("WIND_SWORD_CRIT_DAMAGE", "%"),
+            new ModKeyWord("Stat_WindSwordMult", false, Color.white).CreateStatus("WIND_SWORD_MULT", "%"),
 
             new ModKeyWord("ModWeaponEffect_GreatswordOfExorcism", true, IceColor),
             new ModKeyWord("ModWeaponEffect_LegacyoftheIllusionist", true, WeaponColor),
@@ -197,6 +223,7 @@ namespace SPMod.ModContent
             new ModKeyWord("WindDamageAmp", false, WindColor).StringToSprite("Wind").CreateStatusAmp("WIND_DAMAGE_AMP", "WindDamage", "%"),
             new ModKeyWord($"Elemental_{Wind}", false, WindColor).StringToSprite("Wind"),
             new ModKeyWord("WindErosion", true, WindColor).StringToSprite("Wind"),
+            new ModKeyWord("WindSword", false, WindColor).StringToSprite("WindSword"),
         ];
         //模组伤害来源
         public static List<ModDamageKey> ModDamageKeyEntityData =
@@ -222,6 +249,7 @@ namespace SPMod.ModContent
             new ModDamageKey("BottledLightning", DamageIdEntity.ECategory.Charm),
             new ModDamageKey("ElectricIce", DamageIdEntity.ECategory.Charm),
             new ModDamageKey("PlasmaCrystal", DamageIdEntity.ECategory.Charm),
+            new ModDamageKey("WindSword", DamageIdEntity.ECategory.Charm),
 
             //武器
             new ModDamageKey("IceCrystal", DamageIdEntity.ECategory.Weapon),
@@ -260,6 +288,10 @@ namespace SPMod.ModContent
             new ModEffectHUD("Charge", true, true),
             new ModEffectHUD("ThunderBeast", false, true),
             new ModEffectHUD("YuisShortDagger", true, true),
+            new ModEffectHUD("Resonance", true, true),
+            new ModEffectHUD("EnergyStorage", true, true),
+            new ModEffectHUD("Natural", false, true),
+            new ModEffectHUD("Shield", true, true),
         ];
         //模组减益列表
         public static List<ModCharacterDebuff> ModDeBuffData =
@@ -459,8 +491,8 @@ namespace SPMod.ModContent
             }, // 荆棘壳
             { 1193, new List<StatusGroup>
                     {
-                        Tools.SetStatusGroup("FIRE_DAMAGE", 2, 4, 6),
-                        Tools.SetStatusGroup("ATTACK_SPEED", 2, 4, 6)
+                        Tools.SetStatusGroup("FIRE_DAMAGE", 3, 6),
+                        Tools.SetStatusGroup("ATTACK_SPEED", 3, 6)
                     }
             }, // 索利斯·弗拉克斯
             { 1194, new List<StatusGroup> { Tools.SetStatusGroup("ATTACK_SPEED", 3, 6, 9) } }, // 银手镯
@@ -1654,6 +1686,134 @@ namespace SPMod.ModContent
 
             new ModItem("WindyWeather", EItemRarity.Rare)
             .CustomCreateCharm(Tools.SetCategories("HURRICANE"), Item => WindyWeather!.BindCharm(Item, 4, "ModCharmEffect_WindyWeather")),//大风天
+
+            new ModItem("WindSword", EItemRarity.Eternal)
+            .SetCost(0)
+            .CustomCreateCharm(Tools.SetCategories("WINDSWORD"), Action =>
+            {
+                Action.cannotBeReward = true;
+                Action.cannotThrow = true;
+                Charm_WindSword Effect = Action.resourcePrefab.AddComponent<Charm_WindSword>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = [ new("ModCharmEffect_WindSword") ];
+                Effect.maxLevel = 0;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//风之刃
+
+            new ModItem("CrystalShard", EItemRarity.Common)
+            .CreateCharm(Tools.SetCategories("WINDSWORD"),
+            [
+                Tools.SetStatusGroup("WIND_DAMAGE", 3, 6),
+                Tools.SetStatusGroup("CRITICAL", 300, 600),
+            ], false),//碎魔晶
+
+            new ModItem("RunesAccurate", EItemRarity.Common)
+            .CustomCreateCharm(Tools.SetCategories("WINDSWORD"), Action =>
+            {
+                Charm_WindSwordRune Effect = Action.resourcePrefab.AddComponent<Charm_WindSwordRune>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = [ new("ModCharmEffect_WindSwordRunes") ];
+                Effect.EffectKeyword = "Stat_WindSwordCritDamage";
+                Effect.Value = 6;
+                Effect.maxLevel = 0;
+                Effect.isUniqueEffect = false;
+                Effect.enabled = false;
+            }),//符文[精准]
+
+            new ModItem("RunesSharp", EItemRarity.Uncommon)
+            .CustomCreateCharm(Tools.SetCategories("WINDSWORD"), Action =>
+            {
+                Charm_WindSwordRune Effect = Action.resourcePrefab.AddComponent<Charm_WindSwordRune>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = [ new("ModCharmEffect_WindSwordRunes") ];
+                Effect.EffectKeyword = "Stat_WindSwordDamage";
+                Effect.Value = 10;
+                Effect.maxLevel = 0;
+                Effect.isUniqueEffect = false;
+                Effect.enabled = false;
+            }),//符文[锋利]
+
+            new ModItem("RunesRapidly", EItemRarity.Rare)
+            .CustomCreateCharm(Tools.SetCategories("WINDSWORD"), Action =>
+            {
+                Charm_WindSwordRune Effect = Action.resourcePrefab.AddComponent<Charm_WindSwordRune>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = [ new("ModCharmEffect_WindSwordRunes") ];
+                Effect.EffectKeyword = "Stat_WindSwordSpeed";
+                Effect.Value = 20;
+                Effect.maxLevel = 0;
+                Effect.isUniqueEffect = false;
+                Effect.enabled = false;
+            }),//符文[急速]
+
+            new ModItem("SkyrendEdge", EItemRarity.Uncommon)
+            .CreateCharm(Tools.SetCategories("WINDSWORD"),
+            [
+                Tools.SetStatusGroup("WIND_SWORD_MULT", 10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
+            ]),//裂空刃
+
+            new ModItem("WindruleHilt", EItemRarity.Rare)
+            .CustomCreateCharm(Tools.SetCategories("WINDSWORD"), Action =>
+            {
+                Charm_CustomStatus Effect = Action.resourcePrefab.AddComponent<Charm_CustomStatus>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = [new("ModCharmEffect_WindruleHilt")];
+                Effect.ValueByLevel = [1];
+                Effect.ValueName = TextFile.WindSwordBig;
+                Effect.stats =
+                [
+                    Tools.SetStatusGroup("WIND_SWORD_SPEED", -60, -55, -50, -45, -40, -35, -30),
+                    Tools.SetStatusGroup("WIND_SWORD_RANGE", 20, 25, 30, 35, 40, 45, 50)
+                ];
+                Effect.maxLevel = 6;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//御风柄
+
+            new ModItem("StormHeartCore", EItemRarity.Legend)
+            .CreateCharm(Tools.SetCategories("WINDSWORD"),
+            [
+                Tools.SetStatusGroup("HIGHEST_ELEMENTAL_DAMAGE", 2, 4, 4, 6, 6),
+                Tools.SetStatusGroup("CHARM_DAMAGE_BONUS", 5, 10, 10, 15, 15),
+                Tools.SetStatusGroup("WIND_SWORD_COUNT", 0, 0, 1, 1, 2),
+            ]),//飓心核
+
+            new ModItem("ResonanceMagicCrystal", EItemRarity.Uncommon)
+            .CustomCreateCharm(Tools.SetCategories("WINDSWORD"), Action =>
+            {
+                Charm_ResonanceMagicCrystal Effect = Action.resourcePrefab.AddComponent<Charm_ResonanceMagicCrystal>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = [new("ModCharmEffect_ResonanceMagicCrystal")];
+                Effect.effectHUD_ID = "Resonance";
+                Effect.maxLevel = 2;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//共振魔晶
+
+            new ModItem("EnergyStorageMagicCrystal", EItemRarity.Rare)
+            .CustomCreateCharm(Tools.SetCategories("WINDSWORD"), Action =>
+            {
+                Charm_EnergyStorageMagicCrystal Effect = Action.resourcePrefab.AddComponent<Charm_EnergyStorageMagicCrystal>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = [new("ModCharmEffect_EnergyStorageMagicCrystal")];
+                Effect.effectHUD_ID = "EnergyStorage";
+                Effect.maxLevel = 2;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//蓄能魔晶
+
+            new ModItem("NaturalMagicCrystal", EItemRarity.Legend)
+            .CustomCreateCharm(Tools.SetCategories("WINDSWORD"), Action =>
+            {
+                Charm_NaturalMagicCrystal Effect = Action.resourcePrefab.AddComponent<Charm_NaturalMagicCrystal>();
+                Effect.isWeaponRelatedCharm = false;
+                Effect.effectsString = [new("ModCharmEffect_NaturalMagicCrystal")];
+                Effect.effectHUD_ID = "Natural";
+                Effect.maxLevel = 2;
+                Effect.isUniqueEffect = true;
+                Effect.enabled = false;
+            }),//万象魔晶
         ];
         public static void CreateModItems()
         {
@@ -2005,7 +2165,7 @@ namespace SPMod.ModContent
 
             new ModWeapon("WindGreatSword", WeaponIDs.WindGreatSword, WeaponIDs.TheEmberforged)
             .SetEnhanceFrom(WeaponIDs.SteelGreatsword)
-            .SetSprite("GreatSword_Fire_Minor_0", "ModWeapon_WindGreatSword", "Weapon")
+            .SetSprite("GreatSword_Fire_Minor", "ModWeapon_WindGreatSword", "Weapon")
             .SetSprite("GreatSword_Fire_Minor_Blade", "ModWeapon_WindGreatSword_1", "Weapon")
             .SetBasicAttacks(WindGreatSword_Basic.ToArray())
             .SetSpecialAttack(0, WindGreatSword_Special)
@@ -2035,6 +2195,7 @@ namespace SPMod.ModContent
             {
                 if (Weapon is WeaponSimple_GreatSword GreatSword)
                 {
+                    GreatSword.attackWeightPerSwing = 0.15f;
                     GreatSword.sweepCost = 3;
                     GreatSword.sweepTimer.time = 0.466f;
                 }

@@ -246,6 +246,14 @@ namespace SPMod.Tool
         public const string WindErosionOverFlowAdd = "STAT_WINDEROSIONOVERFLOWADD";                         // 模组属性：风帆额外倍率
         public const string WindErosionOverFlowBase = "STAT_WINDEROSIONOVERFLOWBASE";                       // 模组属性：风帆基础伤害
         public const string CyanOrbUP = "STAT_CYANORBUP";                                                   // 模组属性：强化青绿色宝珠
+        public const string WindSwordDamage = "STAT_WINDSWORDDAMAGE";                                       // 模组属性：风之刃伤害
+        public const string WindSwordSpeed = "STAT_WINDSWORDSPEED";                                         // 模组属性：风之刃攻击速度
+        public const string WindSwordRange = "STAT_WINDSWORDRANGE";                                         // 模组属性：风之刃攻击范围
+        public const string WindSwordCount = "STAT_WINDSWORDCOUNT";                                         // 模组属性：风之刃额外攻击次数
+        public const string WindSwordCritDamage = "STAT_WINDSWORDCRITDAMAGE";                               // 模组属性：风之刃暴击伤害
+        public const string WindSwordMult = "STAT_WINDSWORDMULT";                                           // 模组属性：风之刃基础倍率
+        public const string WindSwordBig = "STAT_WINDSWORDBIG";                                             // 模组属性：风之刃双倍伤害
+
         #endregion
         #region 服装文本
         public static string Costume_PinkRabbit_2 => Tools.GetLocalization(nameof(Costume_PinkRabbit_2));

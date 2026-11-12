@@ -1916,14 +1916,6 @@ namespace SPMod
                     __instance.outsideBonus = false;
                     __instance.doubleWhirlwind = false;
                 }
-                if (Player.IsWeapon(TroublingDelight, LegacyofTheIllusionist, Lazarion, PristineForm))
-                {
-                    if (__instance.entityId == TroublingDelight ||
-                        __instance.entityId == LegacyofTheIllusionist ||
-                        __instance.entityId == Lazarion ||
-                        __instance.entityId == PristineForm)
-                        __instance.attackWeightPerSwing = 0.22f;
-                }
                 if (__instance.entityId == LegacyofTheIllusionist)
                 {
                     if (LegacyofTheIllusionistAttack.TryGetValue(Player, out LegacyofTheIllusionistAttackData Attack))
@@ -2022,7 +2014,7 @@ namespace SPMod
                 if (__instance.rapidWhirlwind && (bool)projectile)
                 {
                     projectile.additionalCriticalChancePercent -= 50f;
-                    projectile.additionalCriticalDamageRate += Player.GetCustomStatUnsafe(TextFile.CriticalDamageBonus).IntMult(1f);
+                    projectile.additionalCriticalDamageRate += 50 + Player.GetCustomStatUnsafe(TextFile.CriticalDamageBonus);
                 }
                 if (Player.IsWeapon(Negligence) && __instance.entityId == Negligence)
                 {

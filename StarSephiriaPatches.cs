@@ -298,7 +298,7 @@ namespace SPMod
                 }
                 if (Damage.origin is PlayerAvatar Player)
                 {
-                    if (Hard >= 4) Damage.damage *= 0.8f;
+                    if (Hard >= 4 && Target.monsterType != EMonsterType.Dummy) Damage.damage *= 0.8f;
 
                     if (Player.IsWeapon(WeaponIDs.SolisImber))
                     {
@@ -348,7 +348,7 @@ namespace SPMod
                 {
                     if (Orig.Leader is PlayerAvatar Leader)
                     {
-                        if (Hard >= 4) Damage.damage *= 0.8f;
+                        if (Hard >= 4 && Target.monsterType != EMonsterType.Dummy) Damage.damage *= 0.8f;
 
                         if (Leader.IsWeapon(WeaponIDs.DarkVeil))
                         {
@@ -405,16 +405,18 @@ namespace SPMod
                 string Message = Perfect ? "PerfectGuard" : "Guard";
                 if (damage.victim is PlayerAvatar Player)
                 {
-                    if (!GuardDeBuff.ContainsKey(Player))
+                    if (!GuardDeBuff.ContainsKey(Player) && ModConfig.HardMode > 0)
                     {
                         GuardDeBuff.Add(Player, new Counter(20, 3f));
+                        Player.CreateEffectHUD("Shield", "GuardDeBuff");
                     }
-                    else
+                    if (GuardDeBuff.ContainsKey(Player))
                     {
                         if (Perfect)
                             GuardDeBuff[Player].Count += 1;
                         else
                             GuardDeBuff[Player].Count += 2;
+                        Player.SetEffectHUDValue("GuardDeBuff", GuardDeBuff[Player].Count.ToString());
                     }
                 }
                 OnBlockDamage(damage, Message);
@@ -1478,11 +1480,15 @@ namespace SPMod
                 if (GuardDeBuff.TryGetValue(__instance, out Counter GuardCount))
                 {
                     if (GuardCount.Update(Time.deltaTime, out bool Take))
+                    {
                         GuardDeBuff.Remove(__instance);
+                        __instance.DestroyEffectHUD("GuardDeBuff");
+                    }
                     if (Take)
                     {
                         UpdateGuardBroken(__instance);
                         GuardDeBuff.Remove(__instance);
+                        __instance.DestroyEffectHUD("GuardDeBuff");
                     }
                 }
 
@@ -1506,7 +1512,6 @@ namespace SPMod
             public static FieldInfo guardAvailabilityRestoreTimerField = AccessTools.Field(typeof(UnitAvatar), "guardAvailabilityRestoreTimer");
             public static void UpdateGuardBroken(UnitAvatar __instance)
             {
-                if (ModConfig.HardMode <= 0) return;
                 if (isAvailableGuardField == null || guardAvailabilityRestoreTimerField == null) return;
 
                 isAvailableGuardField.SetValue(__instance, false);

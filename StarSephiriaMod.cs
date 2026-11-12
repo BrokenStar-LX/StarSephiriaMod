@@ -1022,6 +1022,10 @@ namespace SPMod
                 WeaponDatabase.Modify(WeaponIDs.LegacyofTheIllusionist, Weapon => Weapon.SetAddonStat(TextFile.CooldownRecoverySpeed, 0));//幻术师的遗产
                 WeaponDatabase.Modify(WeaponIDs.RedSnakeCrush, Weapon => Weapon.SetAddonStat(TextFile.RedSnakeEyeDamageBonus, 0));//红蛇碎击
                 WeaponDatabase.Modify(WeaponIDs.SolisCineris, Weapon => Weapon.SetAddonStat(TextFile.FlameSwordAdditionalAttackFromWeapon, 0));//索利斯·西涅里斯
+                WeaponDatabase.Modify(WeaponIDs.TroublingDelight, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//不便的喜悦
+                WeaponDatabase.Modify(WeaponIDs.LegacyofTheIllusionist, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//幻术师的遗产
+                WeaponDatabase.Modify(WeaponIDs.Lazarion, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//拉扎里恩
+                WeaponDatabase.Modify(WeaponIDs.PristineForm, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//太初形态
 
                 //—— 匕首 ——
                 WeaponDatabase.Modify(WeaponIDs.LightningDagger, Weapon => Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 40));//闪电匕首

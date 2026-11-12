@@ -130,6 +130,17 @@ namespace SPMod.Tool
             };
         }
 
+        /// <summary>神器的武器值（AttackWeightPerSwing）。WeaponController 只在服务端 Connect 赋值，客机用 avatar 兜底。</summary>
+        public static float GetWeaponWeight(this Charm_Basic Charm, UnitAvatar? Avatar = null)
+        {
+            WeaponControllerSimple? Controller = Charm.WeaponController;
+            if (Controller == null && Avatar != null && Avatar.TryGetComponent<WeaponControllerSimple>(out WeaponControllerSimple AvatarController))
+                Controller = AvatarController;
+            if (Controller != null && Controller.currentWeapon != null)
+                return Mathf.Max(0f, Controller.currentWeapon.AttackWeightPerSwing);
+            return 0f;
+        }
+
         public static WeaponEntity SetAddons(this WeaponEntity Weapon, Action<WeaponAddon[]> action)
         {
             if (Weapon.mainWeaponPrefab == null)
