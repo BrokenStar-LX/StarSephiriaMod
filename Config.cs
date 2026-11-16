@@ -55,7 +55,7 @@ public static class ModConfig
 
             int Value = 0;
             bool Found = DungeonManager.Instance && DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]HardMode", out Value);
-            if (!Found)
+            if (!Found && !Mirror.NetworkServer.active && !Mirror.NetworkClient.active)
                 Value = SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]HardMode_Level", 0);
 
             _hardModeFrame = Frame;
@@ -72,6 +72,7 @@ public static class ModConfig
                 if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]InfiniteMode", out int Value))
                     return Value > 0;
             }
+            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return false;
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]InfiniteMode_Level", 0) > 0;
         }
     }
@@ -84,6 +85,7 @@ public static class ModConfig
                 if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]BossRushMode", out int Value))
                     return Value > 0;
             }
+            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return false;
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]BossRushMode_Level", 0) > 0;
         }
     }
@@ -96,6 +98,7 @@ public static class ModConfig
                 if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]PollutedBlood", out int Value))
                     return Value > 0;
             }
+            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return false;
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]PollutedBlood_Level", 0) > 0;
         }
     }
@@ -108,6 +111,7 @@ public static class ModConfig
                 if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]EvilGuardian", out int Value))
                     return Value > 0;
             }
+            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return false;
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]EvilGuardian_Level", 0) > 0;
         }
     }
