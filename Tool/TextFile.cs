@@ -252,7 +252,6 @@ namespace SPMod.Tool
         public const string WindSwordCount = "STAT_WINDSWORDCOUNT";                                         // 模组属性：风之刃额外攻击次数
         public const string WindSwordCritDamage = "STAT_WINDSWORDCRITDAMAGE";                               // 模组属性：风之刃暴击伤害
         public const string WindSwordMult = "STAT_WINDSWORDMULT";                                           // 模组属性：风之刃基础倍率
-        public const string WindSwordBig = "STAT_WINDSWORDBIG";                                             // 模组属性：风之刃双倍伤害
         public const string WindSwordGreatSword = "STAT_WINDSWORD_GREATSWORD";                              // 模组属性：风之刃·狂澜
 
         #endregion
@@ -320,6 +319,7 @@ namespace SPMod.Tool
         public static string Excallion => Tools.GetLocalization(nameof(Excallion));
         public static string Rapier => Tools.GetLocalization(nameof(Rapier));
         public static string Rapier2 => Tools.GetLocalization(nameof(Rapier2));
+        public static string KeenEyedRapier => Tools.GetLocalization(nameof(KeenEyedRapier));
         public static string StarTwinkle => Tools.GetLocalization(nameof(StarTwinkle));
         public static string ColdAnger => Tools.GetLocalization(nameof(ColdAnger));
         public static string StoneSword => Tools.GetLocalization(nameof(StoneSword));
@@ -378,6 +378,7 @@ namespace SPMod.Tool
         public static string SolisImber => Tools.GetLocalization(nameof(SolisImber));
         public static string JadeVestige => Tools.GetLocalization(nameof(JadeVestige));
         public static string UnboundImmersion => Tools.GetLocalization(nameof(UnboundImmersion));
+        public static string FierceHumming => Tools.GetLocalization(nameof(FierceHumming));
         public static string CreepingDespair => Tools.GetLocalization(nameof(CreepingDespair));
         public static string DifficultTrial => Tools.GetLocalization(nameof(DifficultTrial));
         public static string ShadowofHope => Tools.GetLocalization(nameof(ShadowofHope));
@@ -408,6 +409,7 @@ namespace SPMod.Tool
         public static string ExpansionDevice => Tools.GetLocalization(nameof(ExpansionDevice));
         public static string RapidFireDevice => Tools.GetLocalization(nameof(RapidFireDevice));
         public static string EquippedwithGuidanceModule => Tools.GetLocalization(nameof(EquippedwithGuidanceModule));
+        public static string RadiantDial => Tools.GetLocalization(nameof(RadiantDial));
         #endregion
         #region 太刀文本
         public static string Heidi => Tools.GetLocalization(nameof(Heidi));
@@ -529,6 +531,7 @@ namespace SPMod.Tool
                     {WeaponIDs.Excallion, (GetWeaponTooltip(Excallion), WeaponIDs.CarrotSword)},
                     {WeaponIDs.Rapier, (GetWeaponTooltip(Rapier), WeaponIDs.DefaultSwordandShield)},
                     {WeaponIDs.Rapier2, (GetWeaponTooltip(Rapier2), WeaponIDs.Rapier)},
+                    {WeaponIDs.KeenEyedRapier, (GetWeaponTooltip(KeenEyedRapier), WeaponIDs.Rapier)},
                     {WeaponIDs.StarTwinkle, (GetWeaponTooltip(StarTwinkle), WeaponIDs.ProtectionoftheFuzz)},
                     {WeaponIDs.ColdAnger, (GetWeaponTooltip(ColdAnger), WeaponIDs.ProtectionoftheFuzz)},
                     {WeaponIDs.StoneSword, (GetWeaponTooltip(StoneSword), WeaponIDs.ProtectionoftheFuzz)},
@@ -590,6 +593,7 @@ namespace SPMod.Tool
                     {WeaponIDs.SolisImber, (GetWeaponTooltip(SolisImber), WeaponIDs.FireDagger)},
                     {WeaponIDs.JadeVestige, (GetWeaponTooltip(JadeVestige), WeaponIDs.Dagger)},
                     {WeaponIDs.UnboundImmersion, (GetWeaponTooltip(UnboundImmersion), WeaponIDs.JadeVestige)},
+                    {WeaponIDs.FierceHumming, (GetWeaponTooltip(FierceHumming), WeaponIDs.JadeVestige)},
                     {WeaponIDs.CreepingDespair, (GetWeaponTooltip(CreepingDespair), WeaponIDs.AridBreeze)},
                     {WeaponIDs.DifficultTrial, (GetWeaponTooltip(DifficultTrial), WeaponIDs.AridBreeze)},
                     {WeaponIDs.ShadowofHope, (GetWeaponTooltip(ShadowofHope), WeaponIDs.OverTheDoorstep)},
@@ -618,6 +622,7 @@ namespace SPMod.Tool
                     {WeaponIDs.RapidFreezeCrystal, (GetWeaponTooltip(RapidFreezeCrystal), WeaponIDs.FrostVeil)},
                     {WeaponIDs.ExpansionDevice, (GetWeaponTooltip(ExpansionDevice), WeaponIDs.FrostVeil)},
                     {WeaponIDs.RapidFireDevice, (GetWeaponTooltip(RapidFireDevice), WeaponIDs.EnhancedSpecialBolts)},
+                    {WeaponIDs.RadiantDial, (GetWeaponTooltip(RadiantDial), WeaponIDs.EnhancedSpecialBolts)},
                     #endregion
                     #region 太刀
                     {WeaponIDs.Heidi, (GetWeaponTooltip(Heidi), WeaponIDs.Helbanus)},
@@ -695,6 +700,9 @@ namespace SPMod.Tool
                 KeywordDatabase.Modify("Buff_Katana_Nanmu", modifier => modifier.description = GetModTooltip("RendbladeRuinDance_Effect"));
                 KeywordDatabase.Modify("Buff_Greatsword_ChainSlash", modifier => modifier.description = GetModTooltip("ScatteredLonging_Effect"));
                 KeywordDatabase.Modify("WeaponAction_Greatsword_DualSlash", modifier => modifier.description = GetModTooltip("ScatteredLonging_Effect2"));
+                KeywordDatabase.Modify("Debuff_Exposed", modifier => modifier.description = GetModTooltip("KeenEyedRapier_Effect"));
+                KeywordDatabase.Modify("LightArrow", modifier => modifier.description = GetModTooltip("RadiantDial_Effect"));
+                KeywordDatabase.Modify("WeaponAction_FullBloom", modifier => modifier.description = GetModTooltip("RadiantDial_Effect2"));
             }
         }
 

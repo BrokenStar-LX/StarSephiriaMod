@@ -84,6 +84,8 @@ namespace SPMod
             HorayModAPI.OnLoadPassiveDatabase += OnLoadPassiveDatabase;
             HorayModAPI.OnAllDatabasesReady += OnAllDatabasesReady;
             HorayModAPI.OnPlayerAvatarSpawnedServerside += OnPlayerAvatarSpawnedServerside;
+            HorayModAPI.OnPlayerAvatarSpawnedClientside += CostumeTransmog_Patch.OnPlayerAvatarSpawnedClientside;
+            HorayModAPI.OnUnitDespawnedServerside += ModNetwork.OnUnitDespawnedServerside;
             HorayModAPI.OnStartGameServerside += Multiplayer.ApplyLiveConnectionLimits;
             Multiplayer.ApplyLiveConnectionLimits();
         }
@@ -101,6 +103,8 @@ namespace SPMod
             HorayModAPI.OnLoadPassiveDatabase -= OnLoadPassiveDatabase;
             HorayModAPI.OnAllDatabasesReady -= OnAllDatabasesReady;
             HorayModAPI.OnPlayerAvatarSpawnedServerside -= OnPlayerAvatarSpawnedServerside;
+            HorayModAPI.OnPlayerAvatarSpawnedClientside -= CostumeTransmog_Patch.OnPlayerAvatarSpawnedClientside;
+            HorayModAPI.OnUnitDespawnedServerside -= ModNetwork.OnUnitDespawnedServerside;
             HorayModAPI.OnStartGameServerside -= Multiplayer.ApplyLiveConnectionLimits;
             if (_languageSubscribed)
             {
@@ -916,6 +920,24 @@ namespace SPMod
                         Attack.swingFxPrefab = null;
                     });
                 });//耀目的寂静
+                WeaponDatabase.Modify(WeaponIDs.KeenEyedRapier, Weapon =>
+                {
+                    WeaponSimple Target = WeaponDatabase.FindWeaponById(513).mainWeaponPrefab.GetComponent<WeaponSimple>();
+                    NewWeaponFireData_MeleeAttack Dash = (NewWeaponFireData_MeleeAttack)Object.Instantiate(Target.dashAttacks[0]);
+                    Dash.attackDashSpeed = 35f;
+                    Dash.damageMultiplier = 3f;
+                    Dash.damageElementalType = EDamageElementalType.Chaos;
+                    Dash.chaosDamageColor = EffectConstant.WoundColor;
+                    Dash.relatedStatFormula = "CHAOS_HIGHEST";
+                    Dash.useElementalTypeFromRelatedStatFormula = true;
+                    Dash.swingID = "ExDashAttack";
+                    // 原版刺剑的 dashAttacks 元素很少，用 SafeRandomAccess 兜底后再写入强化冲刺下标
+                    WeaponSimple Simple = Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>();
+                    NewWeaponFireData Fallback = Simple.dashAttacks.SafeRandomAccess(0);
+                    NewWeaponFireData[] Dashes = [Fallback, Simple.dashAttacks.SafeRandomAccess(1), Fallback];
+                    Dashes[KeenEyedRapierDashIndex] = Dash;
+                    Simple.dashAttacks = Dashes;
+                });//识破的刺剑
 
                 //—— 大剑 ——
                 WeaponDatabase.Modify(WeaponIDs.Compliance, Weapon =>
@@ -1026,6 +1048,8 @@ namespace SPMod
                 WeaponDatabase.Modify(WeaponIDs.LegacyofTheIllusionist, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//幻术师的遗产
                 WeaponDatabase.Modify(WeaponIDs.Lazarion, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//拉扎里恩
                 WeaponDatabase.Modify(WeaponIDs.PristineForm, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//太初形态
+                WeaponDatabase.Modify(WeaponIDs.Minimalism, Weapon => Weapon.enhanceFromId = WeaponIDs.SteelGreatsword);//极简主义
+                WeaponDatabase.Modify(WeaponIDs.BlackIronHalberd, Weapon => Weapon.enhanceFromId = -1);//黑铁戟
 
                 //—— 匕首 ——
                 WeaponDatabase.Modify(WeaponIDs.LightningDagger, Weapon => Weapon.ChangeAddon<WeaponAddonCommon_AdditionalElementalDamage>(Addon => Addon.additionalDamagePercent = 40));//闪电匕首
@@ -1105,6 +1129,23 @@ namespace SPMod
                             Dagger.furyDisableTimer.time = 999999f;
                     });
                 });//索利斯·因贝尔
+                WeaponDatabase.Modify(WeaponIDs.SafeStart, Weapon => Weapon.enhanceFromId = WeaponIDs.Dagger);//安全的开始
+                WeaponDatabase.Modify(WeaponIDs.FierceHumming, Weapon =>
+                {
+                    if (Weapon.mainWeaponPrefab != null)
+                    {
+                        if (Weapon.mainWeaponPrefab.TryGetComponent<WeaponSimple>(out WeaponSimple Target))
+                        {
+                            List<WeaponAddon> Addons = [];
+                            WeaponAddonCommon_StatusUnsafe Effect = Target.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                            Effect.parent = Target;
+                            Effect.effectText = Target.addons[1].effectText;
+                            Addons.Add(Effect);
+                            Addons.Add(Target.addons[0]);
+                            Target.addons = Addons.ToArray();
+                        }
+                    }
+                });//威猛哼唱
 
                 //—— 弩 ——
                 foreach (WeaponEntity Weapon in WeaponDatabase.GetAll().ToList())
@@ -1177,6 +1218,13 @@ namespace SPMod
                     Weapon.SetAddonStat(TextFile.FlameSwordDamage, 0);
                     Weapon.SetAddonStat(TextFile.FinalWeaponDamage, 0);
                 });//索利斯·尤巴尔
+                WeaponDatabase.Modify(WeaponIDs.RadiantDial, Weapon => Weapon.SetSimple(Action =>
+                {
+                    if (Action is WeaponSimple_Crossbow CrossBow)
+                        CrossBow.specialAttackCost = 3;
+                    Action.specialAttacks[0].attackDashSpeed = 0f;
+                    Action.specialAttacks[0].attackDashTime = 0f;
+                }));//光轮装置
 
                 //—— 太刀 ——
                 WeaponDatabase.Modify(WeaponIDs.LongBladeOnohara, Weapon =>
@@ -1271,15 +1319,12 @@ namespace SPMod
                     Weapon.ChangeAddon<WeaponAddonCommon_DebuffAttack>(Addon => Addon.debuffPercent = 60);
                 });//马拉斯皮纳
                 WeaponDatabase.Modify(WeaponIDs.Viduka, Weapon => Weapon.SetAddonStat(TextFile.EnhancedChakram, 0));//比杜卡
-            }
-            WeaponDatabase.Modify(WeaponIDs.Minimalism, Weapon => Weapon.enhanceFromId = WeaponIDs.SteelGreatsword);
-            WeaponDatabase.Modify(WeaponIDs.BlackIronHalberd, Weapon => Weapon.enhanceFromId = -1);
-            WeaponDatabase.Modify(WeaponIDs.SafeStart, Weapon => Weapon.enhanceFromId = WeaponIDs.Dagger);
 
-            foreach (ModWeapon Data in ModWeaponData)
-                Data.CreateWeapon();
-            _ = WindDagger_Vortex.Data;
-            _ = WindGreatSword_Tornado.Data;
+                foreach (ModWeapon Data in ModWeaponData)
+                    Data.CreateWeapon();
+                _ = WindDagger_Vortex.Data;
+                _ = WindGreatSword_Tornado.Data;
+            }
             Skin.GetAddAllModSkin();
         }
 
@@ -1619,6 +1664,12 @@ namespace SPMod
                     Effect.iceDamage = 100;
                     Effect.attackSpeedBonusByLevel = [60, 120, 180, 240, 300];
                 }); // 雪山大耳蝙蝠
+                ItemDatabase.Modify(1295, item =>
+                {
+                    Charm_FlamePlanet Effect = item.resourcePrefab.GetComponent<Charm_FlamePlanet>();
+                    LocalizedString[] strings = [Effect.effectsString[0], new LocalizedString("ModCharmEffect_FlamePlanet") ];
+                    Effect.effectsString = strings;
+                }); // 红色行星观察日志
                 //法术更改
                 ItemDatabase.Modify(3000, item =>
                 {
@@ -1758,12 +1809,12 @@ namespace SPMod
 
         public static void OnLoadMiracleDatabase()
         {
-            foreach (ModMiracle Data in ModMiraclesData)
-            {
-                MiracleDatabase.Register(Data.ThisMiracle);
-            }
             if (ModConfig.Instance.ModifyMiracle)
             {
+                foreach (ModMiracle Data in ModMiraclesData)
+                {
+                    MiracleDatabase.Register(Data.ThisMiracle);
+                }
                 foreach (var entry in ModfyisMiracleStatus)
                 {
                     MiracleDatabase.Modify(entry.Key, modifier =>
@@ -2656,7 +2707,7 @@ namespace SPMod
                 }
             }
 
-            if (ModConfig.Instance.EnableWeaponModifier && ID.EqualsAny(TextFile.FixedAttackSpeed) && Result > 0)
+            if (ModConfig.Instance.EnableWeaponModifier && ID.EqualsAny(TextFile.FixedAttackSpeed) && Result != 0)
             {
                 Result += 100 + Player.GetCustomStatUnsafe(TextFile.AttackSpeed);
             }

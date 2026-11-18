@@ -11,7 +11,7 @@ namespace SPMod.ModContent
 {
     public class Charm_WindSword : Charm_StatusInstance, IAttackableCharm, IModEventReceiver
     {
-        public float BaseMult = 160f;                   
+        public float BaseMult = 200f;                   
         public int AttackCount = 2;
         public Timer CooldownTimer = new(3f);           // 每把剑的攻击间隔（秒，受攻速影响）
 
@@ -19,7 +19,7 @@ namespace SPMod.ModContent
         public float SwordDistance = 0.6f;              // 第一把剑离玩家的距离
         public float SwordSpacing = 0.4f;               // 剑与剑之间的间隔
         public float SwordFloatY = 0.35f;               // 整排剑的高度
-        public float MidHeight = 1f;                    // 待机时剑柄瞄准点（剑与角色连线中点）再往上抬的高度
+        public float MidHeight = 1.2f;                    // 待机时剑柄瞄准点（剑与角色连线中点）再往上抬的高度
         public float SwordScale = 1f;                   // 剑的贴图缩放
         public float FadeInTime = 0.225f;               // 凝聚时剑淡入的时长
         public float FxAlpha = 1f;                      // 剑身与特效的额外透明度（和 ModFX 的可见度设置叠乘）
@@ -32,11 +32,12 @@ namespace SPMod.ModContent
         public float RagingTideMaxEnergy = 200f;         // 能量上限
         public float RagingTideAttackCost = 100f;        // 发动一次狂澜消耗的能量
         public string RagingTideSwordSprite = "Item_WindSword_Entity2"; // 狂澜状态的剑贴图
+        public string RagingTideIconSprite = "Item_WindSword_Icon2";    // 狂澜状态的物品图标
 
         [Header("攻击")]
-        public float AttackSearchRange = 10f;            // 索敌半径：范围内有敌人且剑满才开打
+        public float AttackSearchRange = 10f;           // 索敌半径：范围内有敌人且剑满才开打
         public float DamageRadiusFactor = 0.6f;         // 伤害半径 = 特效宽度 × 这个系数
-        public float FirstAttackStagger = 0.15f;        // 脱战后首次攻击的错开间隔：第 n 把剑等 0.15×n 秒
+        public float FirstAttackStagger = 0.3f;         // 脱战后首次攻击的错开间隔：第 n 把剑等 0.15×n 秒
         public float AttackHitDelay = 0f;               // 命中额外延迟（微调伤害和特效的对齐）
         public float FadeOutTime = 0.18f;               // 出手前在槽位隐身（淡出）的时长
         public float AppearDelay = 0.06f;               // 淡出后到出现在敌人身边的停顿
@@ -48,8 +49,8 @@ namespace SPMod.ModContent
         public int SoundSourceWeaponId = 400;           // 音效来源武器（默认 400 普通武士刀）
         public float SlashArc = 180f;                   // 挥砍扫过的总角度
         public float SlashFps = 12f;                    // 挥砍特效帧率（越大播得越快）
-        public float SlashPivotDistance = 0.9f;         // 挥砍圆心离敌人的基础距离，也是剑的旋转半径
-        public float SizePivotFactor = 1f;              // 敌人半身尺寸乘以这个值，加进挥砍圆心距离
+        public float SlashPivotDistance = 0.9f;         // 挥砍圆心离敌人的基础距离，也是剑刃绕圆心的固定半径
+        public float SizePivotFactor = 1f;              // 敌人半身尺寸乘以这个值，只加进圆心距离，不影响剑刃半径
         public float SlashFxScale = 1f;                 // 挥砍特效缩放
         public Vector2 SlashFxOffset = Vector2.zero;    // 挥砍特效位置微调
         public float SlashFxAngleOffsetLeft = -120f;    // 左砍特效的旋转偏移
@@ -123,6 +124,7 @@ namespace SPMod.ModContent
         private bool InCombat;
         private float RagingTideEnergy;
         private bool RagingTideSubscribed;
+        private bool LastRagingTideIcon;
 
         private static readonly FieldInfo? FinalComboCrownField = AccessTools.Field(typeof(Charm_FinalComboCritical), "crownObject");
         private static readonly FieldInfo? LastAttackCrownField = AccessTools.Field(typeof(Charm_IncreaseLastAttackDamage_SwordAndShield), "crownObject");
@@ -169,6 +171,13 @@ namespace SPMod.ModContent
             if (avatar != null && avatar.GetCustomStatUnsafe(TextFile.WindSwordGreatSword) > 0) return 1;
             int Bonus = avatar != null ? avatar.GetCustomStatUnsafe(TextFile.WindSwordCount) : 0;
             return Mathf.Max(1, AttackCount + Bonus);
+        }
+
+        /// <summary>狂澜形态下物品图标换成第二套；剑身贴图由 EnsureSwords 按同一状态切换。</summary>
+        public override Sprite GetCustomIcon(ItemPosition pos, bool isIsntance)
+        {
+            if (!isIsntance || !IsRagingTide) return base.GetCustomIcon(pos, isIsntance);
+            return Tools.LoadModSprite(RagingTideIconSprite) ?? base.GetCustomIcon(pos, isIsntance);
         }
 
         /// <summary>攻击速度倍率：WindSwordSpeed 每 1 点加快 1%，负值同样生效（倍率最低 10%）。</summary>
@@ -430,10 +439,7 @@ namespace SPMod.ModContent
             float Value = avatar.GetCustomStatUnsafe(TextFile.WindDamage);
             float Base = (BaseMult + avatar.GetCustomStatUnsafe(TextFile.WindSwordMult)) * 0.01f;
             float Mult = 1f + avatar.GetCustomStatUnsafe(TextFile.WindSwordDamage) * 0.01f;
-            float Damage = Value * Base * Mult;
-            if (avatar.GetCustomStatUnsafe(TextFile.WindSwordBig) > 0)
-                Damage *= 2f;
-            return Damage;
+            return Value * Base * Mult;
         }
 
         protected override void OnUpdate()
@@ -804,6 +810,13 @@ namespace SPMod.ModContent
         {
             base.Update_Client();
             if (!isClient) return;
+            // 狂澜状态变化时刷新物品图标（Icon2）
+            bool RagingIcon = IsRagingTide;
+            if (RagingIcon != LastRagingTideIcon)
+            {
+                LastRagingTideIcon = RagingIcon;
+                itemUpdateDirtyBit = true;
+            }
             if (NetworkAvatar == null || !IsEffectEnabled)
             {
                 ClearSwords();
@@ -941,6 +954,8 @@ namespace SPMod.ModContent
 
         private void UpdateSlotSword(SwordVisual S, int Index, Vector2 PlayerPos, Vector2 Back, float SpeedMult)
         {
+            // 剑悬停在玩家左侧时水平翻转贴图，让剑身朝向一致
+            S.Sword.flipX = Back.x < 0f;
             if (!S.Placed)
             {
                 // 新凝聚的剑直接在槽位淡入，不从玩家身上飞出来
@@ -1077,11 +1092,12 @@ namespace SPMod.ModContent
             S.EndPos = S.TargetPos - S.SpawnDir * ThrustDistance;
         }
 
-        /// <summary>以敌人外侧一点为圆心；半径带体型加成，跟服务端伤害判定一致。</summary>
+        /// <summary>以敌人外侧一点为圆心；圆心距离随体型走，剑刃绕圆心的半径固定，和特效大小一致。</summary>
         private void SetupSlashGeometry(SwordVisual S)
         {
-            S.Radius = S.PivotDistance > 0f ? S.PivotDistance : SlashPivotDistance;
-            S.Pivot = S.TargetPos + S.SpawnDir * S.Radius;
+            float PivotDistance = S.PivotDistance > 0f ? S.PivotDistance : SlashPivotDistance;
+            S.Pivot = S.TargetPos + S.SpawnDir * PivotDistance;
+            S.Radius = SlashPivotDistance;
             float BaseAngle = Mathf.Atan2(S.TargetPos.y - S.Pivot.y, S.TargetPos.x - S.Pivot.x) * Mathf.Rad2Deg;
             S.DirSign = S.Type == 0 ? 1f : -1f;
             S.StartAngle = BaseAngle - S.DirSign * SlashArc * 0.5f;

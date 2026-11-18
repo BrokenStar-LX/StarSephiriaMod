@@ -16,7 +16,7 @@ namespace SPMod.ModContent
             Mult *= 100f;
             return
             [
-                new("Value", Mult.ToString() + "%", GetPositiveColor(virtualLevelOffset)),
+                new("Value", Mult.ToString("#0") + "%", GetPositiveColor(virtualLevelOffset)),
             ];
         }
         protected override void OnEnabledEffect()

@@ -530,12 +530,32 @@ namespace SPMod.Tool
             public UnitAvatar Player = player;
             public UnitAvatar Target = target;
             public int Count = count;
-            public float Interval = 0.33f;
+            public float Interval = 0.4f;
             private float Timer;
+
+            public void Refresh(UnitAvatar player, int count = 30)
+            {
+                Player = player;
+                Count = count;
+            }
+
+            public bool TriggerNow()
+            {
+                if (Player == null || Player.IsDead) return true;
+                if (Target == null || Target.IsDead) return true;
+                if (Count <= 0) return true;
+                Count--;
+                Tick();
+                return Count <= 0;
+            }
 
             public float GetDamage()
             {
-                float Value = Player.GetCustomStatUnsafe(TextFile.WindDamage) * 0.6f;
+                float Value = Player.GetCustomStatUnsafe(TextFile.WindDamage) * 0.5f;
+                Charm_WindSword? WindSword = Charm_WindSword.FindPlayerCharm<Charm_WindSword>(Player);
+                if (WindSword != null)
+                    Value *= 1f + WindSword.RequestCharmDamageBonusOnRoot() * 0.01f;
+                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.WindSwordDamage) * 0.01f;
                 Value *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
                 Value *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
                 return Value;
@@ -587,7 +607,7 @@ namespace SPMod.Tool
             private void PlayFx()
             {
                 if (Target == null) return;
-                Vector3 Pos = Target.TopdownActor != null ? Target.TopdownActor.Position_Center : Target.transform.position;
+                Vector3 Pos = Target.transform.position;
                 Pos.y += GetFxHeight() * 0.25f;
                 if (NetworkClient.active)
                     ModFxPool.Spawn("WindForge", Pos, Player.isOwned ? 1 : 0);
@@ -1471,9 +1491,12 @@ namespace SPMod.Tool
             {
                 if (VanillaIcons.TryGetValue(category, out Sprite? Cached)) return Cached;
                 Sprite? Result = null;
-                foreach (DamageIdEntity Entity in Resources.LoadAll<DamageIdEntity>("DamageId"))
+                DamageIdEntity[] Entities = Resources.LoadAll<DamageIdEntity>("DamageId");
+                for (int i = Entities.Length - 1; i >= 0; i--)
                 {
+                    DamageIdEntity Entity = Entities[i];
                     if (Entity.category != category || Entity.icon == null) continue;
+
                     Result = Entity.icon;
                     break;
                 }
@@ -1507,6 +1530,7 @@ namespace SPMod.Tool
             public bool IsDual;
             public bool IsDestroyedOnDiscard;
             public bool IsWitchItem = false;
+            public bool IsCharm { get; private set; }
             public ItemEntity? Item { get; private set; }
             public Action<ItemEntity>? ItemEffect;
             private readonly List<Action<ItemEntity>> Builders = [];
@@ -1547,6 +1571,7 @@ namespace SPMod.Tool
             }
             public ModItem CreateCharm(List<string> Categories, List<StatusGroup> Status, bool Unique = true)
             {
+                IsCharm = true;
                 Builders.Add(Entity =>
                 {
                     Entity.categories = Categories;
@@ -1568,6 +1593,7 @@ namespace SPMod.Tool
             }
             public ModItem CustomCreateCharm(List<string> Categories, Action<ItemEntity> Action)
             {
+                IsCharm = true;
                 Builders.Add(Entity =>
                 {
                     Entity.categories = Categories;

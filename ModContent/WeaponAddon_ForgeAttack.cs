@@ -6,11 +6,16 @@ namespace SPMod.ModContent
 {
     public class WeaponAddon_ForgeAttack : WeaponAddonCommon_StatusUnsafe
     {
-        public static List<ForgeAttackData> WindForgeEffect = [];
+        private const string WindSwordDamageId = "[Star's Sephiria Mod]WindSword";
+
+        public List<ForgeAttackData> WindForgeEffect = [];
         protected override void OnEnableAddon()
         {
             base.OnEnableAddon();
             parent.Networkowner.OnSpecialAttack += OnSpecialAttackUnit;
+            UnitAvatar? Player = parent.Networkowner.unitAvatar;
+            if (Player != null)
+                Player.OnAttackUnitBeforeOperation += OnWindSwordHit;
             if (isServer)
                 WindForgeEffect.RemoveAll(Data => Data.Player == null);
         }
@@ -19,7 +24,11 @@ namespace SPMod.ModContent
         {
             base.OnDisableAddon();
             if (parent != null && parent.Networkowner != null)
+            {
                 parent.Networkowner.OnSpecialAttack -= OnSpecialAttackUnit;
+                if (parent.Networkowner.unitAvatar != null)
+                    parent.Networkowner.unitAvatar.OnAttackUnitBeforeOperation -= OnWindSwordHit;
+            }
 
             if (!isServer || parent == null || parent.Networkowner == null) return;
             UnitAvatar? Player = parent.Networkowner.unitAvatar;
@@ -35,8 +44,33 @@ namespace SPMod.ModContent
             UnitAvatar? Player = parent.Networkowner.unitAvatar;
             if (Player == null) return;
 
-            if (WindForgeEffect.Exists(Data => Data.Target == Target)) return;
+            ForgeAttackData? Existing = WindForgeEffect.Find(Data => Data.Target == Target);
+            if (Existing != null)
+            {
+                Existing.Refresh(Player);
+                return;
+            }
             WindForgeEffect.Add(new ForgeAttackData(Player, Target));
+        }
+
+        private void OnWindSwordHit(UnitAvatar victim, DamageInstance damage)
+        {
+            if (!isServer || !isEnabled) return;
+            if (damage == null || damage.id != WindSwordDamageId) return;
+            if (victim == null || victim.IsDead) return;
+            if (parent == null || parent.Networkowner == null) return;
+
+            UnitAvatar? Player = parent.Networkowner.unitAvatar;
+            if (Player == null) return;
+
+            for (int i = WindForgeEffect.Count - 1; i >= 0; i--)
+            {
+                ForgeAttackData Data = WindForgeEffect[i];
+                if (Data.Player != Player || Data.Target != victim) continue;
+                if (Data.TriggerNow())
+                    WindForgeEffect.RemoveAt(i);
+                return;
+            }
         }
 
         private void Update()

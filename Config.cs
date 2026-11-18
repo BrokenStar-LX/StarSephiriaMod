@@ -27,12 +27,6 @@ public class ModConfigData
     public bool ModifyDefenseFormula { get; set; } = true;
     public bool ModifyEvasionFormula { get; set; } = true;
     public bool ModifyMerchant { get; set; } = true;
-    private int _modifyConnectionsStack = 0;
-    public int ModifyConnectionsStack
-    {
-        get { return _modifyConnectionsStack; }
-        set { _modifyConnectionsStack = Math.Clamp(value, 0, 5); }
-    }
     public bool ModifyDummyDamage { get; set; } = true;
     public bool ModifyMiracle { get; set; } = true;
     public bool ModifyPassive { get; set; } = true;
@@ -157,10 +151,6 @@ public static class ModConfig
             ["ModOption_Monochrome_0", "ModOption_Monochrome_1", "ModOption_Monochrome_2", "ModOption_Monochrome_3", "ModOption_Monochrome_4"],
             () => Instance.MonochromeMode, v => Instance.MonochromeMode = v);
         AddToggle(o, "monochrome_mode_tablet", "ModOption_MonochromeTablet", () => Instance.MonochromeMode_TABLET, v => Instance.MonochromeMode_TABLET = v);
-
-        AddSelection(o, "modify_connections_stack", "ModOption_ConnectionsStack",
-            ["ModOption_ConnectionsStack_0", "ModOption_ConnectionsStack_1", "ModOption_ConnectionsStack_2", "ModOption_ConnectionsStack_3", "ModOption_ConnectionsStack_4", "ModOption_ConnectionsStack_5"],
-            () => Instance.ModifyConnectionsStack, v => Instance.ModifyConnectionsStack = v);
     }
 
     private static void AddToggle(ModOptions o, string key, string labelKey, Func<bool> get, Action<bool> set)
@@ -208,7 +198,5 @@ public static class ModConfig
 
         Instance.MonochromeMode = _options.GetInt("monochrome_mode", Instance.MonochromeMode);
         Instance.MonochromeMode_TABLET = _options.GetBool("monochrome_mode_tablet", Instance.MonochromeMode_TABLET);
-
-        Instance.ModifyConnectionsStack = Math.Clamp(_options.GetInt("modify_connections_stack", Instance.ModifyConnectionsStack), 0, 5);
     }
 }

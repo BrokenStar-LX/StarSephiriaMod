@@ -11,6 +11,7 @@ namespace SPMod.Tool
         public const int UncommonCost = 600;
         public const int RareCost = 800;
         public const int LegendCost = 1100;
+        public const int KeenEyedRapierDashIndex = 2;   // 识破的刺剑：强化冲刺在 dashAttacks 里的下标
         public static EDamageElementalType Wind = (EDamageElementalType)100;
 
         public static Color WeaponColor = new(0.9725f, 0.9176f, 0.847f);

@@ -126,8 +126,8 @@ namespace SPMod.ModContent
                 Effect.ActivateComboCount = 2;
                 Effect.addStatByCombo =
                 [
-                    new() { comboCount = 4, status = ["WIND_SWORD_DAMAGE/8"] },
-                    new() { comboCount = 6, status = ["WIND_SWORD_DAMAGE/12"] },
+                    new() { comboCount = 4, status = ["WIND_SWORD_SPEED/8"] },
+                    new() { comboCount = 6, status = ["WIND_SWORD_SPEED/12"] },
                     new() { comboCount = 8, status = ["WIND_SWORD_SPEED/20"] },
                     new() { comboCount = 10, status = ["WIND_SWORD_COUNT/2"]},
                 ];
@@ -220,6 +220,7 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_Vortex", true, WindColor),
             new ModKeyWord("ModWeaponEffect_Tornado", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_GaleQuell", true, WindColor),
+            new ModKeyWord("ModWeaponEffect_KeenEyedRapier", true, WeaponColor),
 
             new ModKeyWord("Stealth", true, WeaponColor),
             new ModKeyWord("WindDamage", false, WindColor).StringToSprite("Wind").CreateStatus("WIND_DAMAGE").SetDetailed("Status_EachElementalDamage_DetailedValue"),
@@ -1718,7 +1719,7 @@ namespace SPMod.ModContent
                 Effect.isWeaponRelatedCharm = false;
                 Effect.effectsString = [ new("ModCharmEffect_WindSwordRunes") ];
                 Effect.EffectKeyword = "Stat_WindSwordCritDamage";
-                Effect.Value = 8;
+                Effect.Value = 10;
                 Effect.maxLevel = 0;
                 Effect.isUniqueEffect = false;
                 Effect.enabled = false;
@@ -1731,7 +1732,7 @@ namespace SPMod.ModContent
                 Effect.isWeaponRelatedCharm = false;
                 Effect.effectsString = [ new("ModCharmEffect_WindSwordRunes") ];
                 Effect.EffectKeyword = "Stat_WindSwordDamage";
-                Effect.Value = 8;
+                Effect.Value = 10;
                 Effect.maxLevel = 0;
                 Effect.isUniqueEffect = false;
                 Effect.enabled = false;
@@ -1757,22 +1758,12 @@ namespace SPMod.ModContent
             ]),//裂空刃
 
             new ModItem("WindruleHilt", EItemRarity.Rare)
-            .CustomCreateCharm(Tools.SetCategories("WINDSWORD"), Action =>
-            {
-                Charm_CustomStatus Effect = Action.resourcePrefab.AddComponent<Charm_CustomStatus>();
-                Effect.isWeaponRelatedCharm = false;
-                Effect.effectsString = [new("ModCharmEffect_WindruleHilt")];
-                Effect.ValueByLevel = [1];
-                Effect.ValueName = TextFile.WindSwordBig;
-                Effect.stats =
-                [
-                    Tools.SetStatusGroup("WIND_SWORD_SPEED", -60, -55, -50, -45, -40, -35, -30),
-                    Tools.SetStatusGroup("WIND_SWORD_RANGE", 20, 25, 30, 35, 40, 45, 50)
-                ];
-                Effect.maxLevel = 6;
-                Effect.isUniqueEffect = true;
-                Effect.enabled = false;
-            }),//御风柄
+            .CreateCharm(Tools.SetCategories("WINDSWORD"),
+            [
+                Tools.SetStatusGroup("WIND_SWORD_MULT", 20, 40, 60, 80, 100, 120),
+                Tools.SetStatusGroup("WIND_SWORD_SPEED", -50, -44, -38, -32, -26, -20),
+                Tools.SetStatusGroup("WIND_SWORD_RANGE", 0, 10, 20, 30, 40, 50),
+            ]),//御风柄
 
             new ModItem("StormHeartCore", EItemRarity.Legend)
             .CreateCharm(Tools.SetCategories("WINDSWORD"),
@@ -1821,7 +1812,11 @@ namespace SPMod.ModContent
         public static void CreateModItems()
         {
             foreach (ModItem Data in ModItemEntityData)
+            {
+                // “启用模组神器”关闭时不再创建模组神器；药水等非神器内容不受影响
+                if (Data.IsCharm && !ModConfig.Instance.ModifyCharm) continue;
                 Data.CreateItem();
+            }
         }
 
         //模组弹幕
@@ -2023,7 +2018,7 @@ namespace SPMod.ModContent
         });
 
         // 模组攻击数据
-        public static ModFireData WindSword_WindForge = ModFireData.HaetaeStrike(WeaponIDs.FlameEaterHaetae).SetElement(Wind).SetDamage(1.2f)
+        public static ModFireData WindSword_WindForge = ModFireData.HaetaeStrike(WeaponIDs.FlameEaterHaetae).SetElement(Wind).SetDamage(1f)
             .SetSwingSpriteFolder("Weapon.Sword_WindForge");
 
         public static List<ModFireData> WindGreatSword_Basic =
@@ -2179,7 +2174,7 @@ namespace SPMod.ModContent
             {
                 if (Weapon is WeaponSimple_SwordAndShield Sword)
                 {
-                    Sword.attackWeightPerSwing = 0.25f;
+                    Sword.attackWeightPerSwing = 0.3f;
                     Sword.sweepMpCost = 3;
                 }
 

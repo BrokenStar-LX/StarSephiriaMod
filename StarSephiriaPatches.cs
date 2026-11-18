@@ -92,6 +92,7 @@ namespace SPMod
             public static FieldInfo isPerfectGuardAvailableField = AccessTools.Field(typeof(UnitAvatar), "isPerfectGuardAvailable");
             public static FieldInfo guardStartTimerField = AccessTools.Field(typeof(UnitAvatar), "guardStartTimer");
             public static FieldInfo perfectGuardLatencyBonusField = AccessTools.Field(typeof(UnitAvatar), "perfectGuardLatencyBonus");
+            private static readonly FieldInfo requestUpdateHighestElementalBonusField = AccessTools.Field(typeof(UnitAvatar), "requestUpdateHighestElementalBonus");
 
             private static readonly List<string> NoNpcER =
             [
@@ -208,6 +209,11 @@ namespace SPMod
                     {
                         if (Player.IsWeapon(WeaponIDs.IcicleSword))
                             ShootIceBullet(DeBuff.NetworkTarget, Player, 5);
+                    }
+                    if (DeBuff is CharacterDebuff_Exposed)
+                    {
+                        if (Player.IsWeapon(WeaponIDs.KeenEyedRapier))
+                            WeaponPatch.KeenEyedRapierEffect.Add(Player);
                     }
                     if (Player.IsWeapon(WeaponIDs.PurpleJacket))
                     {
@@ -529,6 +535,7 @@ namespace SPMod
                 if (!__instance.isServer)
                     return;
 
+                __instance.UpdateModEffectTime(ref StrikeBackTime);
                 PlayerAvatar? player = __instance as PlayerAvatar;
                 if (player != null) return;
 
@@ -545,7 +552,6 @@ namespace SPMod
                     }
                 }
 
-                __instance.UpdateModEffectTime(ref StrikeBackTime);
                 if (__instance.Leader is PlayerAvatar Leader)
                 {
                     if (Leader.IsWeapon(WeaponIDs.ColdAnger))
@@ -662,27 +668,8 @@ namespace SPMod
                 }//轮回属性加成
                 else if (__instance.GetCustomStatUnsafe(TextFile.ModAddCustomerIntensity) <= 2)
                 {
-                    if (__instance.monsterType != EMonsterType.Dummy)
-                    {
-                        int PlayerStack = PlayerSpawner.MultiplayerList.Count;
-                        int AddPlayerStack = ModConfig.Instance.ModifyConnectionsStack;
-                        if (AddPlayerStack > 0)
-                        {
-                            string HPKey = (__instance.monsterType == EMonsterType.Miniboss || __instance.monsterType == EMonsterType.Boss)
-                                ? "minibossBonusHpByPlayerNumber" : "enemyBonusHpByPlayerNumber";
-
-                            float Orig = PlayerStack * KeywordDatabase.GetConstValue(HPKey, true) / 100f;
-                            float Base = __instance.MaxHp / (1 + Orig);
-                            float Mult = 1f + (PlayerStack + AddPlayerStack) * KeywordDatabase.GetConstValue(HPKey, true) / 100f;
-                            __instance.NetworkmaxHp = Base * Mult;
-                            __instance.HealPercent(100f);
-
-                            Orig = ModConfig.Instance.ModifyConnectionsStack * KeywordDatabase.GetConstValue("minibossBonusDamageByPlayerNumber", true) / 100f;
-                            __instance.AddCustomStat(ECustomStat.AllDamageBonus, (int)Orig);
-                        }
-                    }
                     __instance.AddCustomStatUnsafe(TextFile.ModAddCustomerIntensity, 1);
-                }//额外计算多人血量
+                }//额外计算多人血量（已移除，保留强度计数推进）
                 else if (__instance.GetCustomStatUnsafe(TextFile.ModAddCustomerIntensity) <= 3)
                 {
                     string TName = __instance.name.Replace("(Clone)", "");
@@ -1060,6 +1047,30 @@ namespace SPMod
                 }
                 OnUpdateHighestElemental?.Invoke();
                 return false;
+            }
+
+            [HarmonyPatch("OnCustomStatChanged")]
+            [HarmonyPostfix]
+            static void OnCustomStatChanged_Postfix(UnitAvatar __instance, string key)
+            {
+                if (key != TextFile.WindDamage) return;
+                RequestRefreshElementalBonus(__instance);
+            }
+
+            [HarmonyPatch("OnCustomStatAmpChanged")]
+            [HarmonyPostfix]
+            static void OnCustomStatAmpChanged_Postfix(UnitAvatar __instance, string key)
+            {
+                if (key != TextFile.WindDamage) return;
+                RequestRefreshElementalBonus(__instance);
+            }
+
+            private static void RequestRefreshElementalBonus(UnitAvatar Avatar)
+            {
+                if (!Avatar.isServer) return;
+                if (Avatar.highestElementalBonus < 0) return;
+                if (requestUpdateHighestElementalBonusField == null) return;
+                requestUpdateHighestElementalBonusField.SetValue(Avatar, true);
             }
         }
 
@@ -2130,39 +2141,6 @@ namespace SPMod
             }
         }
 
-        [HarmonyPatch(typeof(UnitAI_BossBasic))]
-        public static class UnitAI_BossBasic_TargetSync_Patch
-        {
-            private sealed class SyncState
-            {
-                public uint TargetNetId;
-                public bool HasValue;
-                public float NextSend;
-            }
-
-            private static readonly ConditionalWeakTable<UnitAI_BossBasic, SyncState> States = new();
-
-            [HarmonyPatch("Update")]
-            [HarmonyPostfix]
-            static void Update_Postfix(UnitAI_BossBasic __instance)
-            {
-                if (!NetworkServer.active || __instance == null || __instance.Avatar == null) return;
-
-                uint TargetNetId = __instance.CurrentTarget != null ? __instance.CurrentTarget.netId : 0u;
-                SyncState State = States.GetOrCreateValue(__instance);
-
-                // 目标变化时立即发；没变化时每秒补发一次，保证后加入的客机也能拿到当前目标。
-                bool Changed = !State.HasValue || State.TargetNetId != TargetNetId;
-                bool Heartbeat = TargetNetId != 0 && Time.unscaledTime >= State.NextSend;
-                if (!Changed && !Heartbeat) return;
-
-                State.HasValue = true;
-                State.TargetNetId = TargetNetId;
-                State.NextSend = Time.unscaledTime + 1f;
-                ModNetwork.SendBossTarget(__instance.netId, TargetNetId);
-            }
-        }
-
         [HarmonyPatch(typeof(ComboEffect_Debuff))]
         public static class ComboEffect_Debuff_Patch
         {
@@ -2914,9 +2892,11 @@ namespace SPMod
         public static class Bullet_Patch
         {
             [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            static void Initialize_Postfix(Bullet __instance, float damage, UnitAvatar owner)
+            [HarmonyPrefix]
+            static void Initialize_Prefix(Bullet __instance, ref bool canBeTransparentOnMultiplayer, float damage, UnitAvatar owner)
             {
+                if (owner != null && owner.Leader != null && owner.Leader is PlayerAvatar)
+                    canBeTransparentOnMultiplayer = true;
                 if (__instance.gameObject != null && DisplayCustomStats)
                 {
                     string prefabName = __instance.gameObject.name.Replace("(Clone)", "");
@@ -2935,9 +2915,11 @@ namespace SPMod
         public static class MeleeCollision_Patch
         {
             [HarmonyPatch("Initialize")]
-            [HarmonyPostfix]
-            static void Initialize_Postfix(ProjectileBase __instance, float damage, UnitAvatar owner)
+            [HarmonyPrefix]
+            static void Initialize_Prefix(ProjectileBase __instance, ref bool canBeTransparentOnMultiplayer, float damage, UnitAvatar owner)
             {
+                if (owner != null && owner.Leader != null && owner.Leader is PlayerAvatar)
+                    canBeTransparentOnMultiplayer = true;
                 if (__instance.gameObject != null && DisplayCustomStats)
                 {
                     string prefabName = __instance.gameObject.name.Replace("(Clone)", "");

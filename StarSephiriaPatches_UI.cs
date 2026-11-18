@@ -1,7 +1,6 @@
 ﻿using FMOD.Studio;
 using HarmonyLib;
 using HeathenEngineering.SteamworksIntegration.API;
-using Mirror;
 using SPMod.ModContent;
 using SPMod.MonsterAI;
 using SPMod.Tool;
@@ -12,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
 using System.Text;
 using TMPro;
 using Unity.Mathematics;
@@ -703,22 +701,12 @@ namespace SPMod
         public static class UI_BossHPBar_Patch
         {
             private static readonly FieldInfo bossAvatarField = AccessTools.Field(typeof(UI_BossHPBar), "bossAvatar");
-            private static readonly FieldInfo bossAIField = AccessTools.Field(typeof(UI_BossHPBar), "bossAI");
             public static TextMeshProUGUI? LifeText;
             public static GameObject? HPValueText;
             public static float OldLife = -1;
             public static float ExMaxLife = 0;
-            private sealed class BossNameState
-            {
-                public UnitAvatar? Avatar;
-                public UnitAvatar? Target;
-                public string Text = "";
-            }
 
-            // 每个血条单独记录，避免多 Boss 时互相覆盖
-            private static readonly ConditionalWeakTable<UI_BossHPBar, BossNameState> NameStates = new();
             private static UI_BossHPBar? CachedBar;
-            private static UnitAI_BossBasic? CachedBossAI;
             private static UnitAvatar? CachedBossAvatar;
             private static float NextFieldRefresh;
 
@@ -763,7 +751,7 @@ namespace SPMod
             [HarmonyPostfix]
             static void Update_Postfix(UI_BossHPBar __instance)
             {
-                if (bossAvatarField == null || bossAIField == null)
+                if (bossAvatarField == null)
                 {
                     StarSephiriaMod.LogError("[UI_BossHPBar][UpdateHP]报错");
                     return;
@@ -772,45 +760,8 @@ namespace SPMod
                 if (CachedBar != __instance || Time.unscaledTime >= NextFieldRefresh)
                 {
                     CachedBar = __instance;
-                    CachedBossAI = (UnitAI_BossBasic)bossAIField.GetValue(__instance);
                     CachedBossAvatar = (UnitAvatar)bossAvatarField.GetValue(__instance);
                     NextFieldRefresh = Time.unscaledTime + 0.25f;
-                }
-
-                UnitAI_BossBasic? bossAI = CachedBossAI;
-                if (bossAI != null)
-                {
-                    // 客机的 CurrentTarget 只在服务器端计算，不会同步；用 ModNetwork 广播的 netId 反查。
-                    UnitAvatar? CurrentTarget = bossAI.CurrentTarget;
-                    if (CurrentTarget == null
-                        && ModNetwork.BossTargetNetIds.TryGetValue(bossAI.netId, out uint TargetNetId)
-                        && NetworkClient.spawned.TryGetValue(TargetNetId, out NetworkIdentity TargetIdentity)
-                        && TargetIdentity != null)
-                    {
-                        CurrentTarget = TargetIdentity.GetComponent<UnitAvatar>();
-                    }
-                    BossNameState State = NameStates.GetOrCreateValue(__instance);
-                    bool BossChanged = bossAI.Avatar != State.Avatar;
-                    bool TargetChanged = CurrentTarget != null && CurrentTarget != State.Target;
-
-                    // 空结果不改变已显示的目标；只有换了 Boss 才允许清空
-                    if (CurrentTarget != null) State.Target = CurrentTarget;
-                    else if (BossChanged) State.Target = null;
-
-                    if (BossChanged || TargetChanged)
-                    {
-                        State.Avatar = bossAI.Avatar;
-                        string NameText = KeywordDatabase.Convert(bossAI.Avatar.Name, false, false);
-                        if (State.Target != null)
-                        {
-                            NameText += " -> " + GetTargetName(State.Target);
-                        }
-                        if (State.Text != NameText)
-                        {
-                            State.Text = NameText;
-                            __instance.nameText.text = NameText;
-                        }
-                    }
                 }
 
                 UnitAvatar? bossAvatar = CachedBossAvatar;
@@ -851,15 +802,6 @@ namespace SPMod
                 if (Value < 100000000)
                     return Value.ToString("#0");
                 return Value.ToString("E2");
-            }
-
-            /// <summary>同伴等没有 defaultNameKey 的单位 Name 是空串，用本地化“同伴”兜底。</summary>
-            private static string GetTargetName(UnitAvatar Target)
-            {
-                string TargetName = Target.Name;
-                if (!string.IsNullOrEmpty(TargetName)) return TargetName;
-                if (Target.NetworkLeader is PlayerAvatar) return Tools.GetLocalization("Companion");
-                return Target.name.Replace("(Clone)", "");
             }
 
             [HarmonyPatch("OnClosed")]

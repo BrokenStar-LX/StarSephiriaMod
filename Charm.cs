@@ -222,13 +222,22 @@ namespace SPMod
             [HarmonyPostfix]
             static void OnEnabledEffect_Postfix(Charm_Basic __instance)
             {
+                UnitAvatar Player = __instance.NetworkAvatar;
+                if (Player == null) return;
                 if (__instance.Item.EntityID == 1008 || __instance.Item.EntityID == 1245 || __instance.Item.EntityID == 1251)
                 {
-                    __instance.NetworkAvatar.AddCustomStatUnsafe(TextFile.ScoreCount, 1);
+                    Player.AddCustomStatUnsafe(TextFile.ScoreCount, 1);
                 }
                 if (__instance.Item.EntityID == 1108)
                 {
-                    __instance.NetworkAvatar.AddCustomStatUnsafe(TextFile.TelescopeCount, 1);
+                    Player.AddCustomStatUnsafe(TextFile.TelescopeCount, 1);
+                }
+                if (ModConfig.Instance.ModifyCharm)
+                {
+                    if (__instance.Item.EntityID == 1295)
+                    {
+                        Player.AddCustomStatUnsafe(TextFile.FinalWeaponDamage, -30);
+                    }
                 }
             }
 
@@ -236,6 +245,8 @@ namespace SPMod
             [HarmonyPostfix]
             static void OnDisabledEffect_Postfix(Charm_Basic __instance)
             {
+                UnitAvatar Player = __instance.NetworkAvatar;
+                if (Player == null) return;
                 if (__instance.Item.EntityID == 1008 || __instance.Item.EntityID == 1245 || __instance.Item.EntityID == 1251)
                 {
                     __instance.NetworkAvatar.AddCustomStatUnsafe(TextFile.ScoreCount, -1);
@@ -243,6 +254,13 @@ namespace SPMod
                 if (__instance.Item.EntityID == 1108)
                 {
                     __instance.NetworkAvatar.AddCustomStatUnsafe(TextFile.TelescopeCount, -1);
+                }
+                if (ModConfig.Instance.ModifyCharm)
+                {
+                    if (__instance.Item.EntityID == 1295)
+                    {
+                        Player.AddCustomStatUnsafe(TextFile.FinalWeaponDamage, 30);
+                    }
                 }
             }
 
@@ -1082,6 +1100,84 @@ namespace SPMod
             }
         }
 
+        [HarmonyPatch(typeof(Charm_GreenGi))]
+        public static class Charm_GreenGi_Patch
+        {
+            private static readonly Dictionary<Charm_GreenGi, Action<UnitAvatar, DamageInstance>> AttackHandlers = [];
+            private static readonly Dictionary<Charm_GreenGi, float> NextTriggerTime = [];
+
+            [HarmonyPatch("OnEnabledEffect")]
+            [HarmonyPostfix]
+            static void OnEnabledEffect_Postfix(Charm_GreenGi __instance)
+            {
+                if (!ModConfig.Instance.ModifyCharm) return;
+                if (__instance.NetworkAvatar == null) return;
+                if (AttackHandlers.TryGetValue(__instance, out Action<UnitAvatar, DamageInstance> Old))
+                    __instance.NetworkAvatar.OnAttackUnit -= Old;
+                void Handler(UnitAvatar Target, DamageInstance Damage)
+                {
+                    OnAttackHit(__instance, Target, Damage);
+                }
+                AttackHandlers[__instance] = Handler;
+                __instance.NetworkAvatar.OnAttackUnit += Handler;
+            }
+
+            [HarmonyPatch("OnDisabledEffect")]
+            [HarmonyPostfix]
+            static void OnDisabledEffect_Postfix(Charm_GreenGi __instance)
+            {
+                NextTriggerTime.SafeRemove(__instance);
+                if (!AttackHandlers.TryGetValue(__instance, out Action<UnitAvatar, DamageInstance> Handler)) return;
+                if (__instance.NetworkAvatar != null)
+                    __instance.NetworkAvatar.OnAttackUnit -= Handler;
+                AttackHandlers.SafeRemove(__instance);
+            }
+
+            private static void OnAttackHit(Charm_GreenGi Charm, UnitAvatar Target, DamageInstance Damage)
+            {
+                if (!ModConfig.Instance.ModifyCharm) return;
+                if (!Charm.IsEffectEnabled) return;
+                if (Target == null || Target.IsDead) return;
+                if (Damage == null || Damage.fromType != EDamageFromType.DirectAttack) return;
+
+                UnitAvatar? Player = Charm.NetworkAvatar;
+                if (Player == null) return;
+                if (!Player.IsWeapon(WeaponIDs.FierceHumming)) return;
+
+                float Value = Player.GetCustomStatUnsafe(TextFile.Evasion) * 0.01f;
+                float Cooldown = 0.5f / (1f + Value * 0.01f);
+                if (NextTriggerTime.TryGetValue(Charm, out float Next) && Time.time < Next) return;
+                NextTriggerTime[Charm] = Time.time + Cooldown;
+
+                Vector2 Delta = (Vector2)Target.transform.position - (Vector2)Player.transform.position;
+                Vector2 Dir = Delta.sqrMagnitude > 0.0001f ? Delta.normalized : Vector2.right;
+
+                int Index = GetDirectionIndex(Delta);
+                if (Index < 0 || Index >= Charm.fireData.Length) return;
+
+                Vector2 Pos = (Vector2)Player.transform.position + Dir * Charm.attackCreateRadius;
+                float Mult = 0.3f + Damage.damage / Player.GetCustomStatUnsafe(TextFile.PhysicalDamage) * 0.2f;
+                float Dam = Charm_Basic.CalculateDamage(Charm) * Mult;
+                Dam /= 1f + Player.GetCustomStatUnsafe(TextFile.MeleeDamage) * 0.01f;
+                Dam /= 1f + Player.GetCustomStatUnsafe(TextFile.DirectWeaponDamage) * 0.01f;
+                Charm.fireData[Index].CreateAttack(EDamageFromType.None, Dam, Charm.damageId, true, Player, Pos, Pos + Vector2.up * 0.1f, 0f, null, null, 1f, null, false, 0f, 1f, 0, null);
+            }
+
+            private static int GetDirectionIndex(Vector2 Delta)
+            {
+                float Angle = Delta.GetAngle();
+                if (Angle < 0f) Angle += 360f;
+                if (Angle > 22.5f && Angle <= 67.5f) return 7;
+                if (Angle > 67.5f && Angle <= 112.5f) return 6;
+                if (Angle > 112.5f && Angle <= 157.5f) return 5;
+                if (Angle > 157.5f && Angle <= 202.5f) return 4;
+                if (Angle > 202.5f && Angle <= 247.5f) return 3;
+                if (Angle > 247.5f && Angle <= 292.5f) return 2;
+                if (Angle > 292.5f && Angle <= 337.5f) return 1;
+                return 0;
+            }
+        }
+
         [HarmonyPatch(typeof(Charm_GrowthParry))]
         public static class Charm_GrowthParry_Patch
         {
@@ -1095,6 +1191,6 @@ namespace SPMod
                 __result = Tools.BaseStatToMax(avatar) * Mult;
                 return false;
             }
-        }  
+        }
     }
 }

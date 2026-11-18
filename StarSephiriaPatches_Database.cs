@@ -112,17 +112,17 @@ namespace SPMod
                     List<int> itemIDList = (List<int>)itemIDListField.GetValue(null);
                     Dictionary<int, ItemEntity> itemDictionary = (Dictionary<int, ItemEntity>)itemDictionaryField.GetValue(null);
                     Dictionary<string, ItemCategoryEntity> itemCategories = (Dictionary<string, ItemCategoryEntity>)itemCategoriesField.GetValue(null);
-                    foreach (ItemCategoryEntity Data in ModItemCategoryData)
-                    {
-                        Data.enableSound = itemCategories["DARKCLOUD"].enableSound;
-                        itemCategories[Data.id] = Data;
-                    }
-                    foreach (int DisableId in DisableCharm)
-                    {
-                        itemDictionary[DisableId].activeType = EItemActiveType.Hidden;
-                    }
                     if (ModConfig.Instance.ModifyCharm)
                     {
+                        foreach (int DisableId in DisableCharm)
+                        {
+                            itemDictionary[DisableId].activeType = EItemActiveType.Hidden;
+                        }
+                        foreach (ItemCategoryEntity Data in ModItemCategoryData)
+                        {
+                            Data.enableSound = itemCategories["DARKCLOUD"].enableSound;
+                            itemCategories[Data.id] = Data;
+                        }
                         foreach (ItemCategoryEntity itemCategoryEntity in itemCategories.Values)
                         {
                             if (itemCategoryEntity.id == "DARKCLOUD")
@@ -240,17 +240,6 @@ namespace SPMod
                             if (!itemDictionary.ContainsKey(itemEntity.id)) itemDictionary.Add(itemEntity.id, itemEntity);
                         }
                     }
-                    if (ModConfig.Instance.DisableUniqueEffects)
-                    {
-                        foreach (ItemEntity item in itemDictionary.Values.Where(i => i.type == EItemType.Charm && i.resourcePrefab != null))
-                        {
-                            Charm_Basic charmBasic = item.resourcePrefab.GetComponent<Charm_Basic>();
-                            if (charmBasic != null)
-                            {
-                                charmBasic.isUniqueEffect = false;
-                            }
-                        }
-                    }
                     int LastId = 0;
                     foreach (ItemEntity AllItem in itemDictionary.Values)
                     {
@@ -277,13 +266,6 @@ namespace SPMod
                             if (!GetModItem.ContainsKey(GetName)) GetModItem.Add(GetName, ModItem);
                             if (Data.IsWitchItem) allWitchHatItems.Add(ModItem);
                             Data.ItemEffect?.Invoke(ModItem);
-                            if (ModConfig.Instance.DisableUniqueEffects)
-                            {
-                                if (ModItem.resourcePrefab.TryGetComponent<Charm_Basic>(out var Basic))
-                                {
-                                    Basic.isUniqueEffect = false;
-                                }
-                            }
                             ItemDatabase.Register(ModItem);
                             if (ModItem.isDual && !BondingItems.Contains(ModItem.id))
                                 BondingItems.Add(ModItem.id);
@@ -293,7 +275,17 @@ namespace SPMod
                             StarSephiriaMod.LogError($"[StarSephiria]物品注册失败{ModItem.name}: {ex}");
                         }
                     }
-
+                    if (ModConfig.Instance.DisableUniqueEffects)
+                    {
+                        foreach (ItemEntity item in itemDictionary.Values.Where(i => i.type == EItemType.Charm && i.resourcePrefab != null))
+                        {
+                            Charm_Basic charmBasic = item.resourcePrefab.GetComponent<Charm_Basic>();
+                            if (charmBasic != null)
+                            {
+                                charmBasic.isUniqueEffect = false;
+                            }
+                        }
+                    }
                     itemCategoriesField.SetValue(null, itemCategories);
                     itemIDListField.SetValue(null, itemIDList);
                     itemDictionaryField.SetValue(null, itemDictionary);

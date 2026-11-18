@@ -42,7 +42,9 @@ namespace SPMod.Tool
         private const string RpcSwingFx = ModId + ":swingFx";
         private const string RpcWeaponFx = ModId + ":weaponFx";
         private const string RpcHud = ModId + ":hud";
-        private const string RpcBossTarget = ModId + ":bossTarget";
+        private const string RpcTransmog = ModId + ":transmog";
+        private const string CmdTransmogSet = ModId + ":transmogSet";
+        private const string CmdTransmogSync = ModId + ":transmogSync";
 
         private struct HudState
         {
@@ -71,8 +73,8 @@ namespace SPMod.Tool
         private static readonly Dictionary<UnitAvatar, HudState> LastHud = [];
         private static readonly Dictionary<UnitAvatar, float> LastHudTime = [];
 
-        /// <summary>客机上的 Boss 当前目标：BossNetId → TargetNetId。0 表示没有目标。</summary>
-        public static readonly Dictionary<uint, uint> BossTargetNetIds = [];
+        /// <summary>服务端的幻化缓存：PlayerAvatar netId → skinID，用于中途加入时补发。</summary>
+        private static readonly Dictionary<uint, string> ServerTransmog = [];
 
         /// <summary>
         /// 注册 ModRpc 处理函数。OnModLoaded 和客户端消息注册时都会调用；RegisterRpc 为覆盖式，重复调用无害。
@@ -83,30 +85,14 @@ namespace SPMod.Tool
             ModRpc.RegisterRpc<WeaponSimple>(ModId, "swingFx", OnModWeaponSwingFxRpc);
             ModRpc.RegisterRpc<UnitAvatar>(ModId, "weaponFx", OnModWeaponFxRpc);
             ModRpc.RegisterRpc<UnitAvatar>(ModId, "hud", OnModWeaponHudRpc);
-            ModRpc.RegisterRpc<UnitAvatar>(ModId, "bossTarget", OnModBossTargetRpc);
+            ModRpc.RegisterRpc<PlayerAvatar>(ModId, "transmog", OnModTransmogRpc);
+            ModRpc.RegisterCommand<PlayerAvatar>(ModId, "transmogSet", OnModTransmogSetCommand);
+            ModRpc.RegisterCommand<PlayerAvatar>(ModId, "transmogSync", OnModTransmogSyncCommand);
         }
 
         public static void RegisterClientHandlers()
         {
             RegisterHandlers();
-        }
-
-        private static void OnModBossTargetRpc(UnitAvatar Boss, NetworkReader Reader)
-        {
-            if (NetworkServer.active) return;
-            uint TargetNetId = Reader.ReadVarUInt();
-            if (TargetNetId == 0)
-                BossTargetNetIds.Remove(Boss.netId);
-            else
-                BossTargetNetIds[Boss.netId] = TargetNetId;
-        }
-
-        /// <summary>服务端广播 Boss 当前目标；TargetNetId 为 0 表示丢失目标。</summary>
-        public static void SendBossTarget(uint BossNetId, uint TargetNetId)
-        {
-            UnitAvatar? Boss = Resolve<UnitAvatar>(BossNetId);
-            if (Boss == null) return;
-            ModRpc.Send(Boss, RpcBossTarget, Writer => Writer.WriteVarUInt(TargetNetId));
         }
 
         /// <summary>服务端广播武器 FX；Event 区分 AirValve 的触发/脉冲和 ShadowThorns 等。</summary>
@@ -525,6 +511,64 @@ namespace SPMod.Tool
                 Writer.WriteVector3(Position);
                 Writer.WriteVector3(EulerAngles);
             });
+        }
+
+        /// <summary>客户端把本机玩家的幻化上报给服务器；SkinID 为空表示取消。</summary>
+        public static void SendTransmogSet(PlayerAvatar Player, string SkinID)
+        {
+            if (Player == null || !NetworkClient.active) return;
+            ModRpc.SendCommand(Player, CmdTransmogSet, Writer => Writer.WriteString(SkinID ?? string.Empty));
+        }
+
+        /// <summary>客户端向服务器要一份所有玩家的幻化，用于中途加入或重生后补数据。</summary>
+        public static void SendTransmogSync(PlayerAvatar Player)
+        {
+            if (Player == null || !NetworkClient.active) return;
+            ModRpc.SendCommand(Player, CmdTransmogSync);
+        }
+
+        /// <summary>服务端单位销毁时清掉幻化缓存，避免 netId 复用时把上一局的外观发给新角色。</summary>
+        public static void OnUnitDespawnedServerside(UnitAvatar Avatar)
+        {
+            if (Avatar == null) return;
+            ServerTransmog.Remove(Avatar.netId);
+        }
+
+        private static void OnModTransmogSetCommand(PlayerAvatar Player, NetworkReader Reader, NetworkConnectionToClient Sender)
+        {
+            if (!NetworkServer.active) return;
+
+            string SkinID = Reader.ReadString();
+            if (string.IsNullOrEmpty(SkinID)) ServerTransmog.Remove(Player.netId);
+            else ServerTransmog[Player.netId] = SkinID;
+
+            // 拥有者本地已经应用过外观，广播时跳过，避免同一个皮肤重建两次
+            ModRpc.Send(Player, RpcTransmog, Writer => Writer.WriteString(SkinID), includeOwner: false);
+        }
+
+        private static void OnModTransmogSyncCommand(PlayerAvatar Player, NetworkReader Reader, NetworkConnectionToClient Sender)
+        {
+            if (!NetworkServer.active) return;
+
+            List<uint>? Stale = null;
+            foreach (KeyValuePair<uint, string> Pair in ServerTransmog)
+            {
+                PlayerAvatar? Target = Resolve<PlayerAvatar>(Pair.Key);
+                if (Target == null)
+                {
+                    if (Stale == null) Stale = [];
+                    Stale.Add(Pair.Key);
+                    continue;
+                }
+                ModRpc.SendTo(Sender, Target, RpcTransmog, Writer => Writer.WriteString(Pair.Value));
+            }
+            if (Stale == null) return;
+            foreach (uint NetId in Stale) ServerTransmog.Remove(NetId);
+        }
+
+        private static void OnModTransmogRpc(PlayerAvatar Player, NetworkReader Reader)
+        {
+            CostumeTransmog_Patch.OnNetworkTransmog(Player, Reader.ReadString());
         }
     }
 }

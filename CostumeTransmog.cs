@@ -13,11 +13,16 @@ namespace SPMod
     /// 因此不会触发 UpdateCostumeData，服装属性、初始物品、专属效果都保持真实装备的那一套。
     /// 交互：服装面板里 Shift+点击一套服装 = 幻化成它的默认皮肤；皮肤图标上 Shift+点击 = 幻化成该皮肤。
     /// 再次 Shift+点击同一个目标 = 取消。
+    /// 多人：本人的幻化存本地存档并上报服务器；其他玩家的幻化由 ModRpc 同步（见 Tool/ModNetwork.cs），
+    /// 按 Avatar netId 缓存，避免和同名玩家或重连后的旧数据混淆。
     /// </summary>
     [HarmonyPatch]
     public static class CostumeTransmog_Patch
     {
         public static readonly Dictionary<string, string> TransmogSkin = [];
+
+        /// <summary>其他玩家经 ModRpc 同步来的幻化：PlayerAvatar netId → skinID。</summary>
+        public static readonly Dictionary<uint, string> RemoteTransmogSkin = [];
 
         private static readonly FieldInfo costumePanelPlayerField = AccessTools.Field(typeof(UI_CostumePanel), "playerAvatar");
         private static readonly MethodInfo updateCostumeOutfitMethod = AccessTools.Method(typeof(PlayerAvatar), "UpdateCostumeOutfit");
@@ -47,9 +52,35 @@ namespace SPMod
             else TransmogSkin[Player.Name] = SkinID;
             SaveManager.Current?.SetString(SaveKey(Player.Name), SkinID ?? "");
             RefreshOutfit(Player);
+            if (Player.isOwned) ModNetwork.SendTransmogSet(Player, SkinID ?? "");
         }
 
         public static void ClearTransmog(PlayerAvatar Player) => SetTransmog(Player, "");
+
+        /// <summary>客户端收到服务器下发的幻化：写入缓存并立即刷新对方外观。</summary>
+        public static void OnNetworkTransmog(PlayerAvatar Player, string SkinID)
+        {
+            if (Player == null || Player.isOwned) return;
+            if (string.IsNullOrEmpty(SkinID)) RemoteTransmogSkin.SafeRemove(Player.netId);
+            else RemoteTransmogSkin[Player.netId] = SkinID;
+
+            if (!ModConfig.Instance.EnableCostumeTransmog) return;
+            RefreshOutfit(Player);
+        }
+
+        /// <summary>本机玩家的角色 spawn 后：清掉上一局的 netId 缓存，上报自己的幻化并拉取其他玩家的幻化。</summary>
+        public static void OnPlayerAvatarSpawnedClientside(PlayerAvatar Player)
+        {
+            if (Player == null || !Player.isOwned) return;
+            RemoteTransmogSkin.Clear();
+            if (!ModConfig.Instance.EnableCostumeTransmog) return;
+
+            LoadSaved(Player.Name);
+            if (TransmogSkin.TryGetValue(Player.Name, out string Saved) && !string.IsNullOrEmpty(Saved))
+                ModNetwork.SendTransmogSet(Player, Saved);
+            ModNetwork.SendTransmogSync(Player);
+            RefreshOutfit(Player);
+        }
 
         private static void RefreshOutfit(PlayerAvatar Player)
         {
@@ -90,14 +121,29 @@ namespace SPMod
         static void UpdateCostumeOutfit_Prefix(PlayerAvatar __instance, ref string skinID)
         {
             if (!ModConfig.Instance.EnableCostumeTransmog) return;
-            // 每次刷新都以存档为准，避免切换档案后残留上一个档案的幻化
-            LoadSaved(__instance.Name);
-            if (TransmogSkin.TryGetValue(__instance.Name, out string Target)
-                && !string.IsNullOrEmpty(Target)
-                && CostumeDatabase.GetCostumeSkinByID(Target) != null)
-            {
+            if (!TryGetTransmogSkin(__instance, out string Target)) return;
+            if (!string.IsNullOrEmpty(Target) && CostumeDatabase.GetCostumeSkinByID(Target) != null)
                 skinID = Target;
-            }
+        }
+
+        /// <summary>本机玩家以存档为准；其他玩家用 ModRpc 同步来的缓存。</summary>
+        private static bool TryGetTransmogSkin(PlayerAvatar Player, out string SkinID)
+        {
+            SkinID = "";
+            if (Player == null) return false;
+            if (!Player.isOwned) return RemoteTransmogSkin.TryGetValue(Player.netId, out SkinID);
+
+            // 每次刷新都以存档为准，避免切换档案后残留上一个档案的幻化
+            LoadSaved(Player.Name);
+            return TransmogSkin.TryGetValue(Player.Name, out SkinID);
+        }
+
+        [HarmonyPatch(typeof(UnitAvatar), "OnStopClient")]
+        [HarmonyPostfix]
+        static void OnStopClient_Postfix(UnitAvatar __instance)
+        {
+            if (__instance is PlayerAvatar Player)
+                RemoteTransmogSkin.SafeRemove(Player.netId);
         }
 
         [HarmonyPatch(typeof(UI_CostumePanel), "HandleClick")]

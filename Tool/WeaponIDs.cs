@@ -43,6 +43,7 @@ namespace SPMod.Tool
         public const int BlindingSilence = 1028;                    // 耀目的寂静 
         public const int GardenofNeedleIce = 1029;                  // 霜针花园  
         public const int PrismaticMagic = 1030;                     // 棱镜法杖
+        public const int KeenEyedRapier = 1033;                     // 识破的细剑
 
         public const int WindSword = ModWeaponId;                   // 风语者
         public const int SpiralCloudBand = ModWeaponId + 1;         // 螺旋云带
@@ -117,6 +118,7 @@ namespace SPMod.Tool
         public const int DormantFrost = 1215;                       // 沉眠之霜
         public const int FrozenSmelt = 1216;                        // 冷冻公鱼
         public const int Drífa = 1217;                              // 德里法
+        public const int FierceHumming = 1219;                      // 威猛哼唱
 
         public const int WindDagger = ModWeaponId + 1200;           // 层流
         public const int Vortex = ModWeaponId + 1201;               // 漩涡
@@ -152,6 +154,7 @@ namespace SPMod.Tool
         public const int Minigun = 126;                             // 迷你机枪
         public const int TheBarnacle = 127;                         // 藤壶
         public const int M9200 = 128;                               // M-9200
+        public const int RadiantDial = 129;                         // 重型弩：光轮装置
 
         public const int WindCrossbow = ModWeaponId + 100;          // 重型弩：穿风刺
         public const int AirValve = ModWeaponId + 101;              // 重型弩：气阀
