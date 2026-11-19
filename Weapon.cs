@@ -69,6 +69,8 @@ namespace SPMod
         public static Dictionary<UnitAvatar, bool> AutoSweepSwing = [];
         public static HashSet<UnitAvatar> KeenEyedRapierEffect = [];
         public static HashSet<UnitAvatar> KeenEyedRapierEnhancedDash = [];
+        public static Dictionary<UnitAvatar, (int Count, bool Enhanced, float Expire)> SolisCinerisDash = [];
+        public static Dictionary<UnitAvatar, float> SolisCinerisRegen = [];
 
         public static event Action? OnCrossbowUseReLoad = null;
         public static event Action<UnitAvatar>? OnPlanetaryAttack = null;
@@ -289,7 +291,16 @@ namespace SPMod
             [HarmonyPostfix]
             static void GetDashAttack_Postfix(WeaponSimple __instance, int idx, ref NewWeaponFireData __result)
             {
-                DamageIdx[(__instance.Networkowner.unitAvatar, __instance.entityId)] = ("Dash", idx);
+                UnitAvatar Player = __instance.Networkowner.unitAvatar;
+                DamageIdx[(Player, __instance.entityId)] = ("Dash", idx);
+                if (__instance.entityId == SolisCineris && Player != null)
+                {
+                    if (SolisCinerisDash.TryGetValue(Player, out var Dash) && Time.time <= Dash.Expire)
+                    {
+                        NewWeaponFireData Spear = Dash.Enhanced ? LoadModContent.SolisCinerisSpearUpgrade.Data : LoadModContent.SolisCinerisSpear.Data;
+                        if (Spear != null) __result = Spear;
+                    }
+                }
             }
 
             [HarmonyPatch("OnAttack_Basic")]
@@ -1835,7 +1846,7 @@ namespace SPMod
                         __instance.Networkowner.SetMpConsumedAttackTriggerFromAnimationValue(num);
                         Vector3 Dir = __instance.Networkowner.attackDirection;
                         Vector3 Pos = __instance.FirePosition_SpecialAttack(0);
-                        __instance.CreateSpecialAttackProjectile(0, Pos + Dir * 50f, Dir, null, 1f, 0, 0, num);
+                        __instance.CreateSpecialAttackProjectile(0, Pos + Dir * 100f, Dir, null, 1f, 0, 0, num);
                     }
                     return false;
                 }
@@ -1895,6 +1906,7 @@ namespace SPMod
             public static AccessTools.FieldRef<WeaponSimple_GreatSword, bool>? sweepRequestRef = sweepRequestField == null ? null : AccessTools.FieldRefAccess<WeaponSimple_GreatSword, bool>(sweepRequestField);
             public static AccessTools.FieldRef<WeaponSimple_GreatSword, Timer>? sweepTimerRef = sweepTimerField == null ? null : AccessTools.FieldRefAccess<WeaponSimple_GreatSword, Timer>(sweepTimerField);
             public static MethodInfo? RpcCreateCompleteChargeFxMethod = AccessTools.Method(typeof(WeaponSimple_GreatSword), "RpcCreateCompleteChargeFx");
+            public static MethodInfo? RpcDestroyChargingFxMethod = AccessTools.Method(typeof(WeaponSimple_GreatSword), "RpcDestroyChargingFx");
 
             [HarmonyPatch("Update")]
             [HarmonyPrefix]
@@ -1952,9 +1964,23 @@ namespace SPMod
                         }
                     }
                     __instance.Networkowner.NetworkchargingRatioForUI = sweepTimer.Ratio;
+                    if (__instance.entityId == SolisCineris && Player.IsWeapon(SolisCineris))
+                    {
+                        if (!SolisCinerisRegen.TryGetValue(Player, out float RegenTime)) RegenTime = 0f;
+                        RegenTime += Time.deltaTime * (1f + 0.01f * Player.GetCustomStatUnsafe(TextFile.FlameSwordMax));
+                        if (RegenTime >= 0.3f)
+                        {
+                            RegenTime -= 0.3f;
+                            ComboEffectBase? Combo = Player.Inventory?.FindComboEffect("FLAMESWORD");
+                            if (Combo is ComboEffect_FlameSword FlameSword && !FlameSword.IsMax())
+                                FlameSword.AddSword(1);
+                        }
+                        SolisCinerisRegen[Player] = RegenTime;
+                    }
                 }
                 else
                 {
+                    if (__instance.entityId == SolisCineris) SolisCinerisRegen[Player] = 0f;
                     if (__instance.entityId == Negligence)
                     {
                         __instance.Networkowner.animator.speed = 1f;
@@ -2036,6 +2062,45 @@ namespace SPMod
                     }
                 }
                 return true;
+            }
+
+            [HarmonyPatch("SubAttackButtonUp")]
+            [HarmonyPrefix]
+            static bool SubAttackButtonUp_Prefix(WeaponSimple_GreatSword __instance)
+            {
+                if (!NetworkServer.active || !__instance.Networkowner) return true;
+
+                UnitAvatar Player = __instance.Networkowner.unitAvatar;
+                if (Player == null || __instance.entityId != SolisCineris || !Player.IsWeapon(SolisCineris)) return true;
+
+                bool Charged = sweepRequestRef != null && sweepRequestRef(__instance);
+                __instance.Networkowner.SetAnimationBool(AnimHashContainer.Instance.IsChargingHash, false);
+                __instance.NetworksweepSwing = false;
+                if (sweepRequestRef != null) sweepRequestRef(__instance) = false;
+                if (sweepTimerRef != null) sweepTimerRef(__instance).SetTimer(0f);
+                RpcDestroyChargingFxMethod?.Invoke(__instance, null);
+                __instance.Networkowner.NetworkchargingRatioForUI = 0f;
+                SolisCinerisRegen[Player] = 0f;
+
+                if (!Charged) return false;
+
+                int Count = 0;
+                if (Player.Inventory != null)
+                {
+                    ComboEffectBase? Combo = Player.Inventory.FindComboEffect("FLAMESWORD");
+                    if (Combo is ComboEffect_FlameSword FlameSword)
+                    {
+                        Count = Math.Max(0, FlameSword.NetworkcurrentSword - 5);
+                        if (Count > 0) FlameSword.UseSword(Count);
+                    }
+                }
+                bool Enhanced = ComboEffect_FlameSword.CheckLuck(Player);
+                SolisCinerisDash[Player] = (Count, Enhanced, Time.time + 3f);
+
+                __instance.Networkowner.CancelAction();
+                __instance.Networkowner.NetworkattackDirection = __instance.Networkowner.aimedPositionClientside - __instance.Networkowner.transform.position;
+                __instance.Networkowner.SetAnimationTrigger(AnimHashContainer.Instance.DashAttackHash);
+                return false;
             }
 
             [HarmonyPatch("SubAttackButtonUp")]
@@ -4438,27 +4503,6 @@ namespace SPMod
                                 damage *= 2;
                             }
                         }//灰烬飘扬
-                        if (Type == SolisCineris && Data.AttackType == "Basic")
-                        {
-                            if (owner.Inventory)
-                            {
-                                ComboEffectBase comboEffectBase = owner.Inventory.FindComboEffect("FLAMESWORD");
-                                if (comboEffectBase != null && comboEffectBase is ComboEffect_FlameSword comboEffect_FlameSword)
-                                {
-                                    UnitAvatar Target = PlayerInputController.SearchTargetNearestPoint(owner, owner.transform.position, 50f);
-                                    if (Target != null)
-                                    {
-                                        Vector3 TargetPos = Target.transform.position;
-                                        int Count = 3 + owner.GetCustomStatUnsafe(TextFile.FlameSwordAdditionalAttack);
-                                        for (int i = 0; i < Count; i++)
-                                        {
-                                            Vector3 ShootPos = TargetPos + (Vector3)UnityEngine.Random.insideUnitCircle.normalized * 2.5f;
-                                            comboEffect_FlameSword.FireSword(ShootPos, TargetPos);
-                                        }
-                                    }
-                                }
-                            }
-                        }//索利斯灰烬
                         if (Type == GuardiansReturn && Data.AttackType == "Basic")
                         {
                             if (Tools.GetPro("ThrowShield", out var Pro))
@@ -4718,6 +4762,25 @@ namespace SPMod
                             damage *= Mult;
                             swingMultiplier *= Mult;
                         }//扶摇
+                        if (Type == SolisCineris && Data.AttackType == "Dash" && SolisCinerisDash.TryGetValue(owner, out var DashData) && Time.time <= DashData.Expire)
+                        {
+                            SolisCinerisDash.Remove(owner);
+                            damage *= 1f + 0.5f * DashData.Count;
+                            damage *= 1f + owner.GetCustomStatUnsafe(TextFile.FlameSwordDamage) * 0.01f;
+                            damage *= 1f + owner.GetCustomStatUnsafe(TextFile.FlameSwordAdditionalAttack) * 0.33f;
+                            Action<int, ProjectileBase>? originalCallback = onCreateAttack;
+                            UnitAvatar Owner = owner;
+                            onCreateAttack = (index, projectile) =>
+                            {
+                                if (projectile != null)
+                                {
+                                    projectile.additionalCriticalChancePercent += Owner.GetCustomStatUnsafe(TextFile.FlameSwordCritical) * 0.01f;
+                                    projectile.additionalCriticalDamageRate += Owner.GetCustomStatUnsafe(TextFile.FlameSwordCriticalDamageRate);
+                                    projectile.ignoreDefense += Owner.GetCustomStatUnsafe(TextFile.FlameSwordIgnoreDefense);
+                                }
+                                originalCallback?.Invoke(index, projectile!);
+                            };
+                        }//炎枪
                     }
                 }
                 if (DirectWeaponDamage != 0)

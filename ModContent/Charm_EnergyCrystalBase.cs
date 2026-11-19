@@ -34,6 +34,7 @@ namespace SPMod.ModContent
             OnResetEnergyCrystal();
             NetworkAvatar.OnAttackUnit += OnAttackUnitEvent;
             NetworkAvatar.OnAttackUnitBeforeOperation += OnWindSwordDamage;
+            if (WeaponController != null) WeaponController.OnSpecialAttack += OnSpecialAttackHit;
             UpdateHud(force: true);
         }
 
@@ -43,6 +44,7 @@ namespace SPMod.ModContent
             if (NetworkAvatar == null) return;
             NetworkAvatar.OnAttackUnit -= OnAttackUnitEvent;
             NetworkAvatar.OnAttackUnitBeforeOperation -= OnWindSwordDamage;
+            if (WeaponController != null) WeaponController.OnSpecialAttack -= OnSpecialAttackHit;
             Energy = 0f;
             LastHudValue = -1;
             OnResetEnergyCrystal();
@@ -71,6 +73,15 @@ namespace SPMod.ModContent
             if (!IsEffectEnabled || damage == null) return;
             if (damage.id != WindSwordDamageId) return;
             ApplyWindSwordDamage(damage);
+        }
+
+        private void OnSpecialAttackHit(CombatBehaviour victim, DamageInstance damage, ProjectileBase projectile)
+        {
+            if (!IsEffectEnabled || NetworkAvatar == null) return;
+            if (NetworkAvatar.GetCustomStatUnsafe(TextFile.WindPivotEffect) <= 0) return;
+            float Weight = this.GetWeaponWeight();
+            if (Weight <= 0f) return;
+            AddEnergy(GetEnergyGainByLevel(CurrentLevelToIdx()) * Weight);
         }
 
         protected void AddEnergy(float value)

@@ -221,6 +221,7 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_Tornado", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_GaleQuell", true, WindColor),
             new ModKeyWord("ModWeaponEffect_KeenEyedRapier", true, WeaponColor),
+            new ModKeyWord("ModWeaponEffect_SolisCineris", true, WeaponColor),
 
             new ModKeyWord("Stealth", true, WeaponColor),
             new ModKeyWord("WindDamage", false, WindColor).StringToSprite("Wind").CreateStatus("WIND_DAMAGE").SetDetailed("Status_EachElementalDamage_DetailedValue"),
@@ -2032,6 +2033,12 @@ namespace SPMod.ModContent
         public static ModFireData WindGreatSword_Tornado = ModFireData.Special(WeaponIDs.TheEmberforged, 0).SetElement(Wind).SetDamage(1f)
             .SetMeleeSwingSpriteFolder("Weapon.GreatSword_Tornado", "GreatSword0_TurnSwing_Fire_Minor", true, 1, 1.5f)
             .SetMeleeMultiHit(5, 0.1f, 0.6f);
+        public static readonly ModFireData SolisCinerisSpear = ModFireData.Dash(WeaponIDs.SolisCineris, 0)
+            .SetDamage(2f).SetElement(EDamageElementalType.Fire).SetRelatedStat(TextFile.FireDamage)
+            .SetMeleeSwingSpriteFolder("Weapon.GreatSword_DashFlameSword", "", true, 1f, 2f);
+        public static readonly ModFireData SolisCinerisSpearUpgrade = ModFireData.Dash(WeaponIDs.SolisCineris, 0)
+            .SetDamage(2.66f).SetElement(EDamageElementalType.Fire).SetRelatedStat(TextFile.FireDamage)
+            .SetMeleeSwingSpriteFolder("Weapon.GreatSword_DashFlameSword_Upgrade", "", true, 1f, 3f);
 
         public static List<ModFireData> WindDagger_Basic =
         [
@@ -2104,6 +2111,21 @@ namespace SPMod.ModContent
             .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind");
         public static ModFireData WindStaff_Dash = ModFireData.Dash(WeaponIDs.StaffOfEmbers, 0)
             .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind");
+        // 风属性棍不使用 STAFFEXTEND：渲染器改回 Simple 绘制，
+        // 避免棍子 prefab 的九宫格拉伸把替换贴图按原版 bladeArea 的比例压扁/拉长。
+        private static void UseNativeStaffSprite(WeaponSimple Weapon)
+        {
+            if (Weapon.mainWeaponBody == null)
+            {
+                StarSephiriaMod.LogError($"[风棍渲染] {Weapon.name} mainWeaponBody 为空");
+                return;
+            }
+            if (Weapon.mainWeaponBody.weaponSpriteRenderer != null)
+                Weapon.mainWeaponBody.weaponSpriteRenderer.drawMode = SpriteDrawMode.Simple;
+            if (Weapon.mainWeaponBody.weaponStencilRenderer != null)
+                Weapon.mainWeaponBody.weaponStencilRenderer.drawMode = SpriteDrawMode.Simple;
+        }
+
         // 模组武器
         public static List<ModWeapon> ModWeaponData =
         [
@@ -2414,7 +2436,7 @@ namespace SPMod.ModContent
             .SetBasicAttack(0, WindCrossbow_Basic)
             .SetBasicAttack(1, WindCrossbow_Basic)
             .SetSpecialAttack(0, WindCrossbow_AirValve)
-            .SetCrossBowValue(0.125f, 1.2f, 1, 6)
+            .SetCrossBowValue(0.125f, 1.2f, 1, 8)
             .CustomCreateWeapon(Weapon =>
             {
                 List<WeaponAddon> Addons = [];
@@ -2496,6 +2518,8 @@ namespace SPMod.ModContent
                     Staff.secondSpecialAttackEnhancedFireData = WindStaff_Special_Enhanced.Data;
                 }
 
+                UseNativeStaffSprite(Weapon);
+
                 List<WeaponAddon> Addons = [];
                 WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
                 Effect.parent = Weapon;
@@ -2550,6 +2574,51 @@ namespace SPMod.ModContent
                 Effect2.parent = Weapon;
                 Effect2.debuffPrefab = WindErosion.Prefab;
                 Effect2.effectText = new LocalizedString("ModWeapon_Oars_Effect");
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("WindPivot", WeaponIDs.WindPivot, WeaponIDs.StaffOfEmbers)
+            .SetEnhanceFrom(WeaponIDs.WindStaff)
+            .SetSprite("StaffFire_Tier2", "ModWeapon_WindPivot", "Weapon")
+            .SetSprite("StaffFire_Tier2_In", "ModWeapon_WindPivot_1", "Weapon")
+            .SetBasicAttacks(WindStaff_Basic.ToArray())
+            .SetSpecialAttack(0, WindStaff_Special)
+            .SetDashAttack(0, WindStaff_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                if (Weapon is WeaponSimple_QuartterStaff Staff)
+                {
+                    Staff.secondSpecialAttackFireData = WindStaff_Special_Base.Data;
+                    Staff.secondSpecialAttackEnhancedFireData = WindStaff_Special_Enhanced.Data;
+                    Staff.attackWeightPerSwing = 0.45f;
+                }
+                UseNativeStaffSprite(Weapon);
+
+                List<WeaponAddon> Addons = [];
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.status =
+                [
+                    new() {
+                        statId = TextFile.WindSwordCount,
+                        value = 1,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                    new() {
+                        statId = TextFile.WindPivotEffect,
+                        value = 1,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    }
+                ];
+                Effect.effectText = new LocalizedString("ModWeapon_WindStaff_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddonCommon_StatusUnsafe Effect2 = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect2.parent = Weapon;
+                Effect2.effectText = new LocalizedString("ModWeapon_WindPivot_Effect");
                 Addons.Add(Effect2);
                 Weapon.addons = Addons.ToArray();
             }),

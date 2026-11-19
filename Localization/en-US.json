@@ -100,7 +100,7 @@
   "IcicleSword": "{+20%}<tag=FreezeDamage>\nTrigger <tag=ModWeaponEffect_IcicleSword> when applying <tag=Frostbite> or <tag=Freeze>",
   "GreatswordOfExorcism": "{+1%}<tag=Stat_FinalAttackSpeed> per 1% <tag=ChargingCharmBonus>\n<tag=Artifact><tag=ITEM:1014> effect is changed to <tag=ModWeaponEffect_GreatswordOfExorcism>",
   "RedSnakeCrush": "<tag=Artifact><tag=ITEM:1032> effect modified:\nReduces cooldown by 2.5s per <tag=Weapon> attack\nEach <tag=Burn> stack additionally grants {+20%} damage\nAffected by <tag=Burn><tag=Stat_Reinforce>",
-  "SolisCineris": "{+36%}<tag=FlameSword><tag=CriticalDamageRate>\n<tag=WeaponAction_BasicAttack> makes <tag=FlameSword> automatically attack 3 times",
+  "SolisCineris": "Increases <tag=WeaponRange> by 30%\n<tag=Weapon> attacks trigger 3 extra <tag=FlameSword>\n<tag=WeaponAction_SpecialAttack> is changed to <tag=ModWeaponEffect_SolisCineris>\nCharging gradually restores <tag=FlameSword> to maximum",
   "TroublingDelight": "<tag=WeaponAction_DirectAttack> is replaced by <tag=WeaponAction_Laser>\nDamage: 150% <tag=HighestElementalDamage>\nElement: <tag=Elemental_Chaos>",
   "PristineForm": "<tag=WeaponAction_BasicAttack> is replaced by <tag=ModWeaponEffect_PristineForm>\nFires an extra <tag=ModWeaponEffect_PristineForm> beam during planetary attacks\nAll planets fire simultaneously every 6 attacks",
   "LegacyoftheIllusionist": "Triggers <tag=ModWeaponEffect_LegacyoftheIllusionist> when casting <tag=Magic>\nEnhancements to <tag=Magic> also apply to this effect",
@@ -175,7 +175,7 @@
   "RapidFreezeCrystal": "<tag=Buff_FrostVeil> is replaced by <tag=Buff_FrostVeil_FrostRelic>\nGain the following enhancements during the effect:\n{-20%} damage dealt by <tag=WeaponAction_BasicAttack>\n<tag=WeaponAction_BasicAttack> consumes no ammo\nAttacks activate <tag=Artifact><tag=ITEM:1247> at 50% damage",
   "ExpansionDevice": "While <tag=Buff_FrostVeil> is active:\n{-50%}<tag=Stat_FinalAttackSpeed>\n<tag=WeaponAction_BasicAttack> fires powerful ice spikes (100%<tag=IceDamage>)\nPierces enemies and applies <tag=Frostbite> on hit\nAlso scatters 4 ice shards (50%<tag=IceDamage>)\nThe above effects are enhanced by <tag=Freeze><tag=Stat_Reinforce>",
   "RapidFireDevice": "{+20%}<tag=Weapon> <tag=AttackSpeed>\nWhen <tag=CrossbowAmmo> is not 0, <tag=WeaponAction_SpecialAttack> consumes ammo and 1<tag=MP>\n{+15%}<tag=WeaponAction_SpecialAttack> damage per ammo consumed",
-  "RadiantDial": "<tag=WeaponAction_SpecialAttack> is replaced by <tag=WeaponAction_FullBloom> (4<tag=MP>)\nConsumes <tag=LightArrow> to fire",
+  "RadiantDial": "<tag=WeaponAction_SpecialAttack> is replaced by <tag=WeaponAction_FullBloom> (3<tag=MP>)\nConsumes <tag=LightArrow> to fire",
   "RadiantDial_Effect": "Charges on <tag=WeaponAction_BasicAttack> or planetary attacks\nCan hold up to 10",
   "RadiantDial_Effect2": "Fires <tag=LightArrow> to attack enemies\nDamage: 60%<tag=HighestElementalDamage>\nElement: <tag=Elemental_Chaos>\nPlanetary <tag=Artifact> in your inventory:\n{+1%} damage multiplier per 4 points of damage",
 
@@ -329,6 +329,8 @@
   "ModKeyword_ModWeaponEffect_GaleQuell_Effect": "No longer attacks passively; requires energy\nGains 20% energy when a <tag=WeaponAction_BasicAttack> hits\nDamage: 120% of <tag=WindSword> damage\n+50% damage per 1 extra <tag=WindSword> count\n<tag=Stat_WindSwordSpeed> becomes charge efficiency\nThis effect counts as a final hit\nEnhanced by <tag=WeaponAction_BasicAttack> <tag=Stat_Reinforce>",
   "ModKeyword_ModWeaponEffect_KeenEyedRapier": "Rhythm Combo",
   "ModKeyword_ModWeaponEffect_KeenEyedRapier_Effect": "Left-click to unleash an empowered <tag=WeaponAction_DashAttack>\nDamage: 300% <tag=HighestElementalDamage>\nElement: <tag=Elemental_Chaos>\nDashes while attacking and gains invincibility\nApplies <tag=Debuff_WeakPointSpotted> on hit\nIf <tag=Debuff_Exposed> is triggered, the empowered state is maintained",
+  "ModKeyword_ModWeaponEffect_SolisCineris": "<tag=WeaponAction_DashAttack>: Flame Spear",
+  "ModKeyword_ModWeaponEffect_SolisCineris_Effect": "Consumes all <tag=FlameSword> (excluding the base portion)\nPerforms a powerful <tag=FlameSword> attack\nDamage: 200% <tag=FireDamage>\n{+50%} damage multiplier per sword consumed\nThis effect is affected by <tag=FlameSword><tag=Stat_Reinforce>",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff": "Ring of Flame",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff_Effect": "Deals 18%<tag=FireDamage> every 0.5 seconds\nThis effect is enhanced by <tag=Burn><tag=Stat_Reinforce>",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff2": "Intense Combustion",
@@ -516,6 +518,8 @@
   "ModWeapon_WindStaff_Effect": "Reduces <tag=Weapon> damage by 20%, now based on <tag=WindDamage>",
   "ModWeapon_Oars": "Oars of the Empty Boat",
   "ModWeapon_Oars_Effect": "Increases <tag=WeaponRange> by 30%\n<tag=Weapon> attacks have a {PERCENT} chance to apply <tag=WindErosion>\nChance increases by {ADDPERCENT} when <tag=WindErosion> stacks are not full\n<tag=Artifact> Wind Sail gains the following enhancements\nDeals an additional 80<tag=WindDamage>\nBase multiplier of the effect increases by 30%",
+  "ModWeapon_WindPivot": "Windpivot",
+  "ModWeapon_WindPivot_Effect": "Increases <tag=Stat_WindSwordCount> by 1\nIncreases <tag=Stat_AttackWeight> by 150%\nWhen a <tag=WeaponAction_SpecialAttack> hits:\n<tag=Artifact> Magic Crystal gains 1 extra charge",
 
   "ModUnit_WindJelly": "Breeze Jellyfish",
 

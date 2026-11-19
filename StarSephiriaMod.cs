@@ -1043,7 +1043,17 @@ namespace SPMod
                 });//驱魔的重剑
                 WeaponDatabase.Modify(WeaponIDs.LegacyofTheIllusionist, Weapon => Weapon.SetAddonStat(TextFile.CooldownRecoverySpeed, 0));//幻术师的遗产
                 WeaponDatabase.Modify(WeaponIDs.RedSnakeCrush, Weapon => Weapon.SetAddonStat(TextFile.RedSnakeEyeDamageBonus, 0));//红蛇碎击
-                WeaponDatabase.Modify(WeaponIDs.SolisCineris, Weapon => Weapon.SetAddonStat(TextFile.FlameSwordAdditionalAttackFromWeapon, 0));//索利斯·西涅里斯
+                WeaponDatabase.Modify(WeaponIDs.SolisCineris, Weapon =>
+                {
+                    Weapon.SetSimple(Action =>
+                    {
+                        if (Action is WeaponSimple_GreatSword GreatSword)
+                            GreatSword.sweepTimer.time = 0.5f;
+                    });
+                    Weapon.SetAddonStat(TextFile.WeaponRange, 30);
+                    Weapon.SetAddonStat(TextFile.FlameSwordAdditionalAttackFromWeapon, 3);
+                    Weapon.SetAddonStat(TextFile.FlameSwordCriticalDamageRate, 0);
+                });//索利斯·西涅里斯
                 WeaponDatabase.Modify(WeaponIDs.TroublingDelight, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//不便的喜悦
                 WeaponDatabase.Modify(WeaponIDs.LegacyofTheIllusionist, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//幻术师的遗产
                 WeaponDatabase.Modify(WeaponIDs.Lazarion, Weapon => Weapon.SetSimple(Action => Action.attackWeightPerSwing = 0.22f));//拉扎里恩
@@ -1324,6 +1334,8 @@ namespace SPMod
                     Data.CreateWeapon();
                 _ = WindDagger_Vortex.Data;
                 _ = WindGreatSword_Tornado.Data;
+                _ = SolisCinerisSpear.Data;
+                _ = SolisCinerisSpearUpgrade.Data;
             }
             Skin.GetAddAllModSkin();
         }
@@ -2699,11 +2711,11 @@ namespace SPMod
                 int Count = DungeonPatchs.NumberofReincarnations;
                 if (ID.EqualsAny(TextFile.HealingPenalty))
                 {
-                    Result = 100 - (100 - Result).IntMult(Mathf.Pow(0.8f, Count));
+                    Result = 100 - (100 - Result).IntMult(1f - Count * 0.1f);
                 }
                 if (ID.EqualsAny(TextFile.EXPDrop, TextFile.MoneyDrop))
                 {
-                    Result = Result.IntMult(Mathf.Pow(0.8f, Count));
+                    Result = Result.IntMult(1f - Count * 0.1f);
                 }
             }
 

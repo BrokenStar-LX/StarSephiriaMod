@@ -100,7 +100,7 @@
   "IcicleSword": "{+20%}<tag=FreezeDamage>\n<tag=Frostbite> 또는 <tag=Freeze> 부여 시 <tag=ModWeaponEffect_IcicleSword>가 발동합니다.",
   "GreatswordOfExorcism": "<tag=ChargingCharmBonus> 1%당 <tag=Stat_FinalAttackSpeed>가{+1%}씩 상승하고\n<tag=Artifact> <tag=ITEM:1014>의 효과가 <tag=ModWeaponEffect_GreatswordOfExorcism>로 변경됩니다.",
   "RedSnakeCrush": "<tag=Artifact> <tag=ITEM:1032> 효과 변경:\n<tag=Weapon> 공격 1회마다 재사용 대기시간 2.5초 감소\n<tag=Burn> 중첩당 {+20%} 피해량 추가\n<tag=Burn><tag=Stat_Reinforce>의 영향을 받음",
-  "SolisCineris": "<tag=FlameSword>의 <tag=CriticalDamageRate>가{+36%}증가합니다.\n<tag=WeaponAction_BasicAttack> 시 <tag=FlameSword>이 자동으로 대상을 3회 공격합니다.",
+  "SolisCineris": "<tag=WeaponRange> 30% 증가\n<tag=Weapon> 공격 시 <tag=FlameSword> 추가 3회 발동\n<tag=WeaponAction_SpecialAttack>이(가) <tag=ModWeaponEffect_SolisCineris>(으)로 변경\n차지 중 <tag=FlameSword>이(가) 점차 최대까지 회복",
   "TroublingDelight": "<tag=WeaponAction_DirectAttack>이 <tag=WeaponAction_Laser>로 변경됩니다.\n피해량: 150% <tag=HighestElementalDamage>\n속성: <tag=Elemental_Chaos>",
   "PristineForm": "<tag=WeaponAction_BasicAttack>이 <tag=ModWeaponEffect_PristineForm>으로 변경됩니다.\n행성 공격 시 <tag=ModWeaponEffect_PristineForm>를 추가로 1회 발사하고\n공격 6회마다 모든 행성이 일제히 발사합니다.",
   "LegacyoftheIllusionist": "<tag=Magic> 사용 시 <tag=ModWeaponEffect_LegacyoftheIllusionist> 발동\n<tag=Magic>가 받는 강화 효과가 이 효과에도 적용됩니다.",
@@ -175,7 +175,7 @@
   "RapidFreezeCrystal": "<tag=Buff_FrostVeil>가 <tag=Buff_FrostVeil_FrostRelic>로 변경됩니다.\n효과 지속 중 다음 강화 효과를 얻습니다:\n<tag=WeaponAction_BasicAttack>이 가하는 피해{-20%}\n<tag=WeaponAction_BasicAttack>은 탄약을 소모하지 않음\n공격 시 50% 피해량으로 <tag=Artifact><tag=ITEM:1247>을 발동",
   "ExpansionDevice": "<tag=Buff_FrostVeil> 효과 보유 시:\n{-50%}<tag=Stat_FinalAttackSpeed>\n<tag=WeaponAction_BasicAttack>으로 강력한 얼음창을 발사(100%<tag=IceDamage>)\n적을 관통하며 적중 시 <tag=Frostbite> 부여\n동시에 얼음 파편 4발을 산개(50%<tag=IceDamage>)\n위 효과는 <tag=Freeze><tag=Stat_Reinforce>의 영향을 받습니다",
   "RapidFireDevice": "<tag=Weapon>의 <tag=AttackSpeed> {+20%}\n<tag=CrossbowAmmo>가 0이 아닐 때 <tag=WeaponAction_SpecialAttack>은 탄약과 1<tag=MP>을 소모\n탄약 1개 소모 시마다 <tag=WeaponAction_SpecialAttack>의 피해 {+15%}",
-  "RadiantDial": "<tag=WeaponAction_SpecialAttack>이 <tag=WeaponAction_FullBloom>으로 변경됩니다. (소모 4 <tag=MP>)\n발사하려면 <tag=LightArrow>를 소모해야 합니다",
+  "RadiantDial": "<tag=WeaponAction_SpecialAttack>이 <tag=WeaponAction_FullBloom>으로 변경됩니다. (소모 3 <tag=MP>)\n발사하려면 <tag=LightArrow>를 소모해야 합니다",
   "RadiantDial_Effect": "<tag=WeaponAction_BasicAttack> 또는 행성 공격 시 충전\n최대 10개까지 충전",
   "RadiantDial_Effect2": "<tag=LightArrow>를 발사해 적을 공격\n피해: 60%<tag=HighestElementalDamage>\n속성: <tag=Elemental_Chaos>\n인벤토리에 있는 행성 <tag=Artifact>:\n피해 4포인트당 {+1%} 피해 배율",
 
@@ -329,6 +329,8 @@
   "ModKeyword_ModWeaponEffect_GaleQuell_Effect": "더 이상 자동 공격하지 않으며, 에너지를 소모합니다\n<tag=WeaponAction_BasicAttack> 명중 시 에너지 20% 충전\n피해: <tag=WindSword> 피해의 120%\n<tag=WindSword> 추가 수량 1당 피해 50% 증가\n<tag=Stat_WindSwordSpeed>가 충전 효율로 변경됩니다\n이 효과는 마지막 일격으로 판정됩니다\n<tag=WeaponAction_BasicAttack><tag=Stat_Reinforce>의 영향을 받습니다",
   "ModKeyword_ModWeaponEffect_KeenEyedRapier": "리듬 콤보",
   "ModKeyword_ModWeaponEffect_KeenEyedRapier_Effect": "좌클릭으로 강화 <tag=WeaponAction_DashAttack> 발동\n피해: 300%<tag=HighestElementalDamage>\n속성: <tag=Elemental_Chaos>\n공격 중 이동하며 무적 시간 획득\n이 효과 적중 시 <tag=Debuff_WeakPointSpotted> 부여\n<tag=Debuff_Exposed>가 발동하면 강화 상태 유지",
+  "ModKeyword_ModWeaponEffect_SolisCineris": "<tag=WeaponAction_DashAttack>: 염창",
+  "ModKeyword_ModWeaponEffect_SolisCineris_Effect": "모든 <tag=FlameSword> 소모 (기본 부분 제외)\n강력한 <tag=FlameSword> 공격 시전\n피해: 200%<tag=FireDamage>\n1자루 소모마다 피해 배율 {+50%}\n이 효과는 <tag=FlameSword><tag=Stat_Reinforce>의 영향을 받음",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff": "불의 고리",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff_Effect": "0.5초마다 18%<tag=FireDamage> 피해\n이 효과는 <tag=Burn><tag=Stat_Reinforce>를 적용받습니다.",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff2": "연소 가속",
@@ -516,6 +518,8 @@
   "ModWeapon_WindStaff_Effect": "<tag=Weapon> 피해 20% 감소, 이제 <tag=WindDamage> 기반",
   "ModWeapon_Oars": "빈 배의 노",
   "ModWeapon_Oars_Effect": "<tag=WeaponRange> 30% 증가\n<tag=Weapon> 공격 시 {PERCENT} 확률로 <tag=WindErosion> 부여\n<tag=WindErosion> 중첩이 최대가 아닐 때 확률 {ADDPERCENT} 증가\n<tag=Artifact> 바람돛 강화:\n추가로 80<tag=WindDamage> 피해\n효과의 기본 배율 30% 증가",
+  "ModWeapon_WindPivot": "바람의 축",
+  "ModWeapon_WindPivot_Effect": "<tag=Stat_WindSwordCount> 1 증가\n<tag=Stat_AttackWeight> 150% 증가\n<tag=WeaponAction_SpecialAttack> 명중 시:\n<tag=Artifact> 마정 추가 충전 1회",
 
   "ModUnit_WindJelly": "산들바람 해파리",
 

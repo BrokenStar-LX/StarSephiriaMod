@@ -50,6 +50,7 @@ namespace SPMod.ModContent
             TriggerCooldown.SetTimer(TriggerCooldown.time);
             HudTimer = 0f;
             NetworkAvatar.OnAttackUnit += OnAttackUnitEvent;
+            if (WeaponController != null) WeaponController.OnSpecialAttack += OnSpecialAttackHit;
             UpdateHud();
         }
 
@@ -58,6 +59,7 @@ namespace SPMod.ModContent
             base.OnDisabledEffect();
             if (NetworkAvatar == null) return;
             NetworkAvatar.OnAttackUnit -= OnAttackUnitEvent;
+            if (WeaponController != null) WeaponController.OnSpecialAttack -= OnSpecialAttackHit;
             Cooldown.SetTimer(Cooldown.time);
             HudTimer = 0f;
         }
@@ -109,6 +111,19 @@ namespace SPMod.ModContent
             Cooldown.time = GetCooldownTime();
             Cooldown.SetTimer(0f);
             HudTimer = 0f;
+            UpdateHud();
+        }
+
+        /// <summary>风枢（WindPivotEffect）：特殊攻击命中时，万象魔晶额外充能1次（追加一次冷却缩减）。</summary>
+        private void OnSpecialAttackHit(CombatBehaviour victim, DamageInstance damage, ProjectileBase projectile)
+        {
+            if (!IsEffectEnabled || NetworkAvatar == null) return;
+            if (NetworkAvatar.GetCustomStatUnsafe(TextFile.WindPivotEffect) <= 0) return;
+            if (Cooldown.Ratio >= 1f) return;
+            float Weight = this.GetWeaponWeight();
+            if (Weight <= 0f) return;
+            float Reduce = CooldownReduceByLevel.SafeRandomAccess(CurrentLevelToIdx()) * Weight * 0.01f;
+            Cooldown.SetTimer(Mathf.Min(Cooldown.time, Cooldown.GetTimer() + Cooldown.time * Reduce));
             UpdateHud();
         }
 

@@ -1113,13 +1113,13 @@ namespace SPMod
                 if (!ModConfig.Instance.ModifyCharm) return;
                 if (__instance.NetworkAvatar == null) return;
                 if (AttackHandlers.TryGetValue(__instance, out Action<UnitAvatar, DamageInstance> Old))
-                    __instance.NetworkAvatar.OnAttackUnit -= Old;
+                    __instance.NetworkAvatar.OnAttackUnitBeforeOperation -= Old;
                 void Handler(UnitAvatar Target, DamageInstance Damage)
                 {
                     OnAttackHit(__instance, Target, Damage);
                 }
                 AttackHandlers[__instance] = Handler;
-                __instance.NetworkAvatar.OnAttackUnit += Handler;
+                __instance.NetworkAvatar.OnAttackUnitBeforeOperation += Handler;
             }
 
             [HarmonyPatch("OnDisabledEffect")]
@@ -1129,7 +1129,7 @@ namespace SPMod
                 NextTriggerTime.SafeRemove(__instance);
                 if (!AttackHandlers.TryGetValue(__instance, out Action<UnitAvatar, DamageInstance> Handler)) return;
                 if (__instance.NetworkAvatar != null)
-                    __instance.NetworkAvatar.OnAttackUnit -= Handler;
+                    __instance.NetworkAvatar.OnAttackUnitBeforeOperation -= Handler;
                 AttackHandlers.SafeRemove(__instance);
             }
 
@@ -1156,9 +1156,10 @@ namespace SPMod
                 if (Index < 0 || Index >= Charm.fireData.Length) return;
 
                 Vector2 Pos = (Vector2)Player.transform.position + Dir * Charm.attackCreateRadius;
-                float Mult = 0.3f + Damage.damage / Player.GetCustomStatUnsafe(TextFile.PhysicalDamage) * 0.2f;
+                float Mult = 0.45f + Damage.damage / Player.GetCustomStatUnsafe(TextFile.PhysicalDamage) * 0.3f;
                 float Dam = Charm_Basic.CalculateDamage(Charm) * Mult;
-                Dam /= 1f + Player.GetCustomStatUnsafe(TextFile.MeleeDamage) * 0.01f;
+                if (Charm.fireData[Index] is NewWeaponFireData_MeleeAttack)
+                    Dam /= 1f + Player.GetCustomStatUnsafe(TextFile.MeleeDamage) * 0.01f;
                 Dam /= 1f + Player.GetCustomStatUnsafe(TextFile.DirectWeaponDamage) * 0.01f;
                 Charm.fireData[Index].CreateAttack(EDamageFromType.None, Dam, Charm.damageId, true, Player, Pos, Pos + Vector2.up * 0.1f, 0f, null, null, 1f, null, false, 0f, 1f, 0, null);
             }

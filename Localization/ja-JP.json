@@ -100,7 +100,7 @@
   "IcicleSword": "{+20%}<tag=FreezeDamage>\n<tag=Frostbite>または<tag=Freeze>を付与した時に<tag=ModWeaponEffect_IcicleSword>を発動",
   "GreatswordOfExorcism": "<tag=ChargingCharmBonus>1%ごとに<tag=Stat_FinalAttackSpeed>{+1%}\n<tag=Artifact><tag=ITEM:1014>の効果が<tag=ModWeaponEffect_GreatswordOfExorcism>に変更",
   "RedSnakeCrush": "<tag=Artifact><tag=ITEM:1032>の効果を変更：\n<tag=Weapon>攻撃ごとにクールダウンを2.5秒短縮\n<tag=Burn>スタックごとに追加で{+20%}のダメージ\n<tag=Burn>の<tag=Stat_Reinforce>の影響を受ける",
-  "SolisCineris": "{+36%}<tag=FlameSword>の<tag=CriticalDamageRate>\n<tag=WeaponAction_BasicAttack>時に<tag=FlameSword>が自動で3回攻撃",
+  "SolisCineris": "<tag=WeaponRange>が30%増加\n<tag=Weapon>攻撃時に<tag=FlameSword>を追加で3回発動\n<tag=WeaponAction_SpecialAttack>が<tag=ModWeaponEffect_SolisCineris>に変更\nチャージ中、<tag=FlameSword>が徐々に最大まで回復",
   "TroublingDelight": "<tag=WeaponAction_DirectAttack>が<tag=WeaponAction_Laser>に置き換わる\nダメージ：150%<tag=HighestElementalDamage>\n属性：<tag=Elemental_Chaos>",
   "PristineForm": "<tag=WeaponAction_BasicAttack>が<tag=ModWeaponEffect_PristineForm>に置き換わる\n惑星攻撃時に追加で<tag=ModWeaponEffect_PristineForm>ビームを発射\n6回攻撃ごとに全ての惑星が同時に発射",
   "LegacyoftheIllusionist": "<tag=Magic>詠唱時に<tag=ModWeaponEffect_LegacyoftheIllusionist>を発動\n<tag=Magic>への強化はこの効果にも適用される",
@@ -175,7 +175,7 @@
   "RapidFreezeCrystal": "<tag=Buff_FrostVeil>が<tag=Buff_FrostVeil_FrostRelic>に置き換わる\n効果中に以下の強化を獲得：\n<tag=WeaponAction_BasicAttack>の与ダメージ{-20%}\n<tag=WeaponAction_BasicAttack>が弾薬を消費しない\n攻撃時に<tag=Artifact><tag=ITEM:1247>を50%のダメージで発動",
   "ExpansionDevice": "<tag=Buff_FrostVeil>の効果所持中：\n{-50%}<tag=Stat_FinalAttackSpeed>\n<tag=WeaponAction_BasicAttack>が強力な氷の棘を発射（100%<tag=IceDamage>）\n敵を貫通し、命中時に<tag=Frostbite>を付与\n同時に氷の破片を4つ散らす（50%<tag=IceDamage>）\n以上の効果は<tag=Freeze><tag=Stat_Reinforce>の影響を受ける",
   "RapidFireDevice": "{+20%}<tag=Weapon>の<tag=AttackSpeed>\n<tag=CrossbowAmmo>が0でない時、<tag=WeaponAction_SpecialAttack>が弾薬と<tag=MP>1を消費\n消費した弾薬1発ごとに<tag=WeaponAction_SpecialAttack>ダメージ{+15%}",
-  "RadiantDial": "<tag=WeaponAction_SpecialAttack>が<tag=WeaponAction_FullBloom>に置き換わる（<tag=MP>4）\n発射には<tag=LightArrow>を消費する必要がある",
+  "RadiantDial": "<tag=WeaponAction_SpecialAttack>が<tag=WeaponAction_FullBloom>に置き換わる（<tag=MP>3）\n発射には<tag=LightArrow>を消費する必要がある",
   "RadiantDial_Effect": "<tag=WeaponAction_BasicAttack>または惑星攻撃時にチャージ\n最大10個までチャージ",
   "RadiantDial_Effect2": "<tag=LightArrow>を発射して敵を攻撃\nダメージ：60%<tag=HighestElementalDamage>\n属性：<tag=Elemental_Chaos>\nバッグ内の惑星<tag=Artifact>：\nダメージ4ポイントごとに{+1%}ダメージ倍率",
 
@@ -329,6 +329,8 @@
   "ModKeyword_ModWeaponEffect_GaleQuell_Effect": "パッシブ攻撃を行わず、エネルギーを消費する\n<tag=WeaponAction_BasicAttack>命中時にエネルギーを20%蓄積\nダメージ：120%<tag=WindSword>のダメージ\n<tag=WindSword>の追加数1ごとにダメージ+50%\n<tag=Stat_WindSwordSpeed>がチャージ効率に変化\nこの効果は最後の一撃として扱われる\n<tag=WeaponAction_BasicAttack>の<tag=Stat_Reinforce>を受ける",
   "ModKeyword_ModWeaponEffect_KeenEyedRapier": "リズムコンボ",
   "ModKeyword_ModWeaponEffect_KeenEyedRapier_Effect": "左クリックで強化<tag=WeaponAction_DashAttack>を発動\nダメージ：300%<tag=HighestElementalDamage>\n属性：<tag=Elemental_Chaos>\n攻撃中に移動し、無敵時間を獲得\nこの効果が命中した時<tag=Debuff_WeakPointSpotted>を付与\n<tag=Debuff_Exposed>が発動した場合、強化状態を維持",
+  "ModKeyword_ModWeaponEffect_SolisCineris": "<tag=WeaponAction_DashAttack>：炎槍",
+  "ModKeyword_ModWeaponEffect_SolisCineris_Effect": "全ての<tag=FlameSword>を消費（基本分を除く）\n強力な<tag=FlameSword>攻撃を行う\nダメージ：200%<tag=FireDamage>\n1本消費ごとに{+50%}ダメージ倍率\nこの効果は<tag=FlameSword><tag=Stat_Reinforce>の影響を受ける",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff": "炎の輪",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff_Effect": "0.5秒ごとに18%<tag=FireDamage>を与える\nこの効果は<tag=Burn><tag=Stat_Reinforce>で強化される",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff2": "強燃焼",
@@ -516,6 +518,8 @@
   "ModWeapon_WindStaff_Effect": "<tag=Weapon>のダメージが20%減少し、<tag=WindDamage>を基準に変更",
   "ModWeapon_Oars": "空舟の櫂",
   "ModWeapon_Oars_Effect": "<tag=WeaponRange>が30%増加\n<tag=Weapon>攻撃が{PERCENT}の確率で<tag=WindErosion>を付与\n<tag=WindErosion>スタックが最大でない時、確率が{ADDPERCENT}増加\n<tag=Artifact>ウィンドセイルが以下の強化を獲得\n追加で80<tag=WindDamage>を与える\n効果の基本倍率が30%増加",
+  "ModWeapon_WindPivot": "ウィンドピボット",
+  "ModWeapon_WindPivot_Effect": "<tag=Stat_WindSwordCount>が1増加\n<tag=Stat_AttackWeight>が150%増加\n<tag=WeaponAction_SpecialAttack>命中時：\n<tag=Artifact>魔晶が追加で1回チャージ",
 
   "ModUnit_WindJelly": "そよ風クラゲ",
 

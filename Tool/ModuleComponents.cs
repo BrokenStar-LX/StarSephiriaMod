@@ -2087,7 +2087,7 @@ namespace SPMod.Tool
 
             /// <summary>
             /// 近战（NewWeaponFireData_MeleeAttack）专用换皮：按顺序把文件夹里的图替换到原 FX 帧上。
-            /// 原帧名需以 originalPrefix 开头（例如 GreatSword0_TurnSwing_Fire_Minor）。
+            /// originalPrefix 为空时匹配所有原帧；否则原帧名需以该前缀开头。
             /// extendFrames 为 true 时，多出来的图会追加到动画末尾；swingScale 缩放整个 FX prefab；
             /// collisionScale 缩放伤害体 MeleeCollision 的判定范围。
             /// 会同时处理 FireData 自己的 swingFxPrefab 和伤害体 MeleeCollision 的 swingFxPrefab。
@@ -2096,7 +2096,7 @@ namespace SPMod.Tool
             {
                 Builders.Add(Data =>
                 {
-                    if (Data is not NewWeaponFireData_MeleeAttack Melee || string.IsNullOrEmpty(originalPrefix))
+                    if (Data is not NewWeaponFireData_MeleeAttack Melee)
                     {
                         StarSephiriaMod.LogError("[ModFireData] SetMeleeSwingSpriteFolder 只支持 NewWeaponFireData_MeleeAttack");
                         return;
@@ -2545,7 +2545,8 @@ namespace SPMod.Tool
 
             private static bool FxHasFramesWithPrefix(GameObject? Fx, string Prefix)
             {
-                if (Fx == null || string.IsNullOrEmpty(Prefix)) return false;
+                if (Fx == null) return false;
+                if (string.IsNullOrEmpty(Prefix)) return true;
 
                 foreach (SimpleAnimator2D Animator in Fx.GetComponentsInChildren<SimpleAnimator2D>(true))
                 {
@@ -2587,7 +2588,7 @@ namespace SPMod.Tool
 
             private GameObject? ReskinFxByOrder(GameObject? SourceFx, List<Sprite> Ordered, string Prefix, bool ExtendFrames, float Scale)
             {
-                if (SourceFx == null || Ordered.Count == 0 || string.IsNullOrEmpty(Prefix)) return null;
+                if (SourceFx == null || Ordered.Count == 0) return null;
                 if (!FxHasFramesWithPrefix(SourceFx, Prefix)) return null;
 
                 GameObject Fx = CloneInactive(SourceFx);
@@ -3247,10 +3248,19 @@ namespace SPMod.Tool
                 if (SpritePivotCache.TryGetValue((Origin, Replacement), out Sprite? Cached) && Cached != null)
                     return Cached;
 
-                Vector2 Pivot = new(
-                    Origin.pivot.x / Origin.rect.width,
-                    Origin.pivot.y / Origin.rect.height);
-                Sprite Fixed = Sprite.Create(Replacement.texture, Replacement.rect, Pivot, Origin.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+                Vector2 Pivot = new(Origin.pivot.x / Origin.rect.width, Origin.pivot.y / Origin.rect.height);
+
+                Vector4 Border = Origin.border;
+                if (Origin.rect.width > 0f && Origin.rect.height > 0f)
+                {
+                    float ScaleX = Replacement.rect.width / Origin.rect.width;
+                    float ScaleY = Replacement.rect.height / Origin.rect.height;
+                    Border = new Vector4(Border.x * ScaleX, Border.y * ScaleY, Border.z * ScaleX, Border.w * ScaleY);
+                }
+                if (Border.x + Border.z >= Replacement.rect.width) Border = new Vector4(0f, Border.y, 0f, Border.w);
+                if (Border.y + Border.w >= Replacement.rect.height) Border = new Vector4(Border.x, 0f, Border.z, 0f);
+
+                Sprite Fixed = Sprite.Create(Replacement.texture, Replacement.rect, Pivot, Origin.pixelsPerUnit, 0, SpriteMeshType.FullRect, Border);
                 Fixed.name = Replacement.name;
                 SpritePivotCache[(Origin, Replacement)] = Fixed;
                 return Fixed;

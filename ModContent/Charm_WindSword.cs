@@ -659,6 +659,7 @@ namespace SPMod.ModContent
         private void DealRagingTideDamage(UnitAvatar Enemy, Vector2 Dir, float Damage, float CritChance)
         {
             if (NetworkAvatar == null || Enemy == null || Enemy.IsDead) return;
+
             DamageInstance Dam = DamageInstance.GetDamage(NetworkAvatar, DamageId, Enemy.transform.position, 4294967295L, Damage,
                 EDamageType.Slice, EDamageFromType.DirectAttack, Dir, 0, 0f);
             Dam.elementalType = EffectConstant.Wind;
@@ -789,7 +790,7 @@ namespace SPMod.ModContent
             if (NetworkAvatar == null || Enemy == null || Enemy.IsDead) return;
             DamageInstance Dam = DamageInstance.GetDamage(NetworkAvatar, DamageId, Enemy.transform.position, 4294967295L, Damage, EDamageType.Slice, EDamageFromType.None, Dir, 0, 0f);
             Dam.elementalType = EffectConstant.Wind;
-            Dam.criticalDamageRate += Enemy.GetCustomStatUnsafe(TextFile.WindSwordCritDamage);
+            Dam.criticalDamageRate += NetworkAvatar.GetCustomStatUnsafe(TextFile.WindSwordCritDamage);
             Dam.flag = DamageId;
             Enemy.ApplyDamage(Dam);
         }

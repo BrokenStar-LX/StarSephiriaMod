@@ -93,6 +93,7 @@ namespace SPMod
             public static FieldInfo guardStartTimerField = AccessTools.Field(typeof(UnitAvatar), "guardStartTimer");
             public static FieldInfo perfectGuardLatencyBonusField = AccessTools.Field(typeof(UnitAvatar), "perfectGuardLatencyBonus");
             private static readonly FieldInfo requestUpdateHighestElementalBonusField = AccessTools.Field(typeof(UnitAvatar), "requestUpdateHighestElementalBonus");
+            private static UnitAvatar? HandledQQQBoss = null;
 
             private static readonly List<string> NoNpcER =
             [
@@ -881,7 +882,12 @@ namespace SPMod
                 {
                     if (ModConfig.InfiniteMode)
                     {
+                        // Die 被重复调用时 Postfix 仍会执行（IsDead 提前 return 也会走 Postfix），按 BOSS 实例去重
+                        if (HandledQQQBoss == __instance) return;
+                        HandledQQQBoss = __instance;
+
                         int ReincarnationsCount = 0;
+                        bool ReincarnationAdvanced = false;
                         foreach (PlayerSpawner PlayerList in PlayerSpawner.MultiplayerList)
                         {
                             PlayerAvatar TargetPlayer = PlayerList.PlayerAvatar;
@@ -899,16 +905,21 @@ namespace SPMod
                             if (ReincarnationsCount <= 0)
                             {
                                 ReincarnationsCount += 1;
+                                ReincarnationAdvanced = true;
                                 DungeonPatchs.NumberofReincarnations += 1;
                                 DungeonManager.Instance.Chat(TargetPlayer, "[Star's Sephiria Mod]", $"{Tools.GetLocalization("Instruction_InfiniteMode")}{DungeonPatchs.NumberofReincarnations}");
                                 DungeonPatchs.InitializationModGameData("New");
                             }
                         }
-                        DungeonManager CurrenDungeon = DungeonManager.Instance;
-                        if (CurrenDungeon != null)
+                        // 只有本次回调真正推进了轮回才重置/重载，避免重复调用把房间刷在同一个坐标
+                        if (ReincarnationAdvanced)
                         {
-                            DungeonPatchs.ResetStageData(CurrenDungeon);
-                            CurrenDungeon.LoadStageAndMove("Moleland");
+                            DungeonManager CurrenDungeon = DungeonManager.Instance;
+                            if (CurrenDungeon != null)
+                            {
+                                DungeonPatchs.ResetStageData(CurrenDungeon);
+                                CurrenDungeon.LoadStageAndMove("Moleland");
+                            }
                         }
                     }
                 }

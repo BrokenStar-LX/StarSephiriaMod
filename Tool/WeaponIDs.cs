@@ -217,6 +217,7 @@ namespace SPMod.Tool
 
         public const int WindStaff = ModWeaponId + 500;             // 拨云棍
         public const int Oars = ModWeaponId + 501;                  // 空舟船桨
+        public const int WindPivot = ModWeaponId + 502;             // 风枢
 
         public enum WeaponCategory
         {

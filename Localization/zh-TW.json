@@ -100,7 +100,7 @@
   "IcicleSword": "{+20%}<tag=FreezeDamage>\n施加<tag=Frostbite>或<tag=Freeze>時觸發<tag=ModWeaponEffect_IcicleSword>",
   "GreatswordOfExorcism": "每1%<tag=ChargingCharmBonus>{+1%}<tag=Stat_FinalAttackSpeed>\n<tag=Artifact><tag=ITEM:1014>效果改為<tag=ModWeaponEffect_GreatswordOfExorcism>",
   "RedSnakeCrush": "<tag=Artifact><tag=ITEM:1032>效果更改：\n每次<tag=Weapon>攻擊減少2.5s冷卻時間\n每層<tag=Burn>額外疊加上限{+20%}傷害\n受<tag=Burn><tag=Stat_Reinforce>",
-  "SolisCineris": "{+36%}<tag=FlameSword><tag=CriticalDamageRate>\n<tag=WeaponAction_BasicAttack>使<tag=FlameSword>自動攻擊3次",
+  "SolisCineris": "增加30%<tag=WeaponRange>\n<tag=Weapon>攻擊時額外觸發3次<tag=FlameSword>\n<tag=WeaponAction_SpecialAttack>改為<tag=ModWeaponEffect_SolisCineris>\n蓄力時會逐漸恢復<tag=FlameSword>至最大",
   "TroublingDelight": "<tag=WeaponAction_DirectAttack>改為<tag=WeaponAction_Laser>\n傷害：150%<tag=HighestElementalDamage>\n屬性：<tag=Elemental_Chaos>",
   "PristineForm": "<tag=WeaponAction_BasicAttack>改為<tag=ModWeaponEffect_PristineForm>\n行星攻擊時額外發射一道<tag=ModWeaponEffect_PristineForm>\n每攻擊6次使所有行星齊射",
   "LegacyoftheIllusionist": "使用<tag=Magic>時，觸發<tag=ModWeaponEffect_LegacyoftheIllusionist>\n觸發此效果的<tag=Magic>受到加成對此效果也生效",
@@ -175,7 +175,7 @@
   "RapidFreezeCrystal": "<tag=Buff_FrostVeil>改為<tag=Buff_FrostVeil_FrostRelic>\n效果期間獲得以下強化：\n{-20%}<tag=WeaponAction_BasicAttack>造成的傷害\n<tag=WeaponAction_BasicAttack>不消耗彈藥\n攻擊時以50%傷害啟動<tag=Artifact><tag=ITEM:1247>",
   "ExpansionDevice": "持有<tag=Buff_FrostVeil>效果時：\n{-50%}<tag=Stat_FinalAttackSpeed>\n<tag=WeaponAction_BasicAttack>發射強力冰錐(100%<tag=IceDamage>)\n穿透敵人且命中施加<tag=Frostbite>\n同時散射4枚冰晶(50%<tag=IceDamage>)\n以上效果受<tag=Freeze><tag=Stat_Reinforce>",
   "RapidFireDevice": "{+20%}<tag=Weapon>的<tag=AttackSpeed>\n<tag=CrossbowAmmo>不為0時，<tag=WeaponAction_SpecialAttack>將消耗彈藥和1<tag=MP>\n每消耗1彈藥{+15%}<tag=WeaponAction_SpecialAttack>的傷害",
-  "RadiantDial": "<tag=WeaponAction_SpecialAttack>改為<tag=WeaponAction_FullBloom>(4<tag=MP>)\n需要消耗<tag=LightArrow>進行發射",
+  "RadiantDial": "<tag=WeaponAction_SpecialAttack>改為<tag=WeaponAction_FullBloom>(3<tag=MP>)\n需要消耗<tag=LightArrow>進行發射",
   "RadiantDial_Effect": "<tag=WeaponAction_BasicAttack>或行星攻擊時進行充能\n最多充能10支",
   "RadiantDial_Effect2": "發射<tag=LightArrow>攻擊敵人\n傷害：60%<tag=HighestElementalDamage>\n屬性：<tag=Elemental_Chaos>\n玩家背包中的行星<tag=Artifact>：\n每有4點傷害{+1%}傷害倍率",
 
@@ -329,6 +329,8 @@
   "ModKeyword_ModWeaponEffect_GaleQuell_Effect": "不再進行被動攻擊，需要消耗能量\n<tag=WeaponAction_BasicAttack>命中時積蓄20%能量\n傷害：120%<tag=WindSword>的傷害\n每1<tag=WindSword>額外數量增加50%傷害\n<tag=Stat_WindSwordSpeed>改為充能效率\n此效果判定被為最後一擊\n受<tag=WeaponAction_BasicAttack><tag=Stat_Reinforce>",
   "ModKeyword_ModWeaponEffect_KeenEyedRapier": "節奏連擊",
   "ModKeyword_ModWeaponEffect_KeenEyedRapier_Effect": "單擊左鍵釋放強化<tag=WeaponAction_DashAttack>\n傷害：300%<tag=HighestElementalDamage>\n屬性：<tag=Elemental_Chaos>\n攻擊進行位移並獲得無敵時間\n此效果命中時施加<tag=Debuff_WeakPointSpotted>\n如果觸發<tag=Debuff_Exposed>則保持強化狀態",
+  "ModKeyword_ModWeaponEffect_SolisCineris": "<tag=WeaponAction_DashAttack>：炎槍",
+  "ModKeyword_ModWeaponEffect_SolisCineris_Effect": "消耗所有<tag=FlameSword>(不包括基礎部分)\n進行強力的<tag=FlameSword>攻擊\n傷害：200%<tag=FireDamage>\n每消耗1把{+50%}傷害倍率\n此效果受<tag=FlameSword><tag=Stat_Reinforce>",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff": "火焰之環",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff_Effect": "每0.5秒造成18%<tag=FireDamage>\n此效果受<tag=Burn><tag=Stat_Reinforce>",
   "ModKeyword_ModWeaponEffect_FiaolasJudgmentStaff2": "劇烈燃燒",
@@ -516,6 +518,8 @@
   "ModWeapon_WindStaff_Effect": "減少20%<tag=Weapon>的傷害，現在基於<tag=WindDamage>",
   "ModWeapon_Oars": "空舟船槳",
   "ModWeapon_Oars_Effect": "增加30%<tag=WeaponRange>\n<tag=Weapon>攻擊有{PERCENT}機率施加<tag=WindErosion>\n<tag=WindErosion>層數未滿時機率提升{ADDPERCENT}\n<tag=Artifact>風帆獲得以下強化\n額外造成80<tag=WindDamage>\n效果的基礎倍率提升30%",
+  "ModWeapon_WindPivot": "風樞",
+  "ModWeapon_WindPivot_Effect": "增加1<tag=Stat_WindSwordCount>\n增加150%<tag=Stat_AttackWeight>\n<tag=WeaponAction_SpecialAttack>命中時：\n魔晶<tag=Artifact>額外充能1次",
 
   "ModUnit_WindJelly": "和風水母",
 
