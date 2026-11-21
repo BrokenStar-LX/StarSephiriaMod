@@ -2055,7 +2055,7 @@ namespace SPMod
                 else if (__instance.GetCustomStatUnsafe(TextFile.MaxDimensionPocket) > 0)
                 {
                     List<StatusInstance> costumeStats = (List<StatusInstance>)costumeStatsField.GetValue(__instance);
-                    foreach (StatusInstance Stats in costumeStats)
+                    foreach (StatusInstance Stats in costumeStats.ToArray())
                     {
                         if (DeerStatsList.Contains(Stats))
                         {
