@@ -2205,7 +2205,7 @@ namespace SPMod
 
             [HarmonyPatch("AttackButtonDown")]
             [HarmonyPrefix]
-            static bool AttackButtonDown_Prefix(WeaponSimple_GreatSword __instance, int dashAttack)
+            static bool AttackButtonDown_Prefix(WeaponSimple_GreatSword __instance, int dashAttack, ref bool ___isAttackButtonDown)
             {
                 if (dashAttack > 0)
                 {
@@ -2215,6 +2215,7 @@ namespace SPMod
                         if (Player.parryInvincibleApplied <= 0)
                         {
                             __instance.Networkowner.CancelAction();
+                            ___isAttackButtonDown = true;
                             __instance.Networkowner.SetAnimationTrigger(AnimHashContainer.Instance.DashAttackHash);
                             int UseStack = 1;
                             if (MinimalismDashAttack.TryGetValue(Player, out int Stack) && Stack > 0)
