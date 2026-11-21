@@ -5,7 +5,7 @@ namespace SPMod.ModContent
 {
     public class Charm_EnergyStorageMagicCrystal : Charm_EnergyCrystalBase
     {
-        public int[] EnergyGainByLevel = [24, 48, 72];   // 命中获得：武器值 × 这个数值 的能量
+        public int[] EnergyGainByLevel = [20, 40, 60];   // 命中获得：武器值 × 这个数值 的能量
         public float MaxEnergy = 500f;                   // 能量上限
         public float EnergyPerDamage = 5f;               // 每 X 点能量
         public float DamagePerEnergy = 1f;               // 提高 1% 风之刃伤害（并入 Stat_WindSwordDamage）

@@ -222,6 +222,7 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_GaleQuell", true, WindColor),
             new ModKeyWord("ModWeaponEffect_KeenEyedRapier", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_SolisCineris", true, WeaponColor),
+            new ModKeyWord("ModWeaponEffect_Kusanagi", true, WeaponColor),
 
             new ModKeyWord("Stealth", true, WeaponColor),
             new ModKeyWord("WindDamage", false, WindColor).StringToSprite("Wind").CreateStatus("WIND_DAMAGE").SetDetailed("Status_EachElementalDamage_DetailedValue"),
@@ -2034,11 +2035,11 @@ namespace SPMod.ModContent
             .SetMeleeSwingSpriteFolder("Weapon.GreatSword_Tornado", "GreatSword0_TurnSwing_Fire_Minor", true, 1, 1.5f)
             .SetMeleeMultiHit(5, 0.1f, 0.6f);
         public static readonly ModFireData SolisCinerisSpear = ModFireData.Dash(WeaponIDs.SolisCineris, 0)
-            .SetDamage(2f).SetElement(EDamageElementalType.Fire).SetRelatedStat(TextFile.FireDamage)
-            .SetMeleeSwingSpriteFolder("Weapon.GreatSword_DashFlameSword", "", true, 1f, 2f);
+            .SetDamage(3f).SetElement(EDamageElementalType.Fire).SetRelatedStat(TextFile.FireDamage)
+            .SetMeleeSwingSpriteFolder("Weapon.GreatSword_DashFlameSword", "", true, Vector2.one, new Vector2(1f, 2f));
         public static readonly ModFireData SolisCinerisSpearUpgrade = ModFireData.Dash(WeaponIDs.SolisCineris, 0)
-            .SetDamage(2.66f).SetElement(EDamageElementalType.Fire).SetRelatedStat(TextFile.FireDamage)
-            .SetMeleeSwingSpriteFolder("Weapon.GreatSword_DashFlameSword_Upgrade", "", true, 1f, 3f);
+            .SetDamage(4f).SetElement(EDamageElementalType.Fire).SetRelatedStat(TextFile.FireDamage)
+            .SetMeleeSwingSpriteFolder("Weapon.GreatSword_DashFlameSword_Upgrade", "", true, Vector2.one, new Vector2(1f, 3f));
 
         public static List<ModFireData> WindDagger_Basic =
         [
@@ -2093,6 +2094,22 @@ namespace SPMod.ModContent
             .SetSwingRangeScaling(false).SetSwingScale(0.5f).SetSwingSpriteFolder("Weapon.Katana_Moment");
         public static ModFireData WindKatana_Moment2 = ModFireData.Basic(WeaponIDs.Helbanus, 0).SetDamage(1.32f)
             .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Katana_Wind");
+        public static ModFireData WindKatana_Kusanagi = ModFireData.Special(WeaponIDs.Helbanus, 1).SetDamage(0.4f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
+            .SetMeleeSwingSpriteFolder("Weapon.Katana_Kusanagi", "", true, new Vector2(0.8f, 0.8f), new Vector2(1.2f, 0.72f))
+            .CustomSet(Action =>
+            {
+                Action.swingSoundEvent = WindKatana_Basic[2].Data.swingSoundEvent;
+                Action.attackDashSpeed = WindKatana_Basic[2].Data.attackDashSpeed;
+                Action.attackDashTime = WindKatana_Basic[2].Data.attackDashTime;
+            });
+        public static ModFireData WindKatana_Kusanagi_2 = ModFireData.Special(WeaponIDs.Helbanus, 0).SetDamage(0.4f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
+            .SetMeleeSwingSpriteFolder("Weapon.Katana_Kusanagi", "", true, new Vector2(0.8f, 0.8f), new Vector2(1.2f, 0.72f)).SetFinalCombo()
+            .CustomSet(Action =>
+            {
+                Action.swingSoundEvent = WindKatana_Basic[2].Data.swingSoundEvent;
+                Action.attackDashSpeed = WindKatana_Basic[2].Data.attackDashSpeed;
+                Action.attackDashTime = WindKatana_Basic[2].Data.attackDashTime;
+            });
 
         public static List<ModFireData> WindStaff_Basic =
         [
@@ -2111,8 +2128,6 @@ namespace SPMod.ModContent
             .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind");
         public static ModFireData WindStaff_Dash = ModFireData.Dash(WeaponIDs.StaffOfEmbers, 0)
             .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Staff_Wind");
-        // 风属性棍不使用 STAFFEXTEND：渲染器改回 Simple 绘制，
-        // 避免棍子 prefab 的九宫格拉伸把替换贴图按原版 bladeArea 的比例压扁/拉长。
         private static void UseNativeStaffSprite(WeaponSimple Weapon)
         {
             if (Weapon.mainWeaponBody == null)
@@ -2503,6 +2518,35 @@ namespace SPMod.ModContent
                 Weapon.addons = Addons.ToArray();
             }),
 
+            new ModWeapon("Kusanagi", WeaponIDs.Kusanagi, WeaponIDs.Helbanus)
+            .SetEnhanceFrom(WeaponIDs.WindKatana)
+            .SetSprite("Katana_Fire_Tier2_0", "ModWeapon_Kusanagi", "Weapon")
+            .SetSprite("Katana_Fire_Tier2_1", "ModWeapon_Kusanagi_1", "Weapon")
+            .SetSprite("Katana_Fire_Tier2_2", "ModWeapon_Kusanagi_2", "Weapon")
+            .SetSprite("Katana_Fire_Tier2_3", "ModWeapon_Kusanagi_3", "Weapon")
+            .SetBasicAttacks(WindKatana_Basic.ToArray())
+            .SetSpecialAttacks(WindKatana_Special.ToArray())
+            .SetDashAttack(0, WindKatana_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                if (Weapon is WeaponSimple_Katana Katana)
+                {
+                    Katana.stuckBladeAttack_FireDatas = [WindKatana_Kusanagi.Data, WindKatana_Kusanagi_2.Data];
+                }
+
+                List<WeaponAddon> Addons = [];
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindKatana_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddonCommon_StatusUnsafe Effect2 = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect2.parent = Weapon;
+                Effect2.effectText = new LocalizedString("ModWeapon_Kusanagi_Effect");
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
             new ModWeapon("WindStaff", WeaponIDs.WindStaff, WeaponIDs.StaffOfEmbers)
             .SetEnhanceFrom(WeaponIDs.Quarterstaff)
             .SetSprite("StaffFire_Tier2", "ModWeapon_WindStaff", "Weapon")
@@ -2591,7 +2635,7 @@ namespace SPMod.ModContent
                 {
                     Staff.secondSpecialAttackFireData = WindStaff_Special_Base.Data;
                     Staff.secondSpecialAttackEnhancedFireData = WindStaff_Special_Enhanced.Data;
-                    Staff.attackWeightPerSwing = 0.45f;
+                    Staff.attackWeightPerSwing = 0.36f;
                 }
                 UseNativeStaffSprite(Weapon);
 
@@ -2602,13 +2646,19 @@ namespace SPMod.ModContent
                 [
                     new() {
                         statId = TextFile.WindSwordCount,
-                        value = 1,
+                        value = 2,
                         displayMultiplier = 1f,
                         displaySymbol = "",
                     },
                     new() {
                         statId = TextFile.WindPivotEffect,
-                        value = 1,
+                        value = 2,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                    new() {
+                        statId = TextFile.WindSwordSpeed,
+                        value = -20,
                         displayMultiplier = 1f,
                         displaySymbol = "",
                     }

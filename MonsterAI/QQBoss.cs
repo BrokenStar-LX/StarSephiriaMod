@@ -29,6 +29,17 @@ namespace SPMod.MonsterAI
 
         private static readonly MethodInfo? StartPerimeterBulletGimmickMethod;
         private static readonly MethodInfo? ClearPerimeterBulletsMethod;
+
+        private static readonly AccessTools.FieldRef<UnitAI_QQBoss, Coroutine?>? CurrentPatternCoroutineRef;
+        private static readonly AccessTools.FieldRef<UnitAI_QQBoss, Unit_QQBoss>? QqBossRef;
+        private static readonly Action<UnitAI_QQBoss>? UpdateTentacleSummonPatternDelegate;
+        private static readonly Action<UnitAI_QQBoss>? UpdateMouseOrbPatternDelegate;
+        private static readonly Action<UnitAI_QQBoss>? UpdateDiamondExplosionPatternDelegate;
+        private static readonly Func<UnitAI_QQBoss, IEnumerator>? BlinkToTargetCoroutineDelegate;
+        private static readonly Func<UnitAI_QQBoss, IEnumerator>? FoxAttackCoroutineDelegate;
+        private static readonly Func<UnitAI_QQBoss, IEnumerator>? BlinkToTargetAndCrystalCoroutineDelegate;
+        private static readonly Action<Unit_QQBoss>? StartPerimeterBulletGimmickDelegate;
+        private static readonly Action<Unit_QQBoss>? ClearPerimeterBulletsDelegate;
         static QQBoss()
         {
             // QQBoss 反射
@@ -43,30 +54,23 @@ namespace SPMod.MonsterAI
             BlinkToTargetCoroutineMethod = AccessTools.Method(type, "BlinkToTargetCoroutine");
             FoxAttackCoroutineMethod = AccessTools.Method(type, "FoxAttackCoroutine");
             BlinkToTargetAndCrystalCoroutineMethod = AccessTools.Method(type, "BlinkToTargetAndCrystalCoroutine");
+            CurrentPatternCoroutineRef = ReflectionCache.FieldRef<UnitAI_QQBoss, Coroutine?>(type, "currentPatternCoroutine");
+            QqBossRef = ReflectionCache.FieldRef<UnitAI_QQBoss, Unit_QQBoss>(type, "qqBoss");
+            UpdateTentacleSummonPatternDelegate = ReflectionCache.Delegate<Action<UnitAI_QQBoss>>(UpdateTentacleSummonPatternMethod, "UpdateTentacleSummonPattern");
+            UpdateMouseOrbPatternDelegate = ReflectionCache.Delegate<Action<UnitAI_QQBoss>>(UpdateMouseOrbPatternMethod, "UpdateMouseOrbPattern");
+            UpdateDiamondExplosionPatternDelegate = ReflectionCache.Delegate<Action<UnitAI_QQBoss>>(UpdateDiamondExplosionPatternMethod, "UpdateDiamondExplosionPattern");
+            BlinkToTargetCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_QQBoss, IEnumerator>>(BlinkToTargetCoroutineMethod, "BlinkToTargetCoroutine");
+            FoxAttackCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_QQBoss, IEnumerator>>(FoxAttackCoroutineMethod, "FoxAttackCoroutine");
+            BlinkToTargetAndCrystalCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_QQBoss, IEnumerator>>(BlinkToTargetAndCrystalCoroutineMethod, "BlinkToTargetAndCrystalCoroutine");
 
             type = typeof(Unit_QQBoss);
             StartPerimeterBulletGimmickMethod = AccessTools.Method(type, "StartPerimeterBulletGimmick");
             ClearPerimeterBulletsMethod = AccessTools.Method(type, "ClearPerimeterBullets");
+            StartPerimeterBulletGimmickDelegate = ReflectionCache.Delegate<Action<Unit_QQBoss>>(StartPerimeterBulletGimmickMethod, "StartPerimeterBulletGimmick");
+            ClearPerimeterBulletsDelegate = ReflectionCache.Delegate<Action<Unit_QQBoss>>(ClearPerimeterBulletsMethod, "ClearPerimeterBullets");
         }
 
-        private static bool TryGetRandomAlivePlayer(out PlayerAvatar? player)
-        {
-            List<PlayerAvatar> list = [];
-            foreach (PlayerSpawner playerSpawner in PlayerSpawner.MultiplayerList)
-            {
-                if (playerSpawner && playerSpawner.PlayerAvatar && !playerSpawner.PlayerAvatar.IsDead)
-                {
-                    list.Add(playerSpawner.PlayerAvatar);
-                }
-            }
-            if (list.Count == 0)
-            {
-                player = null;
-                return false;
-            }
-            player = list.GetRandom();
-            return true;
-        }
+        private static bool TryGetRandomAlivePlayer(out PlayerAvatar? player) => BossCommon.TryGetRandomAlivePlayer(out player);
 
         public static GameObject? windmillBulletHellPrefab = null;
         public static int CrystalStack = 0;
@@ -95,7 +99,6 @@ namespace SPMod.MonsterAI
                 if (Hard <= 0) return true;
                 try
                 {
-
                     if (currentPatternCoroutineField == null ||
                         qqBossField == null ||
                         UpdateTentacleSummonPatternMethod == null ||
@@ -110,116 +113,28 @@ namespace SPMod.MonsterAI
                         return true;
                     }
 
-                    UpdateTentacleSummonPatternMethod?.Invoke(__instance, null);
-                    UpdateMouseOrbPatternMethod?.Invoke(__instance, null);
-                    UpdateDiamondExplosionPatternMethod?.Invoke(__instance, null);
-                    if (currentPatternCoroutineField.GetValue(__instance) is Coroutine curCoroutine)
+                    UpdateTentacleSummonPatternDelegate!(__instance);
+                    UpdateMouseOrbPatternDelegate!(__instance);
+                    UpdateDiamondExplosionPatternDelegate!(__instance);
+                    if (CurrentPatternCoroutineRef!(__instance) is Coroutine)
                     {
                         return false;
                     }
 
-                    Unit_QQBoss? qqBoss = qqBossField.GetValue(__instance) as Unit_QQBoss;
+                    Unit_QQBoss? qqBoss = QqBossRef!(__instance);
                     if (qqBoss == null) return true;
+                    if (qqBoss.isInStun) return true;
+                    if (qqBoss.powerCrystalState == 3) return false;
 
-                    if (qqBoss.isInStun)
-                    {
-                        return true;
-                    }
-                    if (qqBoss.powerCrystalState == 3)
-                    {
-                        return false;
-                    }
                     if (qqBoss.currentAction == Unit_QQBoss.EAnimation.None && __instance.patternTimer.Update(Time.deltaTime))
                     {
-                        if (Pattern.Count == 0)
-                        {
-                            Pattern.Add(0);
-                            Pattern.Add(1);
-                            Pattern.Add(2);
-                            Pattern.Add(3);
-                            Pattern.Shuffle();
-                            if (Oldpattern >= 0)
-                            {
-                                Pattern.Remove(Oldpattern);
-                                Pattern.Insert(2, Oldpattern);
-                            }
-                            if (AttackFlag % 2 == 0 || Hard >= 4)
-                            {
-                                Pattern.Add(4);
-                            }
-                            else
-                            {
-                                Pattern.Add(5);
-                            }
-                            AttackFlag += 1;
-                        }
-                        int UsePattern = -1;
-                        UsePattern = Pattern[0];
-                        if (UsePattern < 4)
-                            Oldpattern = UsePattern;
+                        if (Pattern.Count == 0) RefillPattern();
+
+                        int UsePattern = Pattern[0];
+                        if (UsePattern < 4) Oldpattern = UsePattern;
                         Pattern.RemoveAt(0);
                         StarSephiriaMod.LogInfoBoss($"终克1阶段当前技能：{UsePattern}");
-                        switch (UsePattern)
-                        {
-                            case 0:
-                                {
-                                    if (TryGetRandomAlivePlayer(out var playerAvatar))
-                                        qqBoss.SatelliteAttack(playerAvatar);
-                                    break;
-                                }
-                            case 1:
-                                if (__instance.hardPatternActivated)
-                                {
-                                    float spd = Mathf.Sign(Random.Range(-1f, 1f)) * __instance.windmillBulletHellHardSpeed;
-                                    qqBoss.WindmillBulletHell(spd);
-                                }
-                                else
-                                {
-                                    qqBoss.WindmillBulletHell(1f);
-                                }
-                                break;
-                            case 2:
-                                {
-                                    if (BlinkToTargetCoroutineMethod.Invoke(__instance, null) is IEnumerator ie)
-                                    {
-                                        Coroutine co = __instance.StartCoroutine(ie);
-                                        currentPatternCoroutineField.SetValue(__instance, co);
-                                    }
-                                    break;
-                                }
-                            case 3:
-                                {
-                                    if (TryGetRandomAlivePlayer(out var playerAvatar) && playerAvatar != null)
-                                    {
-                                        qqBoss.LineGroundAreaAttack(playerAvatar.transform.position);
-                                    }
-                                    break;
-                                }
-                            case 4:
-                                {
-                                    if (FoxAttackCoroutineMethod.Invoke(__instance, null) is IEnumerator ie)
-                                    {
-                                        Coroutine co = __instance.StartCoroutine(ie);
-                                        currentPatternCoroutineField.SetValue(__instance, co);
-                                        if (Hard >= 2)
-                                        {
-                                            __instance.StartCoroutine(FireBulletAndDestroy(qqBoss));
-                                            __instance.StartCoroutine(FireBulletInvincible(qqBoss));
-                                        }
-                                    }
-                                    break;
-                                }
-                            case 5:
-                                {
-                                    if (BlinkToTargetAndCrystalCoroutineMethod.Invoke(__instance, null) is IEnumerator ie)
-                                    {
-                                        Coroutine co = __instance.StartCoroutine(ie);
-                                        currentPatternCoroutineField.SetValue(__instance, co);
-                                        CrystalStack += 1;
-                                    }
-                                    break;
-                                }
-                        }
+                        LaunchPattern(__instance, qqBoss, UsePattern);
                     }
                     return false;
                 }
@@ -227,6 +142,71 @@ namespace SPMod.MonsterAI
                 {
                     StarSephiriaMod.LogError($"[UnitAI_QQBoss][OnAIUpdate_FoundEnemy]出现错误: {ex}");
                     return true;
+                }
+            }
+
+            /// <summary>下一轮技能池：基础技能洗牌 + 狐狸/水晶交替。</summary>
+            private static void RefillPattern()
+            {
+                Pattern.Add(0);
+                Pattern.Add(1);
+                Pattern.Add(2);
+                Pattern.Add(3);
+                Pattern.Shuffle();
+                if (Oldpattern >= 0)
+                {
+                    Pattern.Remove(Oldpattern);
+                    Pattern.Insert(2, Oldpattern);
+                }
+                if (AttackFlag % 2 == 0 || Hard >= 4) Pattern.Add(4);
+                else Pattern.Add(5);
+                AttackFlag += 1;
+            }
+
+            /// <summary>按编号释放技能；2/4/5 会把协程写回 currentPatternCoroutine。</summary>
+            private static void LaunchPattern(UnitAI_QQBoss __instance, Unit_QQBoss qqBoss, int UsePattern)
+            {
+                switch (UsePattern)
+                {
+                    case 0:
+                        if (TryGetRandomAlivePlayer(out var PlayerA))
+                            qqBoss.SatelliteAttack(PlayerA);
+                        break;
+                    case 1:
+                        qqBoss.WindmillBulletHell(__instance.hardPatternActivated
+                            ? Mathf.Sign(Random.Range(-1f, 1f)) * __instance.windmillBulletHellHardSpeed
+                            : 1f);
+                        break;
+                    case 2:
+                        if (BlinkToTargetCoroutineDelegate!(__instance) is IEnumerator BlinkCoroutine)
+                        {
+                            CurrentPatternCoroutineRef!(__instance) = __instance.StartCoroutine(BlinkCoroutine);
+                        }
+                        break;
+                    case 3:
+                        if (TryGetRandomAlivePlayer(out var PlayerB) && PlayerB != null)
+                        {
+                            qqBoss.LineGroundAreaAttack(PlayerB.transform.position);
+                        }
+                        break;
+                    case 4:
+                        if (FoxAttackCoroutineDelegate!(__instance) is IEnumerator FoxCoroutine)
+                        {
+                            CurrentPatternCoroutineRef!(__instance) = __instance.StartCoroutine(FoxCoroutine);
+                            if (Hard >= 2)
+                            {
+                                __instance.StartCoroutine(FireBulletAndDestroy(qqBoss));
+                                __instance.StartCoroutine(FireBulletInvincible(qqBoss));
+                            }
+                        }
+                        break;
+                    case 5:
+                        if (BlinkToTargetAndCrystalCoroutineDelegate!(__instance) is IEnumerator CrystalCoroutine)
+                        {
+                            CurrentPatternCoroutineRef!(__instance) = __instance.StartCoroutine(CrystalCoroutine);
+                            CrystalStack += 1;
+                        }
+                        break;
                 }
             }
 
@@ -243,11 +223,11 @@ namespace SPMod.MonsterAI
                     }
                     if (qqBossField != null)
                     {
-                        Unit_QQBoss? qqBoss = qqBossField.GetValue(__instance) as Unit_QQBoss;
+                        Unit_QQBoss? qqBoss = QqBossRef!(__instance);
                         if (qqBoss == null) return;
 
                         if (__instance.isServer && ClearPerimeterBulletsMethod != null)
-                            ClearPerimeterBulletsMethod.Invoke(qqBoss, null);
+                            ClearPerimeterBulletsDelegate!(qqBoss);
                     }
                 }
             }
@@ -339,7 +319,7 @@ namespace SPMod.MonsterAI
                     return;
                 }
                 if (Hard >= 3)
-                    StartPerimeterBulletGimmickMethod.Invoke(__instance, null);
+                    StartPerimeterBulletGimmickDelegate!(__instance);
             }
 
             [HarmonyPatch("SatelliteAttack")]

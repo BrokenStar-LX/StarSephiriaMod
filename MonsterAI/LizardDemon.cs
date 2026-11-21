@@ -29,6 +29,16 @@ namespace SPMod.MonsterAI
         private static readonly FieldInfo? isRunningHeadSmashAnimationField;
         private static readonly FieldInfo? spawnedSwordSphereListField;
         private static readonly MethodInfo? rpcHeadSmashMethod;
+
+        private static readonly AccessTools.FieldRef<UnitAI_LizardDemon, Coroutine?>? InAndOutCoroutineRef;
+        private static readonly AccessTools.FieldRef<UnitAI_LizardDemon, Vector2>? InAndOutTargetPositionRef;
+        private static readonly AccessTools.FieldRef<UnitAI_LizardDemon, Coroutine?>? DashCoroutineRef;
+        private static readonly AccessTools.FieldRef<Unit_LizardDemon, int>? CurrentTwisterSwordSphereCountRef;
+        private static readonly AccessTools.FieldRef<Unit_LizardDemon, bool>? IsRunningHeadSmashAnimationRef;
+        private static readonly AccessTools.FieldRef<Unit_LizardDemon, List<SwordSphere>>? SpawnedSwordSphereListRef;
+        private static readonly Func<UnitAI_LizardDemon, IEnumerator>? DashCoroutineDelegate;
+        private static readonly Func<UnitAI_LizardDemon, IEnumerator>? DashToCenterCoroutineDelegate;
+        private static readonly Action<Unit_LizardDemon, bool, Vector3>? RpcHeadSmashDelegate;
         //变种攻击判定
         private static bool MeleeAttack2 = false;
         private static bool TwisterAttack2 = false;
@@ -48,6 +58,11 @@ namespace SPMod.MonsterAI
                 dashCoroutineField = AccessTools.Field(type, "dashCoroutine");
                 dashCoroutineMethod = AccessTools.Method(type, "DashCoroutine");
                 dashToCenterCoroutineMethod = AccessTools.Method(type, "DashToCenterCoroutine");
+                InAndOutCoroutineRef = ReflectionCache.FieldRef<UnitAI_LizardDemon, Coroutine?>(type, "inAndOutCoroutine");
+                InAndOutTargetPositionRef = ReflectionCache.FieldRef<UnitAI_LizardDemon, Vector2>(type, "inAndOutTargetPosition");
+                DashCoroutineRef = ReflectionCache.FieldRef<UnitAI_LizardDemon, Coroutine?>(type, "dashCoroutine");
+                DashCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_LizardDemon, IEnumerator>>(dashCoroutineMethod, "DashCoroutine");
+                DashToCenterCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_LizardDemon, IEnumerator>>(dashToCenterCoroutineMethod, "DashToCenterCoroutine");
                 StarSephiriaMod.LogInfoBoss("[UnitAI_LizardDemon]初始化反射");
 
                 // Unit_LizardDemon 反射
@@ -56,6 +71,10 @@ namespace SPMod.MonsterAI
                 isRunningHeadSmashAnimationField = AccessTools.Field(type, "isRunningHeadSmashAnimation");
                 spawnedSwordSphereListField = AccessTools.Field(type, "spawnedSwordSphereList");
                 rpcHeadSmashMethod = AccessTools.Method(type, "RpcHeadSmash", [typeof(bool), typeof(Vector3)]);
+                CurrentTwisterSwordSphereCountRef = ReflectionCache.FieldRef<Unit_LizardDemon, int>(type, "currentTwisterSwordSphereCount");
+                IsRunningHeadSmashAnimationRef = ReflectionCache.FieldRef<Unit_LizardDemon, bool>(type, "isRunningHeadSmashAnimation");
+                SpawnedSwordSphereListRef = ReflectionCache.FieldRef<Unit_LizardDemon, List<SwordSphere>>(type, "spawnedSwordSphereList");
+                RpcHeadSmashDelegate = ReflectionCache.Delegate<Action<Unit_LizardDemon, bool, Vector3>>(rpcHeadSmashMethod, "RpcHeadSmash");
                 StarSephiriaMod.LogInfoBoss("[Unit_LizardDemon]初始化反射");
             }
             catch (Exception ex)
@@ -70,6 +89,25 @@ namespace SPMod.MonsterAI
             private static float TSSTime = -1f;
             private static int SwordCount = -1;
             public static Timer ShootShockwave = new(1f);
+
+            /// <summary>高难度额外加 10 点冲刺速度。</summary>
+            private static float DashSpeed(float BaseSpeed) => BaseSpeed + (Hard >= 4 ? 10f : 0f);
+
+            /// <summary>
+            /// 基础攻击的冲刺速度。First = 第一套 FireData，否则第二套。
+            /// 对应 Anim_BasicAttack_Fire / Anim_BasicAttack_FireSecond。
+            /// </summary>
+            private static float GetBasicAttackDashSpeed(bool First, bool DoubleAttack)
+            {
+                if (First) return DashSpeed(35f);
+                if (Hard < 2) return 20f;
+                if (!DoubleAttack) return DashSpeed(10f);
+                return Hard >= 3 ? DashSpeed(25f) : 20f;
+            }
+
+            /// <summary>是否走第一套攻击数据的变体（Double + Hard3+ + MeleeAttack2）。</summary>
+            private static bool UsesFirstAttackData(Unit_LizardDemon Demon)
+                => Demon.currentAction == Unit_LizardDemon.EAnimation.BasicAttackDouble && Hard >= 3 && MeleeAttack2;
 
             [HarmonyPatch("Update")]
             [HarmonyPostfix]
@@ -153,7 +191,7 @@ namespace SPMod.MonsterAI
                     StarSephiriaMod.LogError("[Unit_LizardDemon][HeadSmashEndDashCoroutine]获取反射失败");
                     yield break;
                 }
-                if (spawnedSwordSphereListField.GetValue(__instance) is not List<SwordSphere> spawnedSwordSphereList)
+                if (SpawnedSwordSphereListRef!(__instance) is not List<SwordSphere> spawnedSwordSphereList)
                 {
                     StarSephiriaMod.LogError("[Unit_LizardDemon][headSmashEndDashCoroutine]反射类型错误");
                     yield break;
@@ -161,21 +199,17 @@ namespace SPMod.MonsterAI
 
                 int attackCount = 3;
                 __instance.NetworkheadSmashTargetPosition = __instance.CurrentLookingPosition;
-                rpcHeadSmashMethod.Invoke(__instance,
-                [
-                    __instance.currentAction == Unit_LizardDemon.EAnimation.HeadSmash_Double,
-                    (Vector3)__instance.headSmashTargetPosition
-                ]);
-                bool isRunningHeadSmashAnimation = (bool)isRunningHeadSmashAnimationField.GetValue(__instance);
+                RpcHeadSmashDelegate!(__instance, __instance.currentAction == Unit_LizardDemon.EAnimation.HeadSmash_Double, (Vector3)__instance.headSmashTargetPosition);
+                bool isRunningHeadSmashAnimation = IsRunningHeadSmashAnimationRef!(__instance);
                 while (!isRunningHeadSmashAnimation)
                 {
                     yield return null;
-                    isRunningHeadSmashAnimation = (bool)isRunningHeadSmashAnimationField.GetValue(__instance);
+                    isRunningHeadSmashAnimation = IsRunningHeadSmashAnimationRef!(__instance);
                 }
                 while (isRunningHeadSmashAnimation)
                 {
                     yield return null;
-                    isRunningHeadSmashAnimation = (bool)isRunningHeadSmashAnimationField.GetValue(__instance);
+                    isRunningHeadSmashAnimation = IsRunningHeadSmashAnimationRef!(__instance);
                 }
                 while (attackCount > 0)
                 {
@@ -214,13 +248,9 @@ namespace SPMod.MonsterAI
                     __instance.ForceAimToPosition(__instance.AimedPosition);
                     yield return new WaitForSeconds(0.3f);
                     __instance.NetworkheadSmashTargetPosition = __instance.CurrentLookingPosition;
-                    rpcHeadSmashMethod.Invoke(__instance,
-                    [
-                        __instance.currentAction == Unit_LizardDemon.EAnimation.HeadSmash_Double,
-                        (Vector3)__instance.headSmashTargetPosition
-                    ]);
+                    RpcHeadSmashDelegate!(__instance, __instance.currentAction == Unit_LizardDemon.EAnimation.HeadSmash_Double, (Vector3)__instance.headSmashTargetPosition);
                     attackCount--;
-                    isRunningHeadSmashAnimation = (bool)isRunningHeadSmashAnimationField.GetValue(__instance);
+                    isRunningHeadSmashAnimation = IsRunningHeadSmashAnimationRef!(__instance);
                     bool falg = false;
                     while (!isRunningHeadSmashAnimation)
                     {
@@ -237,12 +267,12 @@ namespace SPMod.MonsterAI
                             }
                             falg = true;
                         }
-                        isRunningHeadSmashAnimation = (bool)isRunningHeadSmashAnimationField.GetValue(__instance);
+                        isRunningHeadSmashAnimation = IsRunningHeadSmashAnimationRef!(__instance);
                     }
                     while (isRunningHeadSmashAnimation)
                     {
                         yield return null;
-                        isRunningHeadSmashAnimation = (bool)isRunningHeadSmashAnimationField.GetValue(__instance);
+                        isRunningHeadSmashAnimation = IsRunningHeadSmashAnimationRef!(__instance);
                     }
                 }
                 __instance.currentAction = Unit_LizardDemon.EAnimation.None;
@@ -256,10 +286,7 @@ namespace SPMod.MonsterAI
                 if (Hard < 2) return true;
                 try
                 {
-                    if (__instance.currentAction == Unit_LizardDemon.EAnimation.BasicAttackDouble && Hard >= 3 && MeleeAttack2)
-                    {
-                        return true;
-                    }
+                    if (UsesFirstAttackData(__instance)) return true;
                     __instance.Anim_BasicAttack_FireSecond();
                     return false;
                 }
@@ -277,11 +304,9 @@ namespace SPMod.MonsterAI
                 if (Hard < 2) return true;
                 try
                 {
-                    if (__instance.currentAction == Unit_LizardDemon.EAnimation.BasicAttackDouble && Hard >= 3 && MeleeAttack2)
+                    if (UsesFirstAttackData(__instance))
                     {
-                        float Speed = 35f;
-                        if (Hard >= 4) Speed += 10f;
-                        __instance.basicAttackFireData.attackDashSpeed = Speed;
+                        __instance.basicAttackFireData.attackDashSpeed = GetBasicAttackDashSpeed(true, true);
                         return true;
                     }
                     __instance.Anim_BasicAttack_WarningSecond();
@@ -298,34 +323,20 @@ namespace SPMod.MonsterAI
             [HarmonyPrefix]
             static bool Anim_BasicAttack_FireSecond_Prefix(Unit_LizardDemon __instance)
             {
+                bool DoubleAttack = __instance.currentAction == Unit_LizardDemon.EAnimation.BasicAttackDouble;
                 if (Hard < 2)
                 {
-                    __instance.basicAttackSecondFireData.attackDashSpeed = 20f;
+                    __instance.basicAttackSecondFireData.attackDashSpeed = GetBasicAttackDashSpeed(false, DoubleAttack);
                     return true;
                 }
                 try
                 {
-                    if (__instance.currentAction == Unit_LizardDemon.EAnimation.BasicAttackDouble)
+                    if (UsesFirstAttackData(__instance))
                     {
-                        if (Hard >= 3)
-                        {
-                            if (MeleeAttack2)
-                            {
-                                __instance.Anim_BasicAttack_Fire();
-                                return false;
-                            }
-                            float Speed = 25f;
-                            if (Hard >= 4) Speed += 10f;
-                            __instance.basicAttackSecondFireData.attackDashSpeed = Speed;
-                        }
-                        else __instance.basicAttackSecondFireData.attackDashSpeed = 20f;
+                        __instance.Anim_BasicAttack_Fire();
+                        return false;
                     }
-                    else
-                    {
-                        float Speed = 10f;
-                        if (Hard >= 4) Speed += 10f;
-                        __instance.basicAttackSecondFireData.attackDashSpeed = Speed;
-                    }
+                    __instance.basicAttackSecondFireData.attackDashSpeed = GetBasicAttackDashSpeed(false, DoubleAttack);
 
                     Vector2 vector = __instance.CurrentLookingPosition - (Vector2)__instance.transform.position;
                     if (__instance.isServer)
@@ -356,7 +367,7 @@ namespace SPMod.MonsterAI
                 if (Hard < 3) return true;
                 try
                 {
-                    if (__instance.currentAction == Unit_LizardDemon.EAnimation.BasicAttackDouble && MeleeAttack2)
+                    if (UsesFirstAttackData(__instance))
                     {
                         __instance.Anim_BasicAttack_Warning();
                         return false;
@@ -383,7 +394,7 @@ namespace SPMod.MonsterAI
                         return true;
                     }
 
-                    if (spawnedSwordSphereListField.GetValue(__instance) is not List<SwordSphere> spawnedSwordSphereList)
+                    if (SpawnedSwordSphereListRef!(__instance) is not List<SwordSphere> spawnedSwordSphereList)
                     {
                         StarSephiriaMod.LogError("[Unit_LizardDemon][CreateSwordSphere]获取反射失败");
                         return true;
@@ -403,7 +414,7 @@ namespace SPMod.MonsterAI
                             }
                             TwisterPos.Clear();
                             TwisterAttack2 = false;
-                            currentTwisterSwordSphereCountField.SetValue(__instance, 9);
+                            CurrentTwisterSwordSphereCountRef!(__instance) = 9;
                             return false;
                         }
                         foreach (PlayerSpawner PlayerSpawner in PlayerSpawner.MultiplayerList)
@@ -448,164 +459,155 @@ namespace SPMod.MonsterAI
                     float Dis = Vector3.Distance(__instance.CurrentTarget.transform.position, __instance.transform.position);
                     __instance.unit.currentLookingLocalPosition_Server = (__instance.CurrentTarget.transform.position - __instance.transform.position).normalized * Dis;
 
-                    Vector2 inAndOutTargetPosition = (Vector2)inAndOutTargetPositionField.GetValue(__instance);
-                    if (!__instance.unit.IsAppeared || __instance.unit.currentAction != Unit_LizardDemon.EAnimation.None)
-                    {
-                        return false;  // 阻止原方法執行
-                    }
-                    if (inAndOutCoroutineField.GetValue(__instance) is Coroutine inAndOutCoroutine)
-                    {
-                        return false;  // 阻止原方法執行
-                    }
+                    Vector2 inAndOutTargetPosition = InAndOutTargetPositionRef!(__instance);
+                    if (!__instance.unit.IsAppeared || __instance.unit.currentAction != Unit_LizardDemon.EAnimation.None) return false;
+                    if (InAndOutCoroutineRef!(__instance) is Coroutine) return false;
 
                     if (__instance.inAndOutPatternDelayTimer.Update(Time.deltaTime) && __instance.patternTimer.Update(Time.deltaTime))
                     {
                         if (__instance.patternList.Count == 0)
                         {
-                            MeleeAttack2 = !MeleeAttack2;
-                            __instance.patternList.Add(0);
-                            __instance.patternList.Add(2);
-                            __instance.patternList.Add(3);
-                            __instance.patternList.Add(4);
-                            __instance.patternList.Add(5);
-                            __instance.patternList.Shuffle();
-                            if (__instance.Environment && __instance.Environment is BossEnvironment_LizardDemon)
-                            {
-                                if(Hard >= 2)
-                                    __instance.patternList.Add(6);
-                                __instance.patternList.Add(1);
-                                __instance.patternList.Add(1);
-                            }
-                            if (Oldpattern >= 0)
-                            {
-                                __instance.patternList.Remove(Oldpattern);
-                                __instance.patternList.Insert(__instance.patternList.Count / 2, Oldpattern);
-                            }
-                            if (__instance.Environment)
-                            {
-                                inAndOutTargetPosition = __instance.Environment.BossZoneCenter + (Vector3)Random.insideUnitCircle * 3f;
-                                inAndOutTargetPositionField.SetValue(__instance, inAndOutTargetPosition);
-                            }
+                            RefillPatternList(__instance, ref inAndOutTargetPosition);
                         }
 
                         int pattern = __instance.patternList[0];
                         if (pattern != 1 && pattern != 6) Oldpattern = pattern;
                         __instance.patternList.RemoveAt(0);
                         StarSephiriaMod.LogInfoBoss($"蜥蜴当前攻击{pattern}");
-                        switch (pattern)
-                        {
-                            case 0:
-                                __instance.unit.HeadSmash();
-                                __instance.patternTimer.Ratio = 0.5f;
-                                return false;
-                            case 1:
-                                if (__instance.Environment is BossEnvironment_LizardDemon bossEnvironment_LizardDemon)
-                                {
-                                    Vector3 bossZoneBottomLeft = __instance.Environment.BossZoneBottomLeft;
-                                    Vector3 bossZoneTopRight = __instance.Environment.BossZoneTopRight;
-                                    Vector3 bossZoneCenter = __instance.Environment.BossZoneCenter;
-                                    List<int> list = [];
-                                    {
-                                        Vector2 vector = __instance.CurrentTarget.transform.position;
-                                        bool flag = vector.y > bossZoneCenter.y;
-                                        bool flag2 = vector.x > bossZoneCenter.x;
-
-                                        if (flag)
-                                            list.Add(4);
-                                        else
-                                            list.Add(5);
-
-                                        if (flag2)
-                                            list.Add(2);
-                                        else
-                                            list.Add(3);
-                                    }
-                                    list.Add(1);
-                                    list.Add(0);
-
-                                    int V = list[Random.Range(0, list.Count)];
-                                    List<BoxCollider2D> list2 = [];
-                                    if (V > 1)
-                                    {
-                                        list2.AddRange(bossEnvironment_LizardDemon.areaAttackPatterns_Hard[V - 2].GetComponentsInChildren<BoxCollider2D>());
-                                    }
-                                    else
-                                    {
-                                        list2.AddRange(bossEnvironment_LizardDemon.areaAttackPatterns[V].GetComponentsInChildren<BoxCollider2D>());
-                                    }
-                                    list.Remove(V);
-
-                                    if (Hard >= 3)
-                                    {
-                                        V = list[Random.Range(0, list.Count)];
-                                        if (V > 1)
-                                        {
-                                            list2.AddRange(bossEnvironment_LizardDemon.areaAttackPatterns_Hard[V - 2].GetComponentsInChildren<BoxCollider2D>());
-                                        }
-                                        else
-                                        {
-                                            list2.AddRange(bossEnvironment_LizardDemon.areaAttackPatterns[V].GetComponentsInChildren<BoxCollider2D>());
-                                        }
-                                    }
-                                    int num3 = -1;
-                                    if (V == 0) num3 = 0;
-                                    else if (V == 1) num3 = 1;
-                                    __instance.unit.Sunken(bossZoneBottomLeft, bossZoneTopRight, num3, list2.ToArray(), __instance.CurrentTarget);
-                                    if (Hard >= 2) __instance.patternTimer.Ratio = 0.5f;
-                                }
-                                return false;
-                            case 2:
-                                IEnumerator DashCoroutine = (IEnumerator)dashCoroutineMethod.Invoke(__instance, null);
-                                Coroutine DashCoroutine2 = __instance.StartCoroutine(DashCoroutine);
-                                dashCoroutineField.SetValue(__instance, DashCoroutine2);
-                                break;
-                            case 3:
-                                __instance.unit.Twister(__instance.CurrentTarget);
-                                return false;
-                            case 4:
-                                if ((__instance.transform.position - (Vector3)inAndOutTargetPosition).magnitude > __instance.dashToCenterDistance)
-                                {
-                                    IEnumerator dashToCenterEnumerator = (IEnumerator)dashToCenterCoroutineMethod.Invoke(__instance, null);
-                                    Coroutine newInAndOutCoroutine = __instance.StartCoroutine(dashToCenterEnumerator);
-                                    inAndOutCoroutineField.SetValue(__instance, newInAndOutCoroutine);
-                                    __instance.inAndOutPatternDelayTimer.Ratio = 0f;
-                                }
-                                else if (__instance.Environment)
-                                {
-                                    Vector3 bossZoneBottomLeft2 = __instance.Environment.BossZoneBottomLeft;
-                                    Vector3 bossZoneTopRight2 = __instance.Environment.BossZoneTopRight;
-                                    __instance.unit.InAndOut(bossZoneBottomLeft2, bossZoneTopRight2);
-                                    __instance.inAndOutPatternDelayTimer.Ratio = 0f;
-                                }
-                                Unit_LizardDemon_Patch.ShootShockwave.Ratio = 0f;
-                                return false;
-                            case 6:
-                                if (__instance.Environment is BossEnvironment_LizardDemon bossEnvironment)
-                                {
-                                    TwisterAttack2 = true;
-                                    Vector3 ZoneBottomLeft = __instance.Environment.BossZoneBottomLeft;
-                                    Vector3 ZoneTopRight = __instance.Environment.BossZoneTopRight;
-                                    Vector3 ZoneCenter = __instance.Environment.BossZoneCenter;
-                                    int Count = Hard * 3;
-                                    for (int i = 0; i < Count; i++)
-                                    {
-                                        TwisterPos.Add(GetRandomPositionInBossZone(ZoneCenter, ZoneBottomLeft, ZoneTopRight));
-                                    }
-                                    __instance.unit.Twister(__instance.CurrentTarget);
-                                }
-                                break;
-                            default:
-                                __instance.unit.BasicAttack(true);
-                                break;
-                        }
+                        LaunchPattern(__instance, pattern, inAndOutTargetPosition);
                     }
-                    return false;  // 阻止原方法執行
+                    return false;
                 }
                 catch (Exception ex)
                 {
                     StarSephiriaMod.LogError($"[UnitAI_LizardDemon][OnAIUpdate_FoundEnemy]出现错误{ex}");
-                    return true;  // 出錯時執行原方法
+                    return true;
                 }
+            }
+
+            /// <summary>下一轮技能池；环境存在时同时刷新 InAndOut 目标点。</summary>
+            private static void RefillPatternList(UnitAI_LizardDemon __instance, ref Vector2 inAndOutTargetPosition)
+            {
+                MeleeAttack2 = !MeleeAttack2;
+                __instance.patternList.Add(0);
+                __instance.patternList.Add(2);
+                __instance.patternList.Add(3);
+                __instance.patternList.Add(4);
+                __instance.patternList.Add(5);
+                __instance.patternList.Shuffle();
+                if (__instance.Environment && __instance.Environment is BossEnvironment_LizardDemon)
+                {
+                    if (Hard >= 2) __instance.patternList.Add(6);
+                    __instance.patternList.Add(1);
+                    __instance.patternList.Add(1);
+                }
+                if (Oldpattern >= 0)
+                {
+                    __instance.patternList.Remove(Oldpattern);
+                    __instance.patternList.Insert(__instance.patternList.Count / 2, Oldpattern);
+                }
+                if (__instance.Environment)
+                {
+                    inAndOutTargetPosition = __instance.Environment.BossZoneCenter + (Vector3)Random.insideUnitCircle * 3f;
+                    InAndOutTargetPositionRef!(__instance) = inAndOutTargetPosition;
+                }
+            }
+
+            /// <summary>按编号释放技能。</summary>
+            private static void LaunchPattern(UnitAI_LizardDemon __instance, int pattern, Vector2 inAndOutTargetPosition)
+            {
+                switch (pattern)
+                {
+                    case 0:
+                        __instance.unit.HeadSmash();
+                        __instance.patternTimer.Ratio = 0.5f;
+                        break;
+                    case 1:
+                        SunkenAttack(__instance);
+                        break;
+                    case 2:
+                        DashCoroutineRef!(__instance) = __instance.StartCoroutine(DashCoroutineDelegate!(__instance));
+                        break;
+                    case 3:
+                        __instance.unit.Twister(__instance.CurrentTarget);
+                        break;
+                    case 4:
+                        if ((__instance.transform.position - (Vector3)inAndOutTargetPosition).magnitude > __instance.dashToCenterDistance)
+                        {
+                            InAndOutCoroutineRef!(__instance) = __instance.StartCoroutine(DashToCenterCoroutineDelegate!(__instance));
+                            __instance.inAndOutPatternDelayTimer.Ratio = 0f;
+                        }
+                        else if (__instance.Environment)
+                        {
+                            __instance.unit.InAndOut(__instance.Environment.BossZoneBottomLeft, __instance.Environment.BossZoneTopRight);
+                            __instance.inAndOutPatternDelayTimer.Ratio = 0f;
+                        }
+                        Unit_LizardDemon_Patch.ShootShockwave.Ratio = 0f;
+                        break;
+                    case 6:
+                        TwisterAttack(__instance);
+                        break;
+                    default:
+                        __instance.unit.BasicAttack(true);
+                        break;
+                }
+            }
+
+            /// <summary>技能 1：根据玩家位置挑选硬直/沉没区域组合。</summary>
+            private static void SunkenAttack(UnitAI_LizardDemon __instance)
+            {
+                if (__instance.Environment is not BossEnvironment_LizardDemon bossEnvironment_LizardDemon) return;
+                Vector3 bossZoneBottomLeft = __instance.Environment.BossZoneBottomLeft;
+                Vector3 bossZoneTopRight = __instance.Environment.BossZoneTopRight;
+                Vector3 bossZoneCenter = __instance.Environment.BossZoneCenter;
+                List<int> list = [];
+                {
+                    Vector2 vector = __instance.CurrentTarget.transform.position;
+                    bool flag = vector.y > bossZoneCenter.y;
+                    bool flag2 = vector.x > bossZoneCenter.x;
+
+                    if (flag) list.Add(4);
+                    else list.Add(5);
+
+                    if (flag2) list.Add(2);
+                    else list.Add(3);
+                }
+                list.Add(1);
+                list.Add(0);
+
+                int V = list[Random.Range(0, list.Count)];
+                List<BoxCollider2D> list2 = [];
+                if (V > 1) list2.AddRange(bossEnvironment_LizardDemon.areaAttackPatterns_Hard[V - 2].GetComponentsInChildren<BoxCollider2D>());
+                else list2.AddRange(bossEnvironment_LizardDemon.areaAttackPatterns[V].GetComponentsInChildren<BoxCollider2D>());
+                list.Remove(V);
+
+                if (Hard >= 3)
+                {
+                    V = list[Random.Range(0, list.Count)];
+                    if (V > 1) list2.AddRange(bossEnvironment_LizardDemon.areaAttackPatterns_Hard[V - 2].GetComponentsInChildren<BoxCollider2D>());
+                    else list2.AddRange(bossEnvironment_LizardDemon.areaAttackPatterns[V].GetComponentsInChildren<BoxCollider2D>());
+                }
+                int num3 = -1;
+                if (V == 0) num3 = 0;
+                else if (V == 1) num3 = 1;
+                __instance.unit.Sunken(bossZoneBottomLeft, bossZoneTopRight, num3, list2.ToArray(), __instance.CurrentTarget);
+                if (Hard >= 2) __instance.patternTimer.Ratio = 0.5f;
+            }
+
+            /// <summary>技能 6：多点龙卷风。</summary>
+            private static void TwisterAttack(UnitAI_LizardDemon __instance)
+            {
+                if (__instance.Environment is not BossEnvironment_LizardDemon) return;
+                TwisterAttack2 = true;
+                Vector3 ZoneBottomLeft = __instance.Environment.BossZoneBottomLeft;
+                Vector3 ZoneTopRight = __instance.Environment.BossZoneTopRight;
+                Vector3 ZoneCenter = __instance.Environment.BossZoneCenter;
+                int Count = Hard * 3;
+                for (int i = 0; i < Count; i++)
+                {
+                    TwisterPos.Add(GetRandomPositionInBossZone(ZoneCenter, ZoneBottomLeft, ZoneTopRight));
+                }
+                __instance.unit.Twister(__instance.CurrentTarget);
             }
 
             public static Vector3 GetRandomPositionInBossZone(Vector3 center, Vector3 bottomLeft, Vector3 topRight)
@@ -672,7 +674,7 @@ namespace SPMod.MonsterAI
                         __instance.unit.Anim_BasicAttack_Fire();
                     yield return new WaitForSeconds(0.1f);
                 }
-                dashCoroutineField.SetValue(__instance, null);
+                DashCoroutineRef!(__instance) = null;
             }
         }
     }

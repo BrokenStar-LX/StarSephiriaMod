@@ -842,6 +842,75 @@ namespace SPMod
             }
         }
 
+        /// <summary>天丛云剑「神击」：复用破甲刀的 isBladeStuck 状态（挥砍动作一致）。</summary>
+        public static class KusanagiState
+        {
+            private static readonly FieldInfo? IsBladeStuckField = AccessTools.Field(typeof(WeaponSimple_Katana), "isBladeStuck");
+            private static readonly FieldInfo? StuckAttackCounterField = AccessTools.Field(typeof(WeaponSimple_Katana), "stuckBladeAttackCounter");
+            private static readonly FieldInfo? StuckCounterChangedField = AccessTools.Field(typeof(WeaponSimple_Katana), "isStuckBladeAttackCounterChangedCurrentFrame");
+            public static readonly AccessTools.FieldRef<WeaponSimple_Katana, bool>? IsBladeStuckRef = IsBladeStuckField == null ? null : AccessTools.FieldRefAccess<WeaponSimple_Katana, bool>(IsBladeStuckField);
+            public static readonly AccessTools.FieldRef<WeaponSimple_Katana, int>? StuckAttackCounterRef = StuckAttackCounterField == null ? null : AccessTools.FieldRefAccess<WeaponSimple_Katana, int>(StuckAttackCounterField);
+            public static readonly AccessTools.FieldRef<WeaponSimple_Katana, bool>? StuckCounterChangedRef = StuckCounterChangedField == null ? null : AccessTools.FieldRefAccess<WeaponSimple_Katana, bool>(StuckCounterChangedField);
+
+            public static bool TryGetOwner(WeaponSimple_Katana Katana, out UnitAvatar Owner)
+            {
+                Owner = null!;
+                if (Katana.entityId != Kusanagi || Katana.Networkowner == null) return false;
+                UnitAvatar? Avatar = Katana.Networkowner.unitAvatar;
+                if (Avatar == null) return false;
+                Owner = Avatar;
+                return true;
+            }
+
+            public static bool IsStuck(WeaponSimple_Katana Katana) => IsBladeStuckRef != null && IsBladeStuckRef(Katana);
+
+            public static bool IsStuck(UnitAvatar? Player)
+            {
+                if (Player == null || !Player.TryGetComponent(out WeaponControllerSimple Controller)) return false;
+                return Controller.currentWeapon is WeaponSimple_Katana Katana && Katana.entityId == Kusanagi && IsStuck(Katana);
+            }
+
+            public static bool IsDivineStrike(UnitAvatar? Player, int SwordCount)
+            {
+                if (Player == null || !Player.TryGetComponent(out WeaponControllerSimple Controller)) return false;
+                if (Controller.currentWeapon is not WeaponSimple_Katana Katana || Katana.entityId != Kusanagi) return false;
+                return Katana.NetworkisBladeSheathed && SwordCount >= 2;
+            }
+
+            public static bool IsDivineStrike(UnitAvatar? Player) => IsDivineStrike(Player, GetOriginalSwordCount(Player));
+
+            public static int GetOriginalSwordCount(UnitAvatar? Player)
+            {
+                if (Player == null) return 0;
+                if (Player.GetCustomStatUnsafe(TextFile.WindSwordGreatSword) > 0) return 1;
+                Charm_WindSword? Sword = Player.FindPlayerCharm<Charm_WindSword>();
+                if (Sword == null) return 0;
+                return Mathf.Max(1, Sword.AttackCount + Player.GetCustomStatUnsafe(TextFile.WindSwordCount));
+            }
+
+            public static void SetDivineStrike(WeaponSimple_Katana Katana, bool Active)
+            {
+                if (IsBladeStuckRef == null || StuckAttackCounterRef == null) return;
+                IsBladeStuckRef(Katana) = Active;
+                StuckAttackCounterRef(Katana) = 0;
+                Katana.useSheathHardening = Active;
+                Katana.finalComboIdx = Active ? 1 : 2;
+                Katana.Networkowner?.SetAnimationBool(AnimHashContainer.Instance.AlwaysSheathHash, Active);
+            }
+
+            /// <summary>神击伤害：扣除数量 × 风之刃伤害。返回是否为神击攻击。</summary>
+            public static bool ApplyDamage(UnitAvatar Owner, NewWeaponFireData_MeleeAttack FireData, ref float Damage)
+            {
+                if (FireData.damageMultiplier != LoadModContent.WindKatana_Kusanagi.Data.damageMultiplier) return false;
+                int RemovedCount = GetOriginalSwordCount(Owner) / 2;
+                Charm_WindSword? WindSword = Owner.FindPlayerCharm<Charm_WindSword>();
+                if (WindSword == null || RemovedCount <= 0) return true;
+
+                Damage = Charm_Basic.CalculateDamage(WindSword) * RemovedCount * (Damage / Owner.GetCustomStatUnsafe(TextFile.WindDamage));
+                return true;
+            }
+        }
+
         [HarmonyPatch(typeof(WeaponSimple_Katana))]
         public static class WeaponSimple_Katana_Patches
         {
@@ -870,6 +939,30 @@ namespace SPMod
             public static MethodInfo? RpcCreateQuickDrawAttackFxMethod = AccessTools.Method(typeof(WeaponSimple_Katana), "RpcCreateQuickDrawAttackFx");
             public static MethodInfo? RpcCreateGreatDrawAttackFxMethod = AccessTools.Method(typeof(WeaponSimple_Katana), "RpcCreateGreatDrawAttackFx");
             public static MethodInfo? SetResidualLightningStackMethod = AccessTools.Method(typeof(WeaponSimple_Katana), "SetResidualLightningStack");
+            private static readonly Dictionary<WeaponSimple_Katana, int> KusanagiLastPressFrame = [];
+            private static readonly Dictionary<WeaponSimple_Katana, bool> KusanagiPrevGuard = [];
+            private static readonly Dictionary<WeaponSimple_Katana, int> KusanagiExitFrame = [];
+
+            /// <summary>退出神击：拔刀动作结束，切回普通攻击。</summary>
+            private static void FinishKusanagiExit(WeaponSimple_Katana __instance)
+            {
+                if (__instance.Networkowner == null) return;
+                KusanagiExitFrame.Remove(__instance);
+                __instance.Networkowner.EndAttackAnimationFullyManual();
+                __instance.NetworkisBladeSheathed = false;
+                __instance.NetworksheathStateEnabled = false;
+                __instance.Networkowner.SetAnimationBool(AnimHashContainer.Instance.GuardHash, false);
+                __instance.Networkowner.StartFuryInvincible(0.125f);
+            }
+
+            [HarmonyPatch("OnDestroy")]
+            [HarmonyPostfix]
+            static void OnDestroy_Postfix(WeaponSimple_Katana __instance)
+            {
+                KusanagiLastPressFrame.Remove(__instance);
+                KusanagiPrevGuard.Remove(__instance);
+                KusanagiExitFrame.Remove(__instance);
+            }
 
             [HarmonyPatch("Update")]
             [HarmonyPostfix]
@@ -878,6 +971,22 @@ namespace SPMod
                 UnitAvatar Player = __instance.Networkowner.unitAvatar;
                 if (Player != null)
                 {
+                    if (__instance.entityId == Kusanagi)
+                    {
+                        float Speed = 1f;
+                        if (__instance.NetworkisBladeSheathed)
+                        {
+                            float Mult = Player.GetCustomStatUnsafe(TextFile.AttackSpeed) + Player.GetCustomStatUnsafe(TextFile.WindSwordSpeed);
+                            Speed = 1f + Mult * 0.01f;
+                        }
+                        if (__instance.Networkowner.animator.speed != Speed)
+                            __instance.Networkowner.animator.speed = Speed;
+
+                        if (KusanagiExitFrame.TryGetValue(__instance, out int ExitFrame) && __instance.isServer && Time.frameCount > ExitFrame)
+                        {
+                            FinishKusanagiExit(__instance);
+                        }
+                    }//天丛云剑
                     if (__instance.entityId == FamedSwordMuramasa && Player.IsWeapon(FamedSwordMuramasa))
                     {
                         float Orig = 0.75f;
@@ -922,7 +1031,7 @@ namespace SPMod
                             BlazingHelbanusSpeed[Player] = false;
                         }
                     }//赫尔巴努斯
-                    if (Player.IsWeaponUseNet(YuisShortDagger) && __instance.entityId == YuisShortDagger)
+                    if (__instance.entityId == YuisShortDagger && Player.IsWeaponUseNet(YuisShortDagger))
                     {
                         if (!YuisShortDaggerMagic.ContainsKey(Player))
                         {
@@ -1181,6 +1290,60 @@ namespace SPMod
                     return false;
                 }
                 return true;
+            }
+
+            [HarmonyPatch("BasicAttackCreated")]
+            [HarmonyPrefix]
+            static void BasicAttackCreated_Prefix(WeaponSimple_Katana __instance)
+            {
+                if (__instance.entityId != Kusanagi || !KusanagiState.IsStuck(__instance)) return;
+                var ChangedRef = KusanagiState.StuckCounterChangedRef;
+                if (ChangedRef == null) return;
+                ChangedRef(__instance) = false;
+            }
+
+            [HarmonyPatch("SubAttackButtonDown")]
+            [HarmonyPrefix]
+            static bool SubAttackButtonDown_Prefix(WeaponSimple_Katana __instance)
+            {
+                if (!KusanagiState.TryGetOwner(__instance, out UnitAvatar Owner)) return true;
+                WeaponControllerSimple Controller = __instance.Networkowner;
+
+                // 攻击/收拔刀动画中不能切换
+                if (Controller.currentWeaponSwing != -1 || __instance.NetworkisSheathAnimationRunning) return false;
+
+                // 同帧重复触发（一次按键触发两次事件）直接忽略
+                if (KusanagiLastPressFrame.TryGetValue(__instance, out int LastFrame) && LastFrame == Time.frameCount) return false;
+                KusanagiLastPressFrame[__instance] = Time.frameCount;
+
+                bool Guard = Controller.GetAnimationBool(AnimHashContainer.Instance.GuardHash);
+                KusanagiPrevGuard[__instance] = Guard;
+
+                if (KusanagiState.IsStuck(__instance))
+                {
+                    // 退出神击：播拔刀动作，下一帧再切回普通攻击
+                    KusanagiState.SetDivineStrike(__instance, false);
+                    KusanagiExitFrame[__instance] = Time.frameCount;
+                    Controller.BeginSpecialAttackAnimationFullyManual(0);
+                    KusanagiPrevGuard.Remove(__instance);
+                    return false;
+                }
+
+                // 不足 2 柄风之刃不能进入神击
+                if (!Guard && !__instance.NetworkisBladeSheathed && KusanagiState.GetOriginalSwordCount(Owner) < 2) return false;
+                return true;
+            }
+
+            [HarmonyPatch("SubAttackButtonDown")]
+            [HarmonyPostfix]
+            static void SubAttackButtonDown_Postfix(WeaponSimple_Katana __instance)
+            {
+                if (!KusanagiState.TryGetOwner(__instance, out UnitAvatar Owner)) return;
+                if (!KusanagiPrevGuard.Remove(__instance, out bool PrevGuard)) return;
+
+                bool Guard = __instance.Networkowner.GetAnimationBool(AnimHashContainer.Instance.GuardHash);
+                if (!PrevGuard && Guard && !KusanagiState.IsStuck(__instance) && KusanagiState.GetOriginalSwordCount(Owner) >= 2)
+                    KusanagiState.SetDivineStrike(__instance, true);
             }
 
             [HarmonyPatch("OnEndCastMagicServerside")]
@@ -1822,17 +1985,17 @@ namespace SPMod
                         int compressedAmmoCount = (int)compressedAmmoCountField.GetValue(__instance);
                         if (__instance.NetworkremainingMagazineCount > 1)
                         {
+                            int Count = __instance.NetworkremainingMagazineCount - 1;
                             __instance.Networkowner.unitAvatar.UseMp((int)__instance.SpecialAttackCost);
                             __instance.NetworkhasCompressedAmmo = true;
-                            compressedAmmoCount += __instance.defaultMagazineCapacity + 3;
+                            compressedAmmoCount += (__instance.defaultMagazineCapacity + Player.GetCustomStatUnsafe(TextFile.CrossbowAmmo) + 3) * Count;
                             compressedAmmoCountField.SetValue(__instance, compressedAmmoCount);
                             __instance.Networkowner.unitAvatar.CreateEffectHUD("AMMO_COMPRESSED", "AmmoCompressed");
                             __instance.Networkowner.unitAvatar.SetEffectHUDValue("AmmoCompressed", compressedAmmoCount.ToString());
-                            __instance.NetworkremainingMagazineCount -= 1;
+                            __instance.NetworkremainingMagazineCount = 1;
                             Vector3 Pos = Player.transform.position + (Vector3)UnityEngine.Random.insideUnitCircle;
                             UIManager.Pool.Spawn<UI_DamageParticle>(Pos).SetDamage(compressedAmmoCount.ToString() + "!", EffectConstant.WeaponColor2);
-                            if (compressedAmmoCount > 10)
-                                __instance.Networkowner.unitAvatar.CreateEffectHUD("AMMO_COMPRESSED_ENHANCED", "AmmoCompressedEnhanced");
+                            __instance.Networkowner.unitAvatar.CreateEffectHUD("AMMO_COMPRESSED_ENHANCED", "AmmoCompressedEnhanced");
                             return false;
                         }
                     }
@@ -1968,9 +2131,9 @@ namespace SPMod
                     {
                         if (!SolisCinerisRegen.TryGetValue(Player, out float RegenTime)) RegenTime = 0f;
                         RegenTime += Time.deltaTime * (1f + 0.01f * Player.GetCustomStatUnsafe(TextFile.FlameSwordMax));
-                        if (RegenTime >= 0.3f)
+                        if (RegenTime >= 0.25f)
                         {
-                            RegenTime -= 0.3f;
+                            RegenTime -= 0.25f;
                             ComboEffectBase? Combo = Player.Inventory?.FindComboEffect("FLAMESWORD");
                             if (Combo is ComboEffect_FlameSword FlameSword && !FlameSword.IsMax())
                                 FlameSword.AddSword(1);
@@ -4176,7 +4339,7 @@ namespace SPMod
         {
             [HarmonyPatch("InstantiateProjectile")]
             [HarmonyPrefix]
-            static bool InstantiateProjectile_Prefix(NewWeaponFireData_MeleeAttack __instance, ref float damage, ref float swingMultiplier, ref UnitAvatar owner, Vector2 motionFrom, Vector2 motionTo, Action<CombatBehaviour, DamageInstance, ProjectileBase> onAttack, ref float rangeBonus, ref EDamageElementalType elementalType, ref Action<int, ProjectileBase> onCreateAttack, float finalDamageMultiplier)
+            static bool InstantiateProjectile_Prefix(NewWeaponFireData_MeleeAttack __instance, ref float damage, ref float swingMultiplier, UnitAvatar owner, Vector2 motionFrom, Vector2 motionTo, ref Action<CombatBehaviour, DamageInstance, ProjectileBase> onAttack, ref float rangeBonus, ref EDamageElementalType elementalType, ref Action<int, ProjectileBase> onCreateAttack, float finalDamageMultiplier)
             {
                 if (owner == null) return true;
 
@@ -4189,6 +4352,20 @@ namespace SPMod
                 {
                     if (owner.GetWeaponTypeAndData(out int Type, out (string AttackType, int Idx) Data))
                     {
+                        if (Type == Kusanagi && __instance.damageElementalType == EffectConstant.Wind && KusanagiState.ApplyDamage(owner, __instance, ref damage))
+                        {
+                            int Crit = owner.GetCustomStatUnsafe(TextFile.WindSwordCritDamage);
+                            if (Crit != 0)
+                            {
+                                Action<int, ProjectileBase> OriginalCreate = onCreateAttack;
+                                onCreateAttack = (Idx, Projectile) =>
+                                {
+                                    if (Projectile is MeleeCollision Melee)
+                                        Melee.additionalCriticalDamageRate += Crit;
+                                    OriginalCreate?.Invoke(Idx, Projectile);
+                                };
+                            }
+                        }//天丛云剑
                         if (Type == CarrotSword2 && Data.AttackType == "Basic")
                         {
                             damage = damage.WeaponDamageMult(__instance.damageMultiplier, 1.5f);
@@ -4765,7 +4942,7 @@ namespace SPMod
                         if (Type == SolisCineris && Data.AttackType == "Dash" && SolisCinerisDash.TryGetValue(owner, out var DashData) && Time.time <= DashData.Expire)
                         {
                             SolisCinerisDash.Remove(owner);
-                            damage *= 1f + 0.5f * DashData.Count;
+                            damage *= 1f + 0.25f * DashData.Count;
                             damage *= 1f + owner.GetCustomStatUnsafe(TextFile.FlameSwordDamage) * 0.01f;
                             damage *= 1f + owner.GetCustomStatUnsafe(TextFile.FlameSwordAdditionalAttack) * 0.33f;
                             Action<int, ProjectileBase>? originalCallback = onCreateAttack;

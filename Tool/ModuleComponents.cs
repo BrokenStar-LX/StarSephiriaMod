@@ -552,7 +552,7 @@ namespace SPMod.Tool
             public float GetDamage()
             {
                 float Value = Player.GetCustomStatUnsafe(TextFile.WindDamage) * 0.5f;
-                Charm_WindSword? WindSword = Charm_WindSword.FindPlayerCharm<Charm_WindSword>(Player);
+                Charm_WindSword? WindSword = Player.FindPlayerCharm<Charm_WindSword>();
                 if (WindSword != null)
                     Value *= 1f + WindSword.RequestCharmDamageBonusOnRoot() * 0.01f;
                 Value *= 1f + Player.GetCustomStatUnsafe(TextFile.WindSwordDamage) * 0.01f;
@@ -2094,6 +2094,12 @@ namespace SPMod.Tool
             /// </summary>
             public ModFireData SetMeleeSwingSpriteFolder(string Path, string originalPrefix, bool extendFrames, float swingScale = 1f, float collisionScale = 1f)
             {
+                return SetMeleeSwingSpriteFolder(Path, originalPrefix, extendFrames, new Vector2(swingScale, swingScale), new Vector2(collisionScale, collisionScale));
+            }
+
+            /// <summary>swingScale / collisionScale 支持宽高分别缩放（x = 宽，y = 高）。</summary>
+            public ModFireData SetMeleeSwingSpriteFolder(string Path, string originalPrefix, bool extendFrames, Vector2 swingScale, Vector2 collisionScale)
+            {
                 Builders.Add(Data =>
                 {
                     if (Data is not NewWeaponFireData_MeleeAttack Melee)
@@ -2122,7 +2128,7 @@ namespace SPMod.Tool
                     {
                         MeleeCollision? SourceCollision = Melee.projectilePrefab.GetComponent<MeleeCollision>();
                         bool FxMatch = SourceCollision != null && FxHasFramesWithPrefix(SourceCollision.swingFxPrefab, originalPrefix);
-                        if (SourceCollision != null && (FxMatch || !Mathf.Approximately(collisionScale, 1f)))
+                        if (SourceCollision != null && (FxMatch || !IsOne(collisionScale)))
                         {
                             GameObject Projectile = CloneInactive(Melee.projectilePrefab);
                             SwingFxCounter++;
@@ -2517,25 +2523,32 @@ namespace SPMod.Tool
                 StarSephiriaMod.RegisterModPrefab(Prefab);
             }
 
-            private static void ScaleMeleeCollision(MeleeCollision Collision, float Scale)
+            /// <summary>宽高都为 1 时视为不缩放。</summary>
+            private static bool IsOne(Vector2 Scale) => Mathf.Approximately(Scale.x, 1f) && Mathf.Approximately(Scale.y, 1f);
+
+            private static void ScaleMeleeCollision(MeleeCollision Collision, Vector2 Scale)
             {
-                if (Collision == null || Mathf.Approximately(Scale, 1f)) return;
+                if (Collision == null || IsOne(Scale)) return;
 
                 switch (Collision)
                 {
                     case MeleeCollision_Circle_Distance Distance:
-                        Distance.radius *= Scale;
+                        Distance.radius *= (Scale.x + Scale.y) * 0.5f;
+                        if (!Mathf.Approximately(Scale.x, Scale.y))
+                            StarSephiriaMod.LogError("[ModFireData] 圆形判定不支持宽高分别缩放，取平均值");
                         break;
                     case MeleeCollision_Circle Circle:
-                        Circle.radius *= Scale;
+                        Circle.radius *= (Scale.x + Scale.y) * 0.5f;
+                        if (!Mathf.Approximately(Scale.x, Scale.y))
+                            StarSephiriaMod.LogError("[ModFireData] 圆形判定不支持宽高分别缩放，取平均值");
                         break;
                     case MeleeCollision_Rectangle Rectangle:
-                        Rectangle.size *= Scale;
-                        Rectangle.offset *= Scale;
+                        Rectangle.size = new Vector2(Rectangle.size.x * Scale.x, Rectangle.size.y * Scale.y);
+                        Rectangle.offset = new Vector2(Rectangle.offset.x * Scale.x, Rectangle.offset.y * Scale.y);
                         break;
                     case MeleeCollision_Capsule Capsule:
-                        Capsule.size *= Scale;
-                        Capsule.offset *= Scale;
+                        Capsule.size = new Vector2(Capsule.size.x * Scale.x, Capsule.size.y * Scale.y);
+                        Capsule.offset = new Vector2(Capsule.offset.x * Scale.x, Capsule.offset.y * Scale.y);
                         break;
                     default:
                         StarSephiriaMod.LogError($"[ModFireData] 未支持的 MeleeCollision 类型，判定范围没有缩放：{Collision.GetType().Name}");
@@ -2586,7 +2599,7 @@ namespace SPMod.Tool
                 return Result;
             }
 
-            private GameObject? ReskinFxByOrder(GameObject? SourceFx, List<Sprite> Ordered, string Prefix, bool ExtendFrames, float Scale)
+            private GameObject? ReskinFxByOrder(GameObject? SourceFx, List<Sprite> Ordered, string Prefix, bool ExtendFrames, Vector2 Scale)
             {
                 if (SourceFx == null || Ordered.Count == 0) return null;
                 if (!FxHasFramesWithPrefix(SourceFx, Prefix)) return null;
@@ -2597,7 +2610,11 @@ namespace SPMod.Tool
                 Fx.SetActive(false);
                 Object.DontDestroyOnLoad(Fx);
 
-                if (!Mathf.Approximately(Scale, 1f)) Fx.transform.localScale *= Scale;
+                if (!IsOne(Scale))
+                {
+                    Vector3 LocalScale = Fx.transform.localScale;
+                    Fx.transform.localScale = new Vector3(LocalScale.x * Scale.x, LocalScale.y * Scale.y, LocalScale.z);
+                }
 
                 Dictionary<AnimationSet, AnimationSet> Cache = [];
                 foreach (Animator2D_Basic Animator in Fx.GetComponentsInChildren<Animator2D_Basic>(true))

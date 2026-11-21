@@ -480,6 +480,7 @@ namespace SPMod
                 {"PARTYBUFF", "翼耳兔共享增益效果"},
                 {"REVIVEPLAYERHASTE", "复活队友的速度"},
                 {"FURYINVINCIBLETIME", "狂怒无敌时间"},
+                {"FURYINVINCIBLETIMEPERCENT", "狂怒无敌时间增加"},
                 {"REDSNAKEEYEDAMAGEBONUS", "红蛇之眼造成的伤害"},
                 {"CROSSBOWAMMO", "弹匣容量"},
                 {"ICEBUFF_DECREASEATTACKSPEED", "扩展装置攻击速度减少"},
@@ -629,6 +630,12 @@ namespace SPMod
                 {"STAT_WINDEROSIONLUCK", "风蚀额外触发概率"},
                 {"STAT_WINDEROSIONOVERFLOW", "风帆倍率"},
                 {"STAT_WINDEROSIONOVERFLOWADD", "风帆额外倍率"},
+                {"STAT_WINDSWORDSPEED", "风之刃攻击速度"},
+                {"STAT_WINDSWORDDAMAGE", "风之刃伤害"},
+                {"STAT_WINDSWORDCRITDAMAGE", "风之刃暴击伤害"},
+                {"STAT_WINDSWORDCOUNT", "风之刃额外攻击次数"},
+                {"STAT_WINDSWORDMULT", "风之刃基础倍率"},
+                {"STAT_WINDSWORDRANGE", "风之刃攻击范围"},
                 {"STAT_GOLDOBTAINED", "总获取叶子数量"},
                 {"WOUNDDAMAGE", "伤口恶化伤害"},
                 {"ATKSPDCHAKRAM", "查克拉姆受攻速影响"},
@@ -658,7 +665,14 @@ namespace SPMod
                 {"STAT_COMPANIONSTRIKEBACK", "同伴继承反击"},
                 {"STAT_WINDEROSIONCRITDAMAGE", "风蚀暴击伤害"},
                 {"STAT_WINDEROSIONDOT", "空气钟倍率"},
-                {"STAT_CYANORBUP", "强化青绿色宝珠"}
+                {"STAT_CYANORBUP", "强化青绿色宝珠"},
+                {"STAT_WINDSWORDSPEED", "风之刃攻击速度"},
+                {"STAT_WINDSWORDDAMAGE", "风之刃伤害"},
+                {"STAT_WINDSWORDCRITDAMAGE", "风之刃暴击伤害"},
+                {"STAT_WINDSWORDCOUNT", "风之刃额外攻击次数"},
+                {"STAT_WINDSWORDMULT", "风之刃基础倍率"},
+                {"STAT_WINDSWORDRANGE", "风之刃攻击范围"},
+                {"FURYINVINCIBLETIMEPERCENT", "狂怒无敌时间增加"},
             };
             _displayNames.AddRange(stats);
         }
@@ -2348,6 +2362,17 @@ namespace SPMod
                     Result += 200;
                 }
             }//希望的影子
+
+            if (Player.IsWeaponUseNet(WeaponIDs.Kusanagi))
+            {
+                if (ID.EqualsAny(TextFile.WeaponRange))
+                {
+                    if (WeaponPatch.KusanagiState.IsStuck(Player))
+                    {
+                        Result += Player.GetCustomStatUnsafe(TextFile.WindSwordRange);
+                    }
+                }
+            }//天丛云剑
 
             if (StarTwinkle_AddDamage.Count > 0)
             {

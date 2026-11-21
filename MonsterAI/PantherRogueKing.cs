@@ -31,6 +31,21 @@ namespace SPMod.MonsterAI
         // Unit_PantherRogueKing 反射字段
         private static readonly FieldInfo? sharedCBField;
 
+        private static readonly AccessTools.FieldRef<UnitAI_PantherRogueKing, Unit_PantherRogueKing>? KingRef;
+        private static readonly AccessTools.FieldRef<UnitAI_PantherRogueKing, UnitAI_PantherRogueKing.State>? StateRef;
+        private static readonly AccessTools.FieldRef<UnitAI_PantherRogueKing, List<int>>? PatternRoundRobbinRef;
+        private static readonly AccessTools.FieldRef<UnitAI_PantherRogueKing, Coroutine?>? PatternCoroutineRef;
+        private static readonly AccessTools.FieldRef<UnitAI_PantherRogueKing, BossEnvironment_Panther>? PantherEnvironmentRef;
+        private static readonly AccessTools.FieldRef<UnitAI_PantherRogueKing, bool>? IsEndEnterCutSceneRef;
+        private static readonly AccessTools.FieldRef<Unit_PantherRogueKing, List<CombatBehaviour>>? SharedCBRef;
+        private static readonly Func<UnitAI_PantherRogueKing, IEnumerator>? RushPatternCoroutineDelegate;
+        private static readonly Func<UnitAI_PantherRogueKing, IEnumerator>? CloneRandomDaggerPatternCoroutineDelegate;
+        private static readonly Func<UnitAI_PantherRogueKing, bool, IEnumerator>? CloneDaggerPatternCoroutineDelegate;
+        private static readonly Func<UnitAI_PantherRogueKing, IEnumerator>? CloneDaggerSpreadPatternCoroutineDelegate;
+        private static readonly Func<UnitAI_PantherRogueKing, IEnumerator>? BasicAttackPatternCoroutineDelegate;
+        private static readonly float[] StraightAngles = [0f, 90f, 180f, 270f];
+        private static readonly float[] DiagonalAngles = [45f, 135f, 225f, 315f];
+
         static PantherRogueKing()
         {
             try
@@ -48,11 +63,23 @@ namespace SPMod.MonsterAI
                 cloneDaggerPatternCoroutineMethod = AccessTools.Method(type, "CloneDaggerPatternCoroutine");
                 cloneDaggerSpreadPatternCoroutineMethod = AccessTools.Method(type, "CloneDaggerSpreadPatternCoroutine");
                 basicAttackPatternCoroutineMethod = AccessTools.Method(type, "BasicAttackPatternCoroutine");
+                KingRef = ReflectionCache.FieldRef<UnitAI_PantherRogueKing, Unit_PantherRogueKing>(type, "king");
+                StateRef = ReflectionCache.FieldRef<UnitAI_PantherRogueKing, UnitAI_PantherRogueKing.State>(type, "state");
+                PatternRoundRobbinRef = ReflectionCache.FieldRef<UnitAI_PantherRogueKing, List<int>>(type, "patternRoundRobbin");
+                PatternCoroutineRef = ReflectionCache.FieldRef<UnitAI_PantherRogueKing, Coroutine?>(type, "pattern");
+                PantherEnvironmentRef = ReflectionCache.FieldRef<UnitAI_PantherRogueKing, BossEnvironment_Panther>(type, "pantherEnvironment");
+                IsEndEnterCutSceneRef = ReflectionCache.FieldRef<UnitAI_PantherRogueKing, bool>(type, "isEndEnterCutScene");
+                RushPatternCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_PantherRogueKing, IEnumerator>>(rushPatternCoroutineMethod, "RushPatternCoroutine");
+                CloneRandomDaggerPatternCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_PantherRogueKing, IEnumerator>>(cloneRandomDaggerPatternCoroutineMethod, "CloneRandomDaggerPatternCoroutine");
+                CloneDaggerPatternCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_PantherRogueKing, bool, IEnumerator>>(cloneDaggerPatternCoroutineMethod, "CloneDaggerPatternCoroutine");
+                CloneDaggerSpreadPatternCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_PantherRogueKing, IEnumerator>>(cloneDaggerSpreadPatternCoroutineMethod, "CloneDaggerSpreadPatternCoroutine");
+                BasicAttackPatternCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_PantherRogueKing, IEnumerator>>(basicAttackPatternCoroutineMethod, "BasicAttackPatternCoroutine");
                 StarSephiriaMod.LogInfoBoss("[UnitAI_PantherRogueKing]初始化反射成功");
 
                 // Unit_PantherRogueKing 反射
                 type = typeof(Unit_PantherRogueKing);
                 sharedCBField = AccessTools.Field(type, "sharedCB");
+                SharedCBRef = ReflectionCache.FieldRef<Unit_PantherRogueKing, List<CombatBehaviour>>(type, "sharedCB");
                 StarSephiriaMod.LogInfoBoss("[Unit_PantherRogueKing]初始化反射成功");
             }
             catch (Exception ex)
@@ -120,7 +147,7 @@ namespace SPMod.MonsterAI
                 {
                     float angle = HorayUtility.GetAngle(__instance.CurrentLookingPosition, __instance.transform.position);
                     angle += Random.Range(-45f, 45f);
-                    List<CombatBehaviour> sharedCB = (List<CombatBehaviour>)sharedCBField.GetValue(__instance);
+                    List<CombatBehaviour> sharedCB = SharedCBRef!(__instance);
                     for (float r = 0f; r <= 360f; r += 24f)
                     {
                         Vector2 vector = HorayUtility.GetVector2FromAngle(angle + r) * 3f;
@@ -146,7 +173,7 @@ namespace SPMod.MonsterAI
                     }
                     if (__instance.isServer)
                     {
-                        List<CombatBehaviour> sharedCB = (List<CombatBehaviour>)sharedCBField.GetValue(__instance);
+                        List<CombatBehaviour> sharedCB = SharedCBRef!(__instance);
                         float Mult = 0.2f * Hard;
                         if (Hard >= 4) Mult += 0.2f;
                         __instance.furyFireData.CreateAttack(EDamageFromType.DirectAttack, __instance.RequestStandardDamage(), "BasicAttack", false, __instance, __instance.transform.position, __instance.transform.position + __instance.furyDirection, 0.2f, null, sharedCB, 1f, null, false, Mult);
@@ -192,78 +219,26 @@ namespace SPMod.MonsterAI
                         return true;
                     }
 
-                    king = (Unit_PantherRogueKing)pantherRogueKingField.GetValue(__instance);
-                    state = (UnitAI_PantherRogueKing.State)pantherStateField.GetValue(__instance);
-                    isEndEnterCutScene = (bool)isEndEnterCutSceneField.GetValue(__instance);
+                    king = KingRef!(__instance);
+                    state = StateRef!(__instance);
+                    isEndEnterCutScene = IsEndEnterCutSceneRef!(__instance);
                     if (king.patternState == Unit_PantherRogueKing.EPatternState.Fury && (__instance.CurrentTarget.transform.position - __instance.transform.position).magnitude < 4f)
                     {
                         king.FurySwing();
                     }
+
                     float AttackSpeed = 1.2f + 0.1f * Hard;
-                    if (Hard >= 4) AttackSpeed *= 1.2f;
                     if (king.patternState == Unit_PantherRogueKing.EPatternState.Idle && state == UnitAI_PantherRogueKing.State.None
                         && __instance.majorPatternTimer.Update(Time.deltaTime * AttackSpeed))
                     {
-                        List<int> patternRoundRobbin = (List<int>)patternRoundRobbinField.GetValue(__instance);
-                        if (patternRoundRobbin.Count <= 0)
-                        {
-                            patternRoundRobbin.Add(0);
-                            patternRoundRobbin.Add(1);
-                            patternRoundRobbin.Add(2);
-                            patternRoundRobbin.Add(3);
-                            patternRoundRobbin.Add(5);
-                            patternRoundRobbin.Shuffle();
-                            patternRoundRobbin.Add(4);
-                            if (Oldpattern >= 0)
-                            {
-                                patternRoundRobbin.Remove(Oldpattern);
-                                patternRoundRobbin.Insert(2, Oldpattern);
-                            }
-                        }
+                        List<int> patternRoundRobbin = PatternRoundRobbinRef!(__instance);
+                        if (patternRoundRobbin.Count <= 0) RefillPatternRoundRobbin(patternRoundRobbin);
 
                         int UsePattern = patternRoundRobbin[0];
                         if (UsePattern != 4) Oldpattern = UsePattern;
                         StarSephiriaMod.LogInfoBoss($"耄耋当前技能：{UsePattern}");
-                        switch (UsePattern)
-                        {
-                            case 1:
-                                king.SlowShuriken();
-                                __instance.majorPatternTimer.Ratio = 0.45f;
-                                break;
-
-                            case 2:
-                                state = UnitAI_PantherRogueKing.State.Rush;
-                                IEnumerator rushCoroutine = (IEnumerator)rushPatternCoroutineMethod.Invoke(__instance, null);
-                                Coroutine patternCoroutine = __instance.StartCoroutine(rushCoroutine);
-                                patternCoroutineField.SetValue(__instance, patternCoroutine);
-                                break;
-
-                            case 3:
-                                state = UnitAI_PantherRogueKing.State.CloneRandomDagger;
-                                IEnumerator cloneRandomCoroutine = (IEnumerator)cloneRandomDaggerPatternCoroutineMethod.Invoke(__instance, null);
-                                patternCoroutineField.SetValue(__instance, __instance.StartCoroutine(cloneRandomCoroutine));
-                                break;
-
-                            case 4:
-                                state = UnitAI_PantherRogueKing.State.CloneDagger;
-                                IEnumerator cloneDaggerCoroutine = (IEnumerator)cloneDaggerPatternCoroutineMethod.Invoke(__instance, [false]);
-                                patternCoroutineField.SetValue(__instance, __instance.StartCoroutine(cloneDaggerCoroutine));
-                                break;
-
-                            case 5:
-                                state = UnitAI_PantherRogueKing.State.CloneDaggerSpread;
-                                IEnumerator spreadCoroutine = (IEnumerator)cloneDaggerSpreadPatternCoroutineMethod.Invoke(__instance, null);
-                                patternCoroutineField.SetValue(__instance, __instance.StartCoroutine(spreadCoroutine));
-                                break;
-
-                            default:
-                                state = UnitAI_PantherRogueKing.State.BasicAttack;
-                                IEnumerator basicCoroutine = (IEnumerator)basicAttackPatternCoroutineMethod.Invoke(__instance, null);
-                                patternCoroutineField.SetValue(__instance, __instance.StartCoroutine(basicCoroutine));
-                                __instance.majorPatternTimer.Ratio = 0.5f;
-                                break;
-                        }
-                        pantherStateField.SetValue(__instance, state);
+                        LaunchPattern(__instance, king, UsePattern);
+                        StateRef!(__instance) = state;
                         patternRoundRobbin.RemoveAt(0);
                     }
 
@@ -273,6 +248,55 @@ namespace SPMod.MonsterAI
                 {
                     StarSephiriaMod.LogError($"[UnitAI_PantherRogueKing][OnAIUpdate_FoundEnemy]出现错误: {ex}");
                     return true;
+                }
+            }
+
+            /// <summary>下一轮技能池：4 固定排在最后，避免连续同招。</summary>
+            private static void RefillPatternRoundRobbin(List<int> PatternList)
+            {
+                PatternList.Add(0);
+                PatternList.Add(1);
+                PatternList.Add(2);
+                PatternList.Add(3);
+                PatternList.Add(5);
+                PatternList.Shuffle();
+                PatternList.Add(4);
+                if (Oldpattern >= 0)
+                {
+                    PatternList.Remove(Oldpattern);
+                    PatternList.Insert(2, Oldpattern);
+                }
+            }
+
+            private static void LaunchPattern(UnitAI_PantherRogueKing __instance, Unit_PantherRogueKing king, int UsePattern)
+            {
+                switch (UsePattern)
+                {
+                    case 1:
+                        king.SlowShuriken();
+                        __instance.majorPatternTimer.Ratio = 0.45f;
+                        break;
+                    case 2:
+                        state = UnitAI_PantherRogueKing.State.Rush;
+                        PatternCoroutineRef!(__instance) = __instance.StartCoroutine(RushPatternCoroutineDelegate!(__instance));
+                        break;
+                    case 3:
+                        state = UnitAI_PantherRogueKing.State.CloneRandomDagger;
+                        PatternCoroutineRef!(__instance) = __instance.StartCoroutine(CloneRandomDaggerPatternCoroutineDelegate!(__instance));
+                        break;
+                    case 4:
+                        state = UnitAI_PantherRogueKing.State.CloneDagger;
+                        PatternCoroutineRef!(__instance) = __instance.StartCoroutine(CloneDaggerPatternCoroutineDelegate!(__instance, false));
+                        break;
+                    case 5:
+                        state = UnitAI_PantherRogueKing.State.CloneDaggerSpread;
+                        PatternCoroutineRef!(__instance) = __instance.StartCoroutine(CloneDaggerSpreadPatternCoroutineDelegate!(__instance));
+                        break;
+                    default:
+                        state = UnitAI_PantherRogueKing.State.BasicAttack;
+                        PatternCoroutineRef!(__instance) = __instance.StartCoroutine(BasicAttackPatternCoroutineDelegate!(__instance));
+                        __instance.majorPatternTimer.Ratio = 0.5f;
+                        break;
                 }
             }
 
@@ -300,8 +324,8 @@ namespace SPMod.MonsterAI
                     StarSephiriaMod.LogError("[UnitAI_PantherRogueKing][CloneDaggerPatternCoroutine]获取反射失败");
                     yield break;
                 }
-                Unit_PantherRogueKing king = (Unit_PantherRogueKing)pantherRogueKingField.GetValue(__instance);
-                BossEnvironment_Panther pantherEnvironment = (BossEnvironment_Panther)pantherEnvironmentField.GetValue(__instance);
+                Unit_PantherRogueKing king = KingRef!(__instance);
+                BossEnvironment_Panther pantherEnvironment = PantherEnvironmentRef!(__instance);
                 if (!isCutscene)
                 {
                     king.SetStealth(true);
@@ -368,12 +392,12 @@ namespace SPMod.MonsterAI
                     yield return new WaitForSeconds(0.25f);
                     king.BeginDaggerSpreadAnimation();
                     yield return new WaitForSeconds(0.5f);
-                    sharedCBField?.SetValue(king, new List<CombatBehaviour>());
+                    SharedCBRef!(king) = new List<CombatBehaviour>();
                     king.FireDaggerSpreadAnimation();
                     yield return new WaitForSeconds(0.25f);
                 }
-                pantherStateField.SetValue(__instance, UnitAI_PantherRogueKing.State.None);
-                patternCoroutineField.SetValue(__instance, null);
+                StateRef!(__instance) = UnitAI_PantherRogueKing.State.None;
+                PatternCoroutineRef!(__instance) = null;
                 yield break;
             }
 
@@ -394,6 +418,23 @@ namespace SPMod.MonsterAI
                 }
             }
 
+            /// <summary>
+            /// 从 BossPos 沿 Dir 方向与圆（Center/Radius）求交，取较远的交点；方向背离圆时返回 false。
+            /// </summary>
+            private static bool TryGetCircleHit(Vector2 BossPos, Vector2 Center, float Radius, Vector2 Dir, out float Dist)
+            {
+                Vector2 Offset = BossPos - Center;
+                float B = Vector2.Dot(Dir, Offset);
+                float Disc = B * B - (Offset.sqrMagnitude - Radius * Radius);
+                if (Disc < 0f)
+                {
+                    Dist = 0f;
+                    return false;
+                }
+                Dist = -B + Mathf.Sqrt(Disc);
+                return Dist > 0f;
+            }
+
             static IEnumerator CloneDaggerSpreadPatternCoroutine(UnitAI_PantherRogueKing __instance)
             {
                 if (pantherRogueKingField == null || pantherEnvironmentField == null || patternCoroutineField == null || pantherStateField == null)
@@ -401,20 +442,53 @@ namespace SPMod.MonsterAI
                     StarSephiriaMod.LogError("[UnitAI_PantherRogueKing][CloneDaggerPatternCoroutine]获取反射失败");
                     yield break;
                 }
-                Unit_PantherRogueKing king = (Unit_PantherRogueKing)pantherRogueKingField.GetValue(__instance);
-                BossEnvironment_Panther pantherEnvironment = (BossEnvironment_Panther)pantherEnvironmentField.GetValue(__instance);
-                Vector2 vector = (Vector2)pantherEnvironment.transform.position + pantherEnvironment.cloneShurikenCloneAreaOffset + Random.insideUnitCircle.normalized * pantherEnvironment.cloneShurikenCloneAreaRadius;
+                Unit_PantherRogueKing king = KingRef!(__instance);
+                BossEnvironment_Panther pantherEnvironment = PantherEnvironmentRef!(__instance);
+                Vector2 Center = (Vector2)pantherEnvironment.transform.position + pantherEnvironment.cloneShurikenCloneAreaOffset;
+                Vector2 BossPos = (Vector2)__instance.transform.position;
+                float Radius = pantherEnvironment.cloneShurikenCloneAreaRadius;
+                List<(float Angle, float Dist)> Hits = [];
+
+                // 第1个：本体四个直方向与圆的交点里，取距离本体最远的
+                foreach (float A in StraightAngles)
+                {
+                    if (TryGetCircleHit(BossPos, Center, Radius, HorayUtility.GetVector2FromAngle(A), out float D))
+                        Hits.Add((A, D));
+                }
+                Hits.Sort((X, Y) => Y.Dist.CompareTo(X.Dist));
+                Vector2 vector = Hits.Count > 0
+                    ? BossPos + HorayUtility.GetVector2FromAngle(Hits[0].Angle) * Hits[0].Dist
+                    : Center + Random.insideUnitCircle.normalized * Radius;
                 PantherRogueKingShadow shadow = king.CreateShadow(vector);
-                vector = (Vector2)pantherEnvironment.transform.position + pantherEnvironment.cloneShurikenCloneAreaOffset + Random.insideUnitCircle.normalized * pantherEnvironment.cloneShurikenCloneAreaRadius;
+
+                // 第2个：本体四个斜方向与圆的交点里，去掉最远和最近，剩下的随机一个
+                Hits.Clear();
+                foreach (float A in DiagonalAngles)
+                {
+                    if (TryGetCircleHit(BossPos, Center, Radius, HorayUtility.GetVector2FromAngle(A), out float D))
+                        Hits.Add((A, D));
+                }
+                Hits.Sort((X, Y) => Y.Dist.CompareTo(X.Dist));
+                int Index = Hits.Count >= 3 ? Random.Range(1, Hits.Count - 1) : Hits.Count > 0 ? Random.Range(0, Hits.Count) : -1;
+                vector = Index >= 0 ? BossPos + HorayUtility.GetVector2FromAngle(Hits[Index].Angle) * Hits[Index].Dist : Center + Random.insideUnitCircle.normalized * Radius;
                 PantherRogueKingShadow shadow2 = king.CreateShadow(vector);
+
+                yield return new WaitForSeconds(0.5f);
                 king.DaggerSpread();
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(0.1f);
                 shadow.DaggerSpread(__instance.Avatar);
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(0.1f);
                 shadow2.DaggerSpread(__instance.Avatar);
-                if (Hard >= 3) king.DaggerSpread();
-                pantherStateField.SetValue(__instance, UnitAI_PantherRogueKing.State.None);
-                patternCoroutineField.SetValue(__instance, null);
+                if (Hard >= 3)
+                {
+                    yield return new WaitForSeconds(1.25f);
+                    if (__instance.CurrentTarget != null)
+                    {
+                        king.RandomDagger(__instance.CurrentTarget.transform.position);
+                    }
+                }
+                StateRef!(__instance) = UnitAI_PantherRogueKing.State.None;
+                PatternCoroutineRef!(__instance) = null;
                 yield return new WaitForSeconds(1.5f);
                 king.DestroyShadow(shadow);
                 king.DestroyShadow(shadow2);
@@ -445,7 +519,7 @@ namespace SPMod.MonsterAI
                     StarSephiriaMod.LogError("[UnitAI_PantherRogueKing][BasicAttackPatternCoroutine]获取反射失败");
                     yield break;
                 }
-                Unit_PantherRogueKing king = (Unit_PantherRogueKing)pantherRogueKingField.GetValue(__instance);
+                Unit_PantherRogueKing king = KingRef!(__instance);
 
                 for(int AttackStack = 0; AttackStack < Math.Min(1 + Hard, 3); AttackStack++)
                 {
@@ -491,15 +565,15 @@ namespace SPMod.MonsterAI
                         yield return new WaitForSeconds(0.5f);
                         king.BeginDaggerSpreadAnimation();
                         yield return new WaitForSeconds(0.25f);
-                        sharedCBField.SetValue(king, new List<CombatBehaviour>());
+                        SharedCBRef!(king) = new List<CombatBehaviour>();
                         king.FireDaggerSpreadAnimation();
                     }
                     else king.BasicAttack();
                     yield return new WaitForSeconds(0.75f);
                 }
                 yield return new WaitForSeconds(0.25f);
-                pantherStateField.SetValue(__instance, UnitAI_PantherRogueKing.State.None);
-                patternCoroutineField.SetValue(__instance, null);
+                StateRef!(__instance) = UnitAI_PantherRogueKing.State.None;
+                PatternCoroutineRef!(__instance) = null;
                 yield break;
             }
 
@@ -527,8 +601,8 @@ namespace SPMod.MonsterAI
                     StarSephiriaMod.LogError("[UnitAI_PantherRogueKing][BasicAttackPatternCoroutine]获取反射失败");
                     yield break;
                 }
-                Unit_PantherRogueKing king = (Unit_PantherRogueKing)pantherRogueKingField.GetValue(__instance);
-                BossEnvironment_Panther pantherEnvironment = (BossEnvironment_Panther)pantherEnvironmentField.GetValue(__instance);
+                Unit_PantherRogueKing king = KingRef!(__instance);
+                BossEnvironment_Panther pantherEnvironment = PantherEnvironmentRef!(__instance);
 
                 if (pantherEnvironment)
                 {
@@ -565,8 +639,8 @@ namespace SPMod.MonsterAI
                     king.DestroyShadow(shadow2);
                 }
                 yield return new WaitForSeconds(1f);
-                pantherStateField.SetValue(__instance, UnitAI_PantherRogueKing.State.None);
-                patternCoroutineField.SetValue(__instance, null);
+                StateRef!(__instance) = UnitAI_PantherRogueKing.State.None;
+                PatternCoroutineRef!(__instance) = null;
                 yield break;
             }
         }

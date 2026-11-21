@@ -397,6 +397,8 @@ namespace SPMod.ModContent
                 S.SpawnDir = ParseSpawnDir(S2);
                 S.State = SwordFadeOut;
                 S.Timer = 0f;
+                // 狂澜攻击固定贴图朝向，不跟随玩家位置翻转；回到槽位后仍按原逻辑跟随
+                if (IsRagingTide && S.Sword != null) S.Sword.flipX = false;
             }
             else if (Event == EventPhantomAttack)
             {
@@ -446,10 +448,17 @@ namespace SPMod.ModContent
         {
             base.OnUpdate();
             if (!IsEffectEnabled || NetworkAvatar == null) return;
+            // 玩家死亡时不进行自动攻击
+            if (NetworkAvatar.IsDead) return;
 
             int Count = GetSwordCount(NetworkAvatar);
             while (SwordTimers.Count < Count) { SwordTimers.Add(0f); SwordBusy.Add(false); }
             while (SwordTimers.Count > Count) { SwordTimers.RemoveAt(SwordTimers.Count - 1); SwordBusy.RemoveAt(SwordBusy.Count - 1); }
+
+            // 天丛云剑神击：后半数剑不参与自动攻击
+            int ActiveCount = Count;
+            if (WeaponPatch.KusanagiState.IsStuck(NetworkAvatar))
+                ActiveCount = Count - Count / 2;
 
             if (isServer && !RagingTideSubscribed) SubscribeRagingTide();
 
@@ -462,7 +471,7 @@ namespace SPMod.ModContent
 
             // 先推进冷却；没有剑准备好时不用索敌
             bool AnyReady = false;
-            for (int i = 0; i < Count; i++)
+            for (int i = 0; i < ActiveCount; i++)
             {
                 SwordTimers[i] -= Time.deltaTime;
                 if (!SwordBusy[i] && SwordTimers[i] <= 0f) AnyReady = true;
@@ -481,14 +490,14 @@ namespace SPMod.ModContent
             {
                 // 首轮按序列错开：0.15s × 序号
                 InCombat = true;
-                for (int i = 0; i < Count; i++)
+                for (int i = 0; i < ActiveCount; i++)
                 {
                     if (SwordBusy[i]) continue;
                     SwordTimers[i] = Mathf.Max(SwordTimers[i], FirstAttackStagger * (i + 1));
                 }
             }
 
-            for (int i = 0; i < Count; i++)
+            for (int i = 0; i < ActiveCount; i++)
             {
                 if (SwordBusy[i] || SwordTimers[i] > 0f) continue;
 
@@ -649,7 +658,7 @@ namespace SPMod.ModContent
             Damage *= 1f + NetworkAvatar.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
             Damage *= 1f + NetworkAvatar.GetCustomStatUnsafe(TextFile.LastBasicAttackDamage) * 0.01f;
 
-            Charm_IncreaseLastAttackDamage_SwordAndShield? LastDamage = FindPlayerCharm<Charm_IncreaseLastAttackDamage_SwordAndShield>(NetworkAvatar);
+            Charm_IncreaseLastAttackDamage_SwordAndShield? LastDamage = NetworkAvatar.FindPlayerCharm<Charm_IncreaseLastAttackDamage_SwordAndShield>();
             if (LastDamage != null)
                 Damage *= 1f + LastDamage.damagePercentByLevel.SafeRandomAccess(LastDamage.CurrentLevelToIdx()) * 0.01f;
             return Damage;
@@ -672,7 +681,7 @@ namespace SPMod.ModContent
 
         private float GetRagingTideCritChance()
         {
-            Charm_FinalComboCritical? FinalCombo = FindPlayerCharm<Charm_FinalComboCritical>(NetworkAvatar);
+            Charm_FinalComboCritical? FinalCombo = NetworkAvatar.FindPlayerCharm<Charm_FinalComboCritical>();
             return FinalCombo != null
                 ? FinalCombo.criticalBonusPercentByLevel.SafeRandomAccess(FinalCombo.CurrentLevelToIdx())
                 : 0f;
@@ -681,8 +690,8 @@ namespace SPMod.ModContent
         /// <summary>手动播放两个最后一击神器的皇冠挥击特效（本体只在 forceFinalCombo 的弹体上触发）。</summary>
         private void TriggerRagingTideCrowns()
         {
-            TriggerCrown(FindPlayerCharm<Charm_FinalComboCritical>(NetworkAvatar), FinalComboCrownField);
-            TriggerCrown(FindPlayerCharm<Charm_IncreaseLastAttackDamage_SwordAndShield>(NetworkAvatar), LastAttackCrownField);
+            TriggerCrown(NetworkAvatar.FindPlayerCharm<Charm_FinalComboCritical>(), FinalComboCrownField);
+            TriggerCrown(NetworkAvatar.FindPlayerCharm<Charm_IncreaseLastAttackDamage_SwordAndShield>(), LastAttackCrownField);
         }
 
         private static void TriggerCrown(Charm_Basic? Charm, FieldInfo? CrownField)
@@ -690,18 +699,6 @@ namespace SPMod.ModContent
             if (Charm == null || CrownField == null) return;
             if (CrownField.GetValue(Charm) is CrownOfPride Crown && Crown != null)
                 Crown.CreateCriticalSwing();
-        }
-
-        /// <summary>从玩家背包里找已激活的神器组件。</summary>
-        public static T? FindPlayerCharm<T>(UnitAvatar? Avatar) where T : Charm_Basic
-        {
-            if (Avatar is not PlayerAvatar Player || Player.Inventory == null) return null;
-            foreach (Charm_Basic Charm in Player.Inventory.charms.Values)
-            {
-                if (Charm is T Target && Target.IsEffectEnabled)
-                    return Target;
-            }
-            return null;
         }
 
         /// <summary>狂澜的命中时机：和右砍特效对齐后手动结算范围伤害。</summary>
@@ -934,13 +931,18 @@ namespace SPMod.ModContent
             // 待机渐入用的攻速倍率，一帧只查一次
             float SpeedMult = Mathf.Max(0.01f, GetAttackSpeedMult(Avatar));
 
+            // 天丛云剑神击：后半数剑渐隐（不参与自动攻击由服务端处理）
+            int ActiveCount = Swords.Count;
+            if (WeaponPatch.KusanagiState.IsDivineStrike(Avatar, Swords.Count))
+                ActiveCount = Swords.Count - Swords.Count / 2;
+
             for (int i = 0; i < Swords.Count; i++)
             {
                 SwordVisual S = Swords[i];
                 if (S.Sword == null) continue;
                 switch (S.State)
                 {
-                    case SwordSlot: UpdateSlotSword(S, i, PlayerPos, Back, SpeedMult); break;
+                    case SwordSlot: UpdateSlotSword(S, i, PlayerPos, Back, SpeedMult, i >= ActiveCount); break;
                     case SwordFadeOut: UpdateFadeOutSword(S); break;
                     case SwordAppear: UpdateAppearSword(S); break;
                     case SwordStrike: UpdateStrikeSword(S); break;
@@ -953,10 +955,18 @@ namespace SPMod.ModContent
             return PlayerPos + Back * (SwordDistance + Index * SwordSpacing) + Vector2.up * (SwordFloatY + Bob);
         }
 
-        private void UpdateSlotSword(SwordVisual S, int Index, Vector2 PlayerPos, Vector2 Back, float SpeedMult)
+        private void UpdateSlotSword(SwordVisual S, int Index, Vector2 PlayerPos, Vector2 Back, float SpeedMult, bool Inactive = false)
         {
             // 剑悬停在玩家左侧时水平翻转贴图，让剑身朝向一致
             S.Sword.flipX = Back.x < 0f;
+            if (Inactive)
+            {
+                // 神击状态：后半数剑渐隐
+                S.Sword.transform.position = GetSlotPos(Index, PlayerPos, Back);
+                S.Placed = true;
+                SetFade(S, Mathf.MoveTowards(S.Fade, 0f, Time.deltaTime / Mathf.Max(0.01f, FadeOutTime)));
+                return;
+            }
             if (!S.Placed)
             {
                 // 新凝聚的剑直接在槽位淡入，不从玩家身上飞出来

@@ -187,6 +187,7 @@ namespace SPMod.Tool
 
         public const int WindKatana = ModWeaponId + 400;            // 岚切
         public const int Moment = ModWeaponId + 401;                // 刹那
+        public const int Kusanagi = ModWeaponId + 503;              // 天丛云剑
 
         // 棍系列
         public const int Quarterstaff = 500;                        // 长棍

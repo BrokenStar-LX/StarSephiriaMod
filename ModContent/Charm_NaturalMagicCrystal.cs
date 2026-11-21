@@ -7,7 +7,7 @@ namespace SPMod.ModContent
     public class Charm_NaturalMagicCrystal : Charm_StatusInstance
     {
         public float CooldownTime = 6f;                    // 效果冷却
-        public int[] CooldownReduceByLevel = [12, 24, 36]; // 命中减少：武器值 × 这个数值% 的冷却
+        public int[] CooldownReduceByLevel = [10, 20, 30]; // 命中减少：武器值 × 这个数值% 的冷却
         public int ExtraCountPerAttack = 2;                // 每 2 点风之刃额外数量追加一次攻击
         public float ExtraAttackDelay = 0.3f;              // 追加攻击与上一击的间隔（秒）
 
@@ -98,7 +98,7 @@ namespace SPMod.ModContent
             }
 
             if (target == null || target.IsDead) return;
-            Charm_WindSword? WindSword = Charm_WindSword.FindPlayerCharm<Charm_WindSword>(NetworkAvatar);
+            Charm_WindSword? WindSword = NetworkAvatar.FindPlayerCharm<Charm_WindSword>();
             if (WindSword == null) return;
 
             int ExtraCount = Mathf.Max(0, NetworkAvatar.GetCustomStatUnsafe(TextFile.WindSwordCount));
@@ -114,16 +114,20 @@ namespace SPMod.ModContent
             UpdateHud();
         }
 
-        /// <summary>风枢（WindPivotEffect）：特殊攻击命中时，万象魔晶额外充能1次（追加一次冷却缩减）。</summary>
+        /// <summary>风枢（WindPivotEffect）：特殊攻击命中时，万象魔晶额外充能，层数即触发次数。</summary>
         private void OnSpecialAttackHit(CombatBehaviour victim, DamageInstance damage, ProjectileBase projectile)
         {
             if (!IsEffectEnabled || NetworkAvatar == null) return;
-            if (NetworkAvatar.GetCustomStatUnsafe(TextFile.WindPivotEffect) <= 0) return;
-            if (Cooldown.Ratio >= 1f) return;
+            int Charges = Mathf.Max(0, NetworkAvatar.GetCustomStatUnsafe(TextFile.WindPivotEffect));
+            if (Charges <= 0 || Cooldown.Ratio >= 1f) return;
             float Weight = this.GetWeaponWeight();
             if (Weight <= 0f) return;
-            float Reduce = CooldownReduceByLevel.SafeRandomAccess(CurrentLevelToIdx()) * Weight * 0.01f;
-            Cooldown.SetTimer(Mathf.Min(Cooldown.time, Cooldown.GetTimer() + Cooldown.time * Reduce));
+            for (int i = 0; i < Charges; i++)
+            {
+                if (Cooldown.Ratio >= 1f) break;
+                float Reduce = CooldownReduceByLevel.SafeRandomAccess(CurrentLevelToIdx()) * Weight * 0.01f;
+                Cooldown.SetTimer(Mathf.Min(Cooldown.time, Cooldown.GetTimer() + Cooldown.time * Reduce));
+            }
             UpdateHud();
         }
 

@@ -71,17 +71,26 @@ namespace SPMod.ModContent
         private void OnWindSwordDamage(UnitAvatar target, DamageInstance damage)
         {
             if (!IsEffectEnabled || damage == null) return;
-            if (damage.id != WindSwordDamageId) return;
+            if (!IsWindSwordDamage(damage)) return;
             ApplyWindSwordDamage(damage);
+        }
+
+        /// <summary>风之刃伤害；天丛云剑神击的普攻伤害同样视为风之刃伤害。</summary>
+        private static bool IsWindSwordDamage(DamageInstance damage)
+        {
+            if (damage.flag == WindSwordDamageId || damage.id == WindSwordDamageId) return true;
+            return damage.id == "Weapon_BasicAttack" && damage.origin is UnitAvatar Attacker && WeaponPatch.KusanagiState.IsStuck(Attacker);
         }
 
         private void OnSpecialAttackHit(CombatBehaviour victim, DamageInstance damage, ProjectileBase projectile)
         {
             if (!IsEffectEnabled || NetworkAvatar == null) return;
-            if (NetworkAvatar.GetCustomStatUnsafe(TextFile.WindPivotEffect) <= 0) return;
+            int Charges = Mathf.Max(0, NetworkAvatar.GetCustomStatUnsafe(TextFile.WindPivotEffect));
+            if (Charges <= 0) return;
             float Weight = this.GetWeaponWeight();
             if (Weight <= 0f) return;
-            AddEnergy(GetEnergyGainByLevel(CurrentLevelToIdx()) * Weight);
+            float Gain = GetEnergyGainByLevel(CurrentLevelToIdx()) * Weight;
+            for (int i = 0; i < Charges; i++) AddEnergy(Gain);
         }
 
         protected void AddEnergy(float value)

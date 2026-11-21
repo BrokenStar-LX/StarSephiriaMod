@@ -18,6 +18,18 @@ namespace SPMod.Tool
 {
     public static class Tools
     {
+        /// <summary>从玩家背包里找已激活的神器组件。</summary>
+        public static T? FindPlayerCharm<T>(this UnitAvatar? Avatar) where T : Charm_Basic
+        {
+            if (Avatar is not PlayerAvatar Player || Player.Inventory == null) return null;
+            foreach (Charm_Basic Charm in Player.Inventory.charms.Values)
+            {
+                if (Charm is T Target && Target.IsEffectEnabled)
+                    return Target;
+            }
+            return null;
+        }
+
         public static void CopyPotionFX(this ItemEntity Entity, int VanillaId)
         {
             ItemEntity? Vanilla = ItemDatabase.FindItemById(VanillaId);

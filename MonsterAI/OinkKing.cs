@@ -27,6 +27,16 @@ namespace SPMod.MonsterAI
         private static readonly FieldInfo? currentBulletHellCoroutineField;
         private static readonly MethodInfo? RpcBulletHellEndMethod;
 
+        private static readonly AccessTools.FieldRef<UnitAI_OinkKing, Unit_OinkKing>? KingRef;
+        private static readonly AccessTools.FieldRef<UnitAI_OinkKing, bool>? SummonCastingRef;
+        private static readonly AccessTools.FieldRef<UnitAI_OinkKing, bool>? IsPatternDoingRef;
+        private static readonly AccessTools.FieldRef<UnitAI_OinkKing, Coroutine?>? CurrentPatternCoroutineRef;
+        private static readonly AccessTools.FieldRef<Unit_OinkKing, Coroutine?>? CurrentBulletHellCoroutineRef;
+        private static readonly Func<UnitAI_OinkKing, IEnumerator>? Pattern0CoroutineDelegate;
+        private static readonly Func<UnitAI_OinkKing, IEnumerator>? Pattern1CoroutineDelegate;
+        private static readonly Func<UnitAI_OinkKing, IEnumerator>? PatternCoroutine_SummonMagicDelegate;
+        private static readonly Action<Unit_OinkKing>? RpcBulletHellEndDelegate;
+
         static OinkKing()
         {
             // AI 反射
@@ -38,11 +48,20 @@ namespace SPMod.MonsterAI
             Pattern0CoroutineMethod = AccessTools.Method(type, "Pattern0Coroutine");
             Pattern1CoroutineMethod = AccessTools.Method(type, "Pattern1Coroutine");
             PatternCoroutine_SummonMagicMethod = AccessTools.Method(type, "PatternCoroutine_SummonMagic");
+            KingRef = ReflectionCache.FieldRef<UnitAI_OinkKing, Unit_OinkKing>(type, "oinkKing");
+            SummonCastingRef = ReflectionCache.FieldRef<UnitAI_OinkKing, bool>(type, "summonCasting");
+            IsPatternDoingRef = ReflectionCache.FieldRef<UnitAI_OinkKing, bool>(type, "isPatternDoing");
+            CurrentPatternCoroutineRef = ReflectionCache.FieldRef<UnitAI_OinkKing, Coroutine?>(type, "currentPatternCoroutine");
+            Pattern0CoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_OinkKing, IEnumerator>>(Pattern0CoroutineMethod, "Pattern0Coroutine");
+            Pattern1CoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_OinkKing, IEnumerator>>(Pattern1CoroutineMethod, "Pattern1Coroutine");
+            PatternCoroutine_SummonMagicDelegate = ReflectionCache.Delegate<Func<UnitAI_OinkKing, IEnumerator>>(PatternCoroutine_SummonMagicMethod, "PatternCoroutine_SummonMagic");
 
             // UnitAvatar 反射
             type = typeof(Unit_OinkKing);
             currentBulletHellCoroutineField = AccessTools.Field(type, "currentBulletHellCoroutine");
             RpcBulletHellEndMethod = AccessTools.Method(type, "RpcBulletHellEnd");
+            CurrentBulletHellCoroutineRef = ReflectionCache.FieldRef<Unit_OinkKing, Coroutine?>(type, "currentBulletHellCoroutine");
+            RpcBulletHellEndDelegate = ReflectionCache.Delegate<Action<Unit_OinkKing>>(RpcBulletHellEndMethod, "RpcBulletHellEnd");
         }
 
         [HarmonyPatch(typeof(Unit_OinkKing))]
@@ -140,7 +159,7 @@ namespace SPMod.MonsterAI
                     yield return new WaitForSeconds(0.5f);
                 }
                 __instance.steeringSpeed += 1f;
-                RpcBulletHellEndMethod.Invoke(__instance, null);
+                RpcBulletHellEndDelegate!(__instance);
                 yield break;
             }
 
@@ -184,7 +203,7 @@ namespace SPMod.MonsterAI
                     yield return new WaitForSeconds(0.15f);
                 }
                 __instance.steeringSpeed += 1f;
-                RpcBulletHellEndMethod.Invoke(__instance, null);
+                RpcBulletHellEndDelegate!(__instance);
                 yield break;
             }
 
@@ -226,7 +245,7 @@ namespace SPMod.MonsterAI
                     angle += 15f;
                 }
                 __instance.steeringSpeed += 1f;
-                RpcBulletHellEndMethod.Invoke(__instance, null);
+                RpcBulletHellEndDelegate!(__instance);
                 yield break;
             }
 
@@ -276,7 +295,7 @@ namespace SPMod.MonsterAI
                     yield return new WaitForSeconds(0.125f);
                 }
                 __instance.steeringSpeed += 1f;
-                RpcBulletHellEndMethod.Invoke(__instance, null);
+                RpcBulletHellEndDelegate!(__instance);
                 yield break;
             }
         }
@@ -307,88 +326,78 @@ namespace SPMod.MonsterAI
                         return true;
                     }
 
-                    Unit_OinkKing oinkKing = (Unit_OinkKing)oinkKingField.GetValue(__instance);
-                    bool summonCasting = (bool)summonCastingField.GetValue(__instance);
-                    bool isPatternDoing = (bool)isPatternDoingField.GetValue(__instance);
-                    Coroutine currentPatternCoroutine = (Coroutine)currentPatternCoroutineField.GetValue(__instance);
-                    if (Hard <= 2)
-                        GravityExplosionTimer.time = 6f;
-                    else
-                    {
-                        GravityExplosionTimer.time = 2f + 4f * oinkKing.hp / oinkKing.MaxHp;
-                    }
+                    Unit_OinkKing oinkKing = KingRef!(__instance);
+                    bool summonCasting = SummonCastingRef!(__instance);
+                    bool isPatternDoing = IsPatternDoingRef!(__instance);
+                    GravityExplosionTimer.time = Hard <= 2 ? 6f : 2f + 4f * oinkKing.hp / oinkKing.MaxHp;
+
                     if (summonCasting)
                     {
                         __instance.Avatar.ForceAimToPosition(__instance.transform.position + new Vector3(__instance.Avatar.TopdownRigidbody.Direction * 3f, 0f));
                     }
-                    if (__instance.IsDramaticDying)
-                    {
-                        return false;
-                    }
+                    if (__instance.IsDramaticDying) return false;
                     if (__instance.CurrentTarget && !summonCasting && GravityExplosionTimer.Update(Time.deltaTime))
                     {
                         oinkKing.GravityBallExplosion(Hard, __instance.CurrentTarget);
                     }
-                    if (oinkKing.CurrentAction != Unit_OinkKing.EAnimation.None || isPatternDoing)
-                    {
-                        return false;
-                    }
+                    if (oinkKing.CurrentAction != Unit_OinkKing.EAnimation.None || isPatternDoing) return false;
+
                     float IdleSpeed = 1f;
                     if (__instance.hardPatternActivated) IdleSpeed *= 1.25f;
                     if (Hard >= 4) IdleSpeed *= 1.1f;
                     IdleSpeed *= 1f + 0.1f * Hard;
                     if (__instance.mainPatternTimer.Update(Time.deltaTime * IdleSpeed))
                     {
-                        if (Pattern.Count <= 0)
-                        {
-                            Pattern.Add(0);
-                            Pattern.Add(1);
-                            Pattern.Add(2);
-                            Pattern.Add(3);
-                            Pattern.Shuffle();
-                            if (Oldpattern >= 0)
-                            {
-                                Pattern.Remove(Oldpattern);
-                                Pattern.Insert(2, Oldpattern);
-                            }
-                        }
+                        if (Pattern.Count <= 0) RefillPattern();
+
                         int UsePattern = Pattern[0];
                         Oldpattern = UsePattern;
                         Pattern.RemoveAt(0);
                         StarSephiriaMod.LogInfoBoss($"猪猪当前技能：{UsePattern}");
                         isPatternDoing = true;
-
-                        IEnumerator Pattern0Coroutine = (IEnumerator)Pattern0CoroutineMethod.Invoke(__instance, null);
-                        IEnumerator Pattern1Coroutine = (IEnumerator)Pattern1CoroutineMethod.Invoke(__instance, null);
-                        IEnumerator PatternCoroutine_SummonMagic = (IEnumerator)PatternCoroutine_SummonMagicMethod.Invoke(__instance, null);
-                        switch (UsePattern)
-                        {
-                            case 1:
-                                currentPatternCoroutine = __instance.StartCoroutine(Pattern1Coroutine);
-                                currentPatternCoroutineField.SetValue(__instance, currentPatternCoroutine);
-                                break;
-                            case 2:
-                                currentPatternCoroutine = __instance.StartCoroutine(Pattern1Coroutine);
-                                currentPatternCoroutineField.SetValue(__instance, currentPatternCoroutine);
-                                break;
-                            case 3:
-                                currentPatternCoroutine = __instance.StartCoroutine(PatternCoroutine_SummonMagic);
-                                currentPatternCoroutineField.SetValue(__instance, currentPatternCoroutine);
-                                __instance.mainPatternTimer.Ratio = 0.5f;
-                                break;
-                            default:
-                                currentPatternCoroutine = __instance.StartCoroutine(Pattern0Coroutine);
-                                currentPatternCoroutineField.SetValue(__instance, currentPatternCoroutine);
-                                break;
-                        }
+                        LaunchPattern(__instance, UsePattern);
                     }
-                    isPatternDoingField.SetValue(__instance, isPatternDoing);
+                    IsPatternDoingRef!(__instance) = isPatternDoing;
                     return false;
                 }
                 catch (Exception ex)
                 {
                     StarSephiriaMod.LogError($"[UnitAI_OinkKing][OnAIUpdate_FoundEnemy]出现错误: {ex}");
                     return true;
+                }
+            }
+
+            /// <summary>下一轮技能池：0~3 洗牌，避免连续同招。</summary>
+            private static void RefillPattern()
+            {
+                Pattern.Add(0);
+                Pattern.Add(1);
+                Pattern.Add(2);
+                Pattern.Add(3);
+                Pattern.Shuffle();
+                if (Oldpattern >= 0)
+                {
+                    Pattern.Remove(Oldpattern);
+                    Pattern.Insert(2, Oldpattern);
+                }
+            }
+
+            /// <summary>按编号释放技能。</summary>
+            private static void LaunchPattern(UnitAI_OinkKing __instance, int UsePattern)
+            {
+                switch (UsePattern)
+                {
+                    case 1:
+                    case 2:
+                        CurrentPatternCoroutineRef!(__instance) = __instance.StartCoroutine(Pattern1CoroutineDelegate!(__instance));
+                        break;
+                    case 3:
+                        CurrentPatternCoroutineRef!(__instance) = __instance.StartCoroutine(PatternCoroutine_SummonMagicDelegate!(__instance));
+                        __instance.mainPatternTimer.Ratio = 0.5f;
+                        break;
+                    default:
+                        CurrentPatternCoroutineRef!(__instance) = __instance.StartCoroutine(Pattern0CoroutineDelegate!(__instance));
+                        break;
                 }
             }
 
@@ -416,10 +425,10 @@ namespace SPMod.MonsterAI
                     yield break;
                 }
                
-                Unit_OinkKing oinkKing = (Unit_OinkKing)oinkKingField.GetValue(__instance);
+                Unit_OinkKing oinkKing = KingRef!(__instance);
                 if (Hard >= 3 && __instance.CurrentTarget)
                 {
-                    currentBulletHellCoroutineField.SetValue(oinkKing, oinkKing.StartCoroutine(Unit_OinkKing_Patch.BulletHellType1(oinkKing, __instance.CurrentTarget.TopdownActor)));
+                    CurrentBulletHellCoroutineRef!(oinkKing) = oinkKing.StartCoroutine(Unit_OinkKing_Patch.BulletHellType1(oinkKing, __instance.CurrentTarget.TopdownActor));
                 }
                 float Mult = oinkKing.hp / oinkKing.MaxHp;
                 for (int i = 0; i < (Mult < 0.33f ? 3 : 2); i++)
@@ -444,7 +453,7 @@ namespace SPMod.MonsterAI
                     }
                 }
                 yield return new WaitForSeconds(0.4f);
-                isPatternDoingField.SetValue(__instance, false);
+                IsPatternDoingRef!(__instance) = false;
                 yield break;
             }
         }

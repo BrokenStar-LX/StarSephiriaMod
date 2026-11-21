@@ -882,7 +882,6 @@ namespace SPMod
                 {
                     if (ModConfig.InfiniteMode)
                     {
-                        // Die 被重复调用时 Postfix 仍会执行（IsDead 提前 return 也会走 Postfix），按 BOSS 实例去重
                         if (HandledQQQBoss == __instance) return;
                         HandledQQQBoss = __instance;
 
@@ -911,7 +910,6 @@ namespace SPMod
                                 DungeonPatchs.InitializationModGameData("New");
                             }
                         }
-                        // 只有本次回调真正推进了轮回才重置/重载，避免重复调用把房间刷在同一个坐标
                         if (ReincarnationAdvanced)
                         {
                             DungeonManager CurrenDungeon = DungeonManager.Instance;

@@ -45,6 +45,25 @@ namespace SPMod.MonsterAI
         private static readonly FieldInfo? isTempInvulnerableField;
         private static readonly FieldInfo? tempInvulnerableTimerField;
         private static readonly FieldInfo? stunCooldownTimerField;
+        // 缓存访问器
+        private static readonly AccessTools.FieldRef<UnitAI_LibraryGuard, List<int>>? PatternQueueRef;
+        private static readonly AccessTools.FieldRef<UnitAI_LibraryGuard, Unit_LibraryGuard>? UnitRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, UI_AOEWarning_MeleeAttackLine_Windmill>? JumpAttackWarningRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, List<UI_AOEWarning_RangeAttackLine>>? LaserWarningsRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, LibraryGuardCrosshair?>? CrosshairInstanceRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, UnitAvatar>? LaserTargetRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, GameObject[]?>? ChakramsRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, bool>? ZoomOutClientsideRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, Vector3>? JumpTargetPositionRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, int>? CurrentJumpAttackCountRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, List<CombatBehaviour>>? LaserAttackedListRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, int>? LaserAttackCountRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, float>? CurrentLaserAimTimerRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, int>? SpinDashPhaseRef;
+        private static readonly AccessTools.FieldRef<Collider2D[]>? SpinDashCollidersRef;
+        private static readonly AccessTools.FieldRef<Collider2D[]>? ChakramCollidersRef;
+        private static readonly AccessTools.FieldRef<Unit_LibraryGuard, Vector3>? FireBallPositionRef;
+        private static readonly AccessTools.FieldRef<CombatBehaviour, bool>? TransformAuthorityRef;
         static LibraryGuard()
         {
             try
@@ -63,6 +82,8 @@ namespace SPMod.MonsterAI
                 type = typeof(UnitAI_LibraryGuard);
                 patternQueueField = AccessTools.Field(type, "patternQueue");
                 unitField = AccessTools.Field(type, "unit");
+                PatternQueueRef = ReflectionCache.FieldRef<UnitAI_LibraryGuard, List<int>>(type, "patternQueue");
+                UnitRef = ReflectionCache.FieldRef<UnitAI_LibraryGuard, Unit_LibraryGuard>(type, "unit");
                 StarSephiriaMod.LogInfoBoss("[UnitAI_LibraryGuard]初始化反射");
 
                 // Unit_LibraryGuard 反射
@@ -82,11 +103,27 @@ namespace SPMod.MonsterAI
                 spinDashCollidersField = AccessTools.Field(type, "spinDashColliders");
                 chakramCollidersField = AccessTools.Field(type, "chakramColliders");
                 fireBallPositionField = AccessTools.Field(type, "fireBallPosition");
+                JumpAttackWarningRef = ReflectionCache.FieldRef<Unit_LibraryGuard, UI_AOEWarning_MeleeAttackLine_Windmill>(type, "jumpAttackWarning");
+                LaserWarningsRef = ReflectionCache.FieldRef<Unit_LibraryGuard, List<UI_AOEWarning_RangeAttackLine>>(type, "laserWarnings");
+                CrosshairInstanceRef = ReflectionCache.FieldRef<Unit_LibraryGuard, LibraryGuardCrosshair?>(type, "crosshairInstance");
+                LaserTargetRef = ReflectionCache.FieldRef<Unit_LibraryGuard, UnitAvatar>(type, "laserTarget");
+                ChakramsRef = ReflectionCache.FieldRef<Unit_LibraryGuard, GameObject[]?>(type, "chakrams");
+                ZoomOutClientsideRef = ReflectionCache.FieldRef<Unit_LibraryGuard, bool>(type, "zoomOutClientside");
+                JumpTargetPositionRef = ReflectionCache.FieldRef<Unit_LibraryGuard, Vector3>(type, "jumpTargetPosition");
+                CurrentJumpAttackCountRef = ReflectionCache.FieldRef<Unit_LibraryGuard, int>(type, "currentJumpAttackCount");
+                LaserAttackedListRef = ReflectionCache.FieldRef<Unit_LibraryGuard, List<CombatBehaviour>>(type, "laserAttackedList");
+                LaserAttackCountRef = ReflectionCache.FieldRef<Unit_LibraryGuard, int>(type, "laserAttackCount");
+                CurrentLaserAimTimerRef = ReflectionCache.FieldRef<Unit_LibraryGuard, float>(type, "currentLaserAimTimer");
+                SpinDashPhaseRef = ReflectionCache.FieldRef<Unit_LibraryGuard, int>(type, "spinDashPhase");
+                SpinDashCollidersRef = ReflectionCache.StaticFieldRef<Collider2D[]>(type, "spinDashColliders");
+                ChakramCollidersRef = ReflectionCache.StaticFieldRef<Collider2D[]>(type, "chakramColliders");
+                FireBallPositionRef = ReflectionCache.FieldRef<Unit_LibraryGuard, Vector3>(type, "fireBallPosition");
                 StarSephiriaMod.LogInfoBoss("[Unit_LibraryGuard]初始化反射");
 
                 // CombatBehaviour 反射
                 type = typeof(CombatBehaviour);
                 transformAuthorityField = AccessTools.Field(type, "transformAuthority");
+                TransformAuthorityRef = ReflectionCache.FieldRef<CombatBehaviour, bool>(type, "transformAuthority");
                 StarSephiriaMod.LogInfoBoss("[CombatBehaviour]初始化反射");
             }
             catch (Exception ex)
@@ -94,76 +131,9 @@ namespace SPMod.MonsterAI
                 StarSephiriaMod.LogError($"[LibraryGuard]反射初始化失败: {ex}");
             }
         }
-        private static readonly Timer StunTimer = new(1f);
-        private static readonly Timer HitRestoreTimer = new(0.75f);
         public static void InstanceUpdate(UnitAvatar __instance)
         {
-            // 原有的击晕逻辑
-            if (!__instance.isServer) return;
-
-            if (__instance.isInStun && StunTimer.Update(Time.deltaTime))
-            {
-                __instance.StopStun();
-            }
-            // 原有的击中卡滞逻辑
-            if (__instance.hitStuck && !__instance.IsDead)
-            {
-                float TimeMult;
-                if (__instance.currentHitStuckLevel == 1)
-                {
-                    TimeMult = 1f;
-                }
-                else if (__instance.TopdownRigidbody == null || __instance.TopdownRigidbody.IsGrounded)
-                {
-                    TimeMult = 0.8f;
-                }
-                else
-                {
-                    TimeMult = 0f;
-                }
-                if (!__instance.isInStun && HitRestoreTimer.Update(Time.deltaTime * TimeMult))
-                {
-                    __instance.StopHitFeedback();
-                }
-            }
-            if (isHitInvincibleEnabledField == null || invincibleTimerField == null || isReviveInvulnerableField == null || isTempInvulnerableField == null || tempInvulnerableTimerField == null || stunCooldownTimerField == null)
-            {
-                StarSephiriaMod.LogError("[UnitAvatar][InstanceUpdate]获取反射失败");
-                return;
-            }
-            // 通过反射获取私有字段的值
-            bool isHitInvincibleEnabled = (bool)isHitInvincibleEnabledField.GetValue(__instance);
-            float invincibleTimer = (float)invincibleTimerField.GetValue(__instance);
-            bool isReviveInvulnerable = (bool)isReviveInvulnerableField.GetValue(__instance);
-            bool isTempInvulnerable = (bool)isTempInvulnerableField.GetValue(__instance);
-            Timer tempInvulnerableTimer = (Timer)tempInvulnerableTimerField.GetValue(__instance);
-            Timer stunCooldownTimer = (Timer)stunCooldownTimerField.GetValue(__instance);
-            // 处理无敌状态
-            if (isHitInvincibleEnabled)
-            {
-                invincibleTimer += Time.deltaTime;
-                if (invincibleTimer >= __instance.invincibleTime)
-                {
-                    invincibleTimer = 0f;
-                    isHitInvincibleEnabledField.SetValue(__instance, false);
-                }
-                invincibleTimerField.SetValue(__instance, invincibleTimer);
-            }
-            // 处理复活无敌
-            if (isReviveInvulnerable && __instance.reviveInvulnerableTimer.Update(Time.deltaTime))
-            {
-                isReviveInvulnerableField.SetValue(__instance, false);
-            }
-            // 处理临时无敌
-            if (isTempInvulnerable && tempInvulnerableTimer.Update(Time.deltaTime))
-            {
-                isTempInvulnerableField.SetValue(__instance, false);
-            }
-            // 处理击晕免疫
-            if (__instance.stunCooldown && stunCooldownTimer.Update(Time.deltaTime))
-            {
-                __instance.stunCooldown = false;
-            }
+            BossCommon.UpdateUnitAvatarTimers(__instance);
         }
 
         [HarmonyPatch(typeof(LibraryGuardZigzagGun))]
@@ -194,16 +164,16 @@ namespace SPMod.MonsterAI
                     }
 
                     // 使用反射獲取字段
-                    var jumpAttackWarning = jumpAttackWarningField.GetValue(__instance) as UI_AOEWarning_MeleeAttackLine_Windmill;
-                    var crosshairInstance = crosshairInstanceField.GetValue(__instance) as LibraryGuardCrosshair;
-                    var laserTarget = laserTargetField.GetValue(__instance) as UnitAvatar;
-                    var chakrams = chakramsField.GetValue(__instance) as GameObject[];
-                    var zoomOutClientside = (bool)zoomOutClientsideField.GetValue(__instance);
-                    var currentJumpAttackCount = (int)currentJumpAttackCountField.GetValue(__instance);
-                    var laserAttackedList = laserAttackedListField.GetValue(__instance) as List<CombatBehaviour>;
-                    var laserAttackCount = (int)laserAttackCountField.GetValue(__instance);
-                    var currentLaserAimTimer = (float)currentLaserAimTimerField.GetValue(__instance);
-                    var spinDashPhase = (int)spinDashPhaseField.GetValue(__instance);
+                    var jumpAttackWarning = JumpAttackWarningRef!(__instance);
+                    var crosshairInstance = CrosshairInstanceRef!(__instance);
+                    var laserTarget = LaserTargetRef!(__instance);
+                    var chakrams = ChakramsRef!(__instance);
+                    var zoomOutClientside = ZoomOutClientsideRef!(__instance);
+                    var currentJumpAttackCount = CurrentJumpAttackCountRef!(__instance);
+                    var laserAttackedList = LaserAttackedListRef!(__instance);
+                    var laserAttackCount = LaserAttackCountRef!(__instance);
+                    var currentLaserAimTimer = CurrentLaserAimTimerRef!(__instance);
+                    var spinDashPhase = SpinDashPhaseRef!(__instance);
                     InstanceUpdate(__instance);
                     UnitAvatar_Patches.Update_Postfix(__instance);
                     if (__instance.isServer)
@@ -260,7 +230,7 @@ namespace SPMod.MonsterAI
                             SpriteFx.Pool.Spawn(__instance.trueDieFxPrefab, __instance.transform.position + new Vector3(0f, 1f) + (Vector3)Random.insideUnitCircle * 1.5f, null);
                         }
 
-                        if (laserWarningsField.GetValue(__instance) is List<UI_AOEWarning_RangeAttackLine> laserWarnings && laserWarnings.Count > 0)
+                        if (LaserWarningsRef!(__instance) is List<UI_AOEWarning_RangeAttackLine> laserWarnings && laserWarnings.Count > 0)
                         {
                             for (int i = 0; i < laserWarnings.Count; i++)
                             {
@@ -282,7 +252,7 @@ namespace SPMod.MonsterAI
                             if (crosshairInstance == null)
                             {
                                 crosshairInstance = Object.Instantiate(__instance.crosshairPrefab, new Vector3(-1000f, -1000f), Quaternion.identity);
-                                crosshairInstanceField.SetValue(__instance, crosshairInstance);
+                                CrosshairInstanceRef!(__instance) = crosshairInstance;
                             }
                             if (laserTarget != null)
                             {
@@ -303,7 +273,7 @@ namespace SPMod.MonsterAI
                         else if (crosshairInstance != null)
                         {
                             Object.Destroy(crosshairInstance.gameObject);
-                            crosshairInstanceField.SetValue(__instance, null);
+                            CrosshairInstanceRef!(__instance) = null;
                         }
 
                         if (__instance.currentState == Unit_LibraryGuard.EState.Chakram && __instance.chakramState == 0)
@@ -329,7 +299,7 @@ namespace SPMod.MonsterAI
                                     chakrams[i] = Object.Instantiate(__instance.chakramPrefab, __instance.chakramCenterPoint.position, Quaternion.identity);
                                     chakrams[i].SetActive(true);
                                 }
-                                chakramsField.SetValue(__instance, chakrams);
+                                ChakramsRef!(__instance) = chakrams;
                             }
                             else
                             {
@@ -351,14 +321,14 @@ namespace SPMod.MonsterAI
                                     Object.Destroy(array[num8].gameObject);
                                 }
                             }
-                            chakramsField.SetValue(__instance, null);
+                            ChakramsRef!(__instance) = null;
                         }
 
                         if (__instance.zoomOut)
                         {
                             if (!zoomOutClientside)
                             {
-                                zoomOutClientsideField.SetValue(__instance, true);
+                                ZoomOutClientsideRef!(__instance) = true;
                                 if (GameCamera.Instance)
                                 {
                                     GameCamera.Instance.targetTracker.SetZoom(7f, 2f);
@@ -368,7 +338,7 @@ namespace SPMod.MonsterAI
                         }
                         else if (zoomOutClientside)
                         {
-                            zoomOutClientsideField.SetValue(__instance, false);
+                            ZoomOutClientsideRef!(__instance) = false;
                             if (GameCamera.Instance)
                             {
                                 GameCamera.Instance.targetTracker.ResetZoom(0.3f);
@@ -392,8 +362,8 @@ namespace SPMod.MonsterAI
                     return;
                 }
 
-                var currentJumpAttackCount = (int)currentJumpAttackCountField.GetValue(__instance);
-                var jumpTargetPosition = (Vector3)jumpTargetPositionField.GetValue(__instance);
+                var currentJumpAttackCount = CurrentJumpAttackCountRef!(__instance);
+                var jumpTargetPosition = JumpTargetPositionRef!(__instance);
 
                 if (__instance.jumpAttackPhase == 1)
                 {
@@ -423,7 +393,7 @@ namespace SPMod.MonsterAI
                         __instance.TopdownRigidbody.SetGravityVelocity(1f);
                         if (__instance.jumpAttackTarget)
                         {
-                            jumpTargetPositionField.SetValue(__instance, __instance.jumpAttackTarget.transform.position);
+                            JumpTargetPositionRef!(__instance) = __instance.jumpAttackTarget.transform.position;
                         }
                     }
                 }
@@ -470,7 +440,7 @@ namespace SPMod.MonsterAI
                 else if (__instance.jumpAttackPhase == 5 && __instance.jumpAttackEndTimer.Update(Time.deltaTime))
                 {
                     int newCount = currentJumpAttackCount + 1;
-                    currentJumpAttackCountField.SetValue(__instance, newCount);
+                    CurrentJumpAttackCountRef!(__instance) = newCount;
                     if (newCount >= __instance.jumpAttackCount)
                     {
                         __instance.NetworkjumpAttackPhase = -1;
@@ -482,7 +452,7 @@ namespace SPMod.MonsterAI
                         __instance.TopdownRigidbody.SetGravityScale(0f);
                         if (__instance.jumpAttackTarget)
                         {
-                            jumpTargetPositionField.SetValue(__instance, __instance.jumpAttackTarget.transform.position);
+                            JumpTargetPositionRef!(__instance) = __instance.jumpAttackTarget.transform.position;
                         }
                     }
                 }
@@ -496,9 +466,9 @@ namespace SPMod.MonsterAI
                     return;
                 }
 
-                var currentLaserAimTimer = (float)currentLaserAimTimerField.GetValue(__instance);
-                var laserAttackedList = laserAttackedListField.GetValue(__instance) as List<CombatBehaviour>;
-                var laserAttackCount = (int)laserAttackCountField.GetValue(__instance);
+                var currentLaserAimTimer = CurrentLaserAimTimerRef!(__instance);
+                var laserAttackedList = LaserAttackedListRef!(__instance);
+                var laserAttackCount = LaserAttackCountRef!(__instance);
 
                 if (__instance.laserPhase == 0)
                 {
@@ -519,7 +489,7 @@ namespace SPMod.MonsterAI
                             __instance.laserStartPoint.position, __instance.laserStartPoint.position + vector3FromAngle2.normalized * 10f, Hard >= 4 ? null : laserAttackedList, null, 0f, EDamageElementalType.Physical, true);
                     }
                     int newLaserAttackCount = laserAttackCount + 1;
-                    laserAttackCountField?.SetValue(__instance, newLaserAttackCount);
+                    LaserAttackCountRef!(__instance) = newLaserAttackCount;
 
                     if (newLaserAttackCount >= __instance.laserAttackMaxCount)
                     {
@@ -532,9 +502,9 @@ namespace SPMod.MonsterAI
                     __instance.TopdownRigidbody.RequestMove(Vec * __instance.laserPhaseTimer.time * 0.33f * Time.deltaTime);
                 }
                 currentLaserAimTimer += Time.deltaTime;
-                currentLaserAimTimerField?.SetValue(__instance, currentLaserAimTimer);
+                CurrentLaserAimTimerRef!(__instance) = currentLaserAimTimer;
 
-                var laserTarget = laserTargetField?.GetValue(__instance) as UnitAvatar;
+                var laserTarget = LaserTargetRef!(__instance);
                 if (laserTarget != null)
                 {
                     float angle = HorayUtility.GetAngle(laserTarget.transform.position, __instance.laserStartPoint.position);
@@ -553,9 +523,9 @@ namespace SPMod.MonsterAI
                     return;
                 }
 
-                var spinDashPhase = (int)spinDashPhaseField.GetValue(__instance);
-                var transformAuthority = (bool)transformAuthorityField.GetValue(__instance);
-                var spinDashColliders = (Collider2D[])spinDashCollidersField.GetValue(null);
+                var spinDashPhase = SpinDashPhaseRef!(__instance);
+                var transformAuthority = TransformAuthorityRef!(__instance);
+                var spinDashColliders = SpinDashCollidersRef!();
 
                 if (spinDashPhase == 1)
                 {
@@ -602,7 +572,7 @@ namespace SPMod.MonsterAI
                     }
                     if (__instance.spinDashTimer.Update(Time.deltaTime))
                     {
-                        spinDashPhaseField?.SetValue(__instance, 2);
+                        SpinDashPhaseRef!(__instance) = 2;
                     }
                 }
                 else if (spinDashPhase == 2)
@@ -610,7 +580,7 @@ namespace SPMod.MonsterAI
                     __instance.NetworkspinDashSpeed = Mathf.MoveTowards(__instance.spinDashSpeed, 0f, 20f * Time.deltaTime);
                     if (__instance.spinDashSpeed <= 0.01f)
                     {
-                        spinDashPhaseField?.SetValue(__instance, 0);
+                        SpinDashPhaseRef!(__instance) = 0;
                         __instance.NetworkzoomOut = false;
                         __instance.NetworkcurrentState = Unit_LibraryGuard.EState.Idle;
                     }
@@ -691,7 +661,7 @@ namespace SPMod.MonsterAI
                     return;
                 }
 
-                var chakramColliders = (Collider2D[])chakramCollidersField.GetValue(null);
+                var chakramColliders = ChakramCollidersRef!();
                 __instance.NetworkcurrentChakramAngle = __instance.currentChakramAngle + Time.deltaTime * 1080f;
                 if (__instance.currentChakramAngle > 360f)
                 {
@@ -787,7 +757,7 @@ namespace SPMod.MonsterAI
                         StarSephiriaMod.LogError("[Unit_LibraryGuard][FireBallAnimation]获取反射失败");
                         return true;
                     }
-                    Vector3 fireBallPosition = (Vector3)fireBallPositionField.GetValue(__instance);
+                    Vector3 fireBallPosition = FireBallPositionRef!(__instance);
                     if (__instance.isServer)
                     {
                         int Stack = 0;
@@ -834,7 +804,7 @@ namespace SPMod.MonsterAI
                     StarSephiriaMod.LogError("[UnitAI_LibraryGuard][Awake]反射获取失败");
                     return;
                 }
-                patternQueueField.SetValue(__instance, new List<int>());
+                PatternQueueRef!(__instance) = new List<int>();
             }
 
             private static int Oldpattern = -1;
@@ -849,8 +819,8 @@ namespace SPMod.MonsterAI
                     return true;
                 }
 
-                Unit_LibraryGuard? unit = unitField.GetValue(__instance) as Unit_LibraryGuard;
-                if (unit == null || patternQueueField.GetValue(__instance) is not List<int> patternQueue)
+                Unit_LibraryGuard? unit = UnitRef!(__instance);
+                if (unit == null || PatternQueueRef!(__instance) is not List<int> patternQueue)
                 {
                     StarSephiriaMod.LogError("[UnitAI_LibraryGuard][OnAIUpdate_FoundEnemy]反射获取错误");
                     return true;
@@ -861,95 +831,26 @@ namespace SPMod.MonsterAI
                 {
                     unit.PatternOrderedExplosion(__instance.Environment.BossZoneBottomLeft, __instance.Environment.BossZoneTopRight);
                 }
+
                 if (unit.currentState == Unit_LibraryGuard.EState.Idle)
                 {
                     unit.Stop();
                     if (__instance.patternQueueTimer.Update(Time.deltaTime))
                     {
-                        if (patternQueue.Count == 0)
-                        {
-                            patternQueue.Add(0);
-                            patternQueue.Add(1);
-                            if (Hard < 3) patternQueue.Add(2);
-                            patternQueue.Add(3);
-                            patternQueue.Add(4);
-                            patternQueue.Add(5);
-                            patternQueue.Shuffle();
-                            if (Oldpattern >= 0)
-                            {
-                                patternQueue.Remove(Oldpattern);
-                                patternQueue.Insert(patternQueue.Count / 2, Oldpattern);
-                            }
-                        }
+                        if (patternQueue.Count == 0) RefillPatternQueue(patternQueue);
+
                         int pattern = patternQueue[0];
                         patternQueue.RemoveAt(0);
                         Oldpattern = pattern;
-                        BossEnvironment_LibraryGuard? bossEnvironment_LibraryGuard = null;
-                        if (__instance.Environment != null) bossEnvironment_LibraryGuard = __instance.Environment as BossEnvironment_LibraryGuard;
+                        BossEnvironment_LibraryGuard? Environment = __instance.Environment != null
+                            ? __instance.Environment as BossEnvironment_LibraryGuard
+                            : null;
                         StarSephiriaMod.LogInfoBoss($"故障机器人当前攻击：{pattern}");
-                        switch (pattern)
-                        {
-                            case 1:
-                                {
-                                    var vector = Random.Range(0, 4) switch
-                                    {
-                                        0 => new Vector2(Random.Range(0.7f, 1f), Random.Range(0.7f, 1f)),
-                                        1 => new Vector2(Random.Range(-1f, -0.7f), Random.Range(0.7f, 1f)),
-                                        2 => new Vector2(Random.Range(-1f, -0.7f), Random.Range(-1f, -0.7f)),
-                                        _ => new Vector2(Random.Range(0.7f, 1f), Random.Range(-1f, -0.7f)),
-                                    };
-                                    Vector2 vector2 = vector;
-                                    unit.PatternSpinDash(vector2, __instance.CurrentTarget);
-                                    return false;
-                                }
-                            case 2:
-                                if (__instance.Environment != null)
-                                {
-                                    unit.PatternLaser(__instance.CurrentTarget, __instance.Environment.BossZoneCenter + (Vector3)Random.insideUnitCircle * 3f);
-                                    return false;
-                                }
-                                unit.PatternLaser(__instance.CurrentTarget, __instance.transform.position);
-                                return false;
-                            case 3:
-                                unit.PatternJumpAttack(3, __instance.CurrentTarget);
-                                return false;
-                            case 4:
-                                {
-                                    Vector3 vector3 = __instance.transform.position;
-                                    for (int i = 0; i < 100; i++)
-                                    {
-                                        vector3 = __instance.CurrentTarget.transform.position + (Vector3)Random.insideUnitCircle.normalized * 3f;
-                                        if (Physics2D.OverlapBox(vector3, new Vector2(2.5f, 2f), 0f) == null)
-                                        {
-                                            break;
-                                        }
-                                    }
-                                    if (Hard >= 3)
-                                    {
-                                        if (__instance.Environment != null)
-                                            unit.PatternLaser(__instance.CurrentTarget, __instance.Environment.BossZoneCenter + (Vector3)Random.insideUnitCircle * 3f);
-                                        else
-                                            unit.PatternLaser(__instance.CurrentTarget, __instance.transform.position);
-                                        unit.NetworkcurrentState = unit.currentState = Unit_LibraryGuard.EState.Idle;
-                                    }
-                                    unit.PatternChakram(vector3);
-                                    return false;
-                                }
-                            case 5:
-                                unit.PatternFireBall(__instance.CurrentTarget.transform.position);
-                                return false;
-                            default:
-                                if (bossEnvironment_LibraryGuard != null)
-                                {
-                                    unit.PatternZigzagBullet(bossEnvironment_LibraryGuard.zigzagLeft, bossEnvironment_LibraryGuard.zigzagRight);
-                                    return false;
-                                }
-                                unit.PatternFireBall(__instance.CurrentTarget.transform.position);
-                                break;
-                        }
+                        LaunchPattern(__instance, unit, pattern, Environment);
                     }
                     return false;
                 }
+
                 if (unit.currentState == Unit_LibraryGuard.EState.Chakram && unit.chakramState == 1)
                 {
                     unit.chakramTargetPosition = __instance.CurrentTarget.transform.position;
@@ -962,6 +863,80 @@ namespace SPMod.MonsterAI
                 }
                 unit.Stop();
                 return false;
+            }
+
+            /// <summary>下一轮技能池：2 只在低难度出现，4 固定排在最后。</summary>
+            private static void RefillPatternQueue(List<int> patternQueue)
+            {
+                patternQueue.Add(0);
+                patternQueue.Add(1);
+                if (Hard < 3) patternQueue.Add(2);
+                patternQueue.Add(3);
+                patternQueue.Add(4);
+                patternQueue.Add(5);
+                patternQueue.Shuffle();
+                if (Oldpattern >= 0)
+                {
+                    patternQueue.Remove(Oldpattern);
+                    patternQueue.Insert(patternQueue.Count / 2, Oldpattern);
+                }
+            }
+
+            /// <summary>按编号释放技能。</summary>
+            private static void LaunchPattern(UnitAI_LibraryGuard __instance, Unit_LibraryGuard unit, int pattern, BossEnvironment_LibraryGuard? Environment)
+            {
+                switch (pattern)
+                {
+                    case 1:
+                        {
+                            Vector2 Direction = Random.Range(0, 4) switch
+                            {
+                                0 => new Vector2(Random.Range(0.7f, 1f), Random.Range(0.7f, 1f)),
+                                1 => new Vector2(Random.Range(-1f, -0.7f), Random.Range(0.7f, 1f)),
+                                2 => new Vector2(Random.Range(-1f, -0.7f), Random.Range(-1f, -0.7f)),
+                                _ => new Vector2(Random.Range(0.7f, 1f), Random.Range(-1f, -0.7f)),
+                            };
+                            unit.PatternSpinDash(Direction, __instance.CurrentTarget);
+                            break;
+                        }
+                    case 2:
+                        if (__instance.Environment != null)
+                            unit.PatternLaser(__instance.CurrentTarget, __instance.Environment.BossZoneCenter + (Vector3)Random.insideUnitCircle * 3f);
+                        else
+                            unit.PatternLaser(__instance.CurrentTarget, __instance.transform.position);
+                        break;
+                    case 3:
+                        unit.PatternJumpAttack(3, __instance.CurrentTarget);
+                        break;
+                    case 4:
+                        {
+                            Vector3 Position = __instance.transform.position;
+                            for (int i = 0; i < 100; i++)
+                            {
+                                Position = __instance.CurrentTarget.transform.position + (Vector3)Random.insideUnitCircle.normalized * 3f;
+                                if (Physics2D.OverlapBox(Position, new Vector2(2.5f, 2f), 0f) == null) break;
+                            }
+                            if (Hard >= 3)
+                            {
+                                if (__instance.Environment != null)
+                                    unit.PatternLaser(__instance.CurrentTarget, __instance.Environment.BossZoneCenter + (Vector3)Random.insideUnitCircle * 3f);
+                                else
+                                    unit.PatternLaser(__instance.CurrentTarget, __instance.transform.position);
+                                unit.NetworkcurrentState = unit.currentState = Unit_LibraryGuard.EState.Idle;
+                            }
+                            unit.PatternChakram(Position);
+                            break;
+                        }
+                    case 5:
+                        unit.PatternFireBall(__instance.CurrentTarget.transform.position);
+                        break;
+                    default:
+                        if (Environment != null)
+                            unit.PatternZigzagBullet(Environment.zigzagLeft, Environment.zigzagRight);
+                        else
+                            unit.PatternFireBall(__instance.CurrentTarget.transform.position);
+                        break;
+                }
             }
         }
     }

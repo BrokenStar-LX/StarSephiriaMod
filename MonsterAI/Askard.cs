@@ -35,6 +35,21 @@ namespace SPMod.MonsterAI
         private static readonly FieldInfo? askardEnvironmentField;
         private static readonly FieldInfo? askardField;
         private static readonly MethodInfo? startFastMoveFarawayMethod;
+
+        private static readonly AccessTools.FieldRef<Unit_Askard_Chapter2, Coroutine?>? BloodyRainCoroutineRef;
+        private static readonly AccessTools.FieldRef<Unit_Askard_Chapter2, AskardTentacle_Glitch>? CurGlitchTentacleRef;
+        private static readonly AccessTools.FieldRef<Unit_Askard_Chapter2, bool>? DarknessPlayerPreventRef;
+        private static readonly AccessTools.FieldRef<Unit_Askard_Chapter2, List<AskardTentacle>>? TentacleListRef;
+        private static readonly AccessTools.FieldRef<Unit_Askard_Chapter2, bool>? IsHoveringRef;
+        private static readonly Action<Unit_Askard_Chapter2, Unit_Askard.EAction>? CurrentActionSetter;
+        private static readonly Action<Unit_Askard_Chapter2>? ForceEndFastMoveDelegate;
+        private static readonly AccessTools.FieldRef<UnitAI_Askard_Chapter2, List<int>>? PatternsRef;
+        private static readonly AccessTools.FieldRef<UnitAI_Askard_Chapter2, int>? PatternCounterRef;
+        private static readonly AccessTools.FieldRef<UnitAI_Askard_Chapter2, int>? CurPatternIndexRef;
+        private static readonly AccessTools.FieldRef<UnitAI_Askard_Chapter2, Transform>? CenterPointRef;
+        private static readonly AccessTools.FieldRef<UnitAI_Askard_Chapter2, BossEnvironment_Askard>? AskardEnvironmentRef;
+        private static readonly AccessTools.FieldRef<UnitAI_Askard_Chapter2, Unit_Askard_Chapter2>? AskardRef;
+        private static readonly Action<UnitAI_Askard_Chapter2, Vector3, Action>? StartFastMoveFarawayDelegate;
         static Askard()
         {
             try
@@ -48,6 +63,13 @@ namespace SPMod.MonsterAI
                 isHoveringField = AccessTools.Field(type, "isHovering");
                 currentActionProperty = AccessTools.Property(type, "CurrentAction");
                 forceEndFastMoveMethod = AccessTools.Method(type, "ForceEndFastMove");
+                BloodyRainCoroutineRef = ReflectionCache.FieldRef<Unit_Askard_Chapter2, Coroutine?>(type, "bloodyRainCoroutine");
+                CurGlitchTentacleRef = ReflectionCache.FieldRef<Unit_Askard_Chapter2, AskardTentacle_Glitch>(type, "curGlitchTentacle");
+                DarknessPlayerPreventRef = ReflectionCache.FieldRef<Unit_Askard_Chapter2, bool>(type, "darknessPlayerPrevent");
+                TentacleListRef = ReflectionCache.FieldRef<Unit_Askard_Chapter2, List<AskardTentacle>>(type, "tentacleList");
+                IsHoveringRef = ReflectionCache.FieldRef<Unit_Askard_Chapter2, bool>(type, "isHovering");
+                CurrentActionSetter = ReflectionCache.Delegate<Action<Unit_Askard_Chapter2, Unit_Askard.EAction>>(currentActionProperty?.GetSetMethod(true), "CurrentAction.set");
+                ForceEndFastMoveDelegate = ReflectionCache.Delegate<Action<Unit_Askard_Chapter2>>(forceEndFastMoveMethod, "ForceEndFastMove");
                 StarSephiriaMod.LogInfoBoss("[Unit_Askard_Chapter2]初始化反射");
 
                 // UnitAI_Askard_Chapter2 反射
@@ -59,6 +81,13 @@ namespace SPMod.MonsterAI
                 askardEnvironmentField = AccessTools.Field(type, "askardEnvironment");
                 askardField = AccessTools.Field(type, "askard");
                 startFastMoveFarawayMethod = AccessTools.Method(type, "StartFastMove_Faraway", [typeof(Vector3), typeof(Action)]);
+                PatternsRef = ReflectionCache.FieldRef<UnitAI_Askard_Chapter2, List<int>>(type, "patterns");
+                PatternCounterRef = ReflectionCache.FieldRef<UnitAI_Askard_Chapter2, int>(type, "patternCounter");
+                CurPatternIndexRef = ReflectionCache.FieldRef<UnitAI_Askard_Chapter2, int>(type, "curPatternIndex");
+                CenterPointRef = ReflectionCache.FieldRef<UnitAI_Askard_Chapter2, Transform>(type, "centerPoint");
+                AskardEnvironmentRef = ReflectionCache.FieldRef<UnitAI_Askard_Chapter2, BossEnvironment_Askard>(type, "askardEnvironment");
+                AskardRef = ReflectionCache.FieldRef<UnitAI_Askard_Chapter2, Unit_Askard_Chapter2>(type, "askard");
+                StartFastMoveFarawayDelegate = ReflectionCache.Delegate<Action<UnitAI_Askard_Chapter2, Vector3, Action>>(startFastMoveFarawayMethod, "StartFastMove_Faraway");
                 StarSephiriaMod.LogInfoBoss("[UnitAI_Askard_Chapter2]初始化反射");
             }
             catch (Exception ex)
@@ -97,14 +126,14 @@ namespace SPMod.MonsterAI
                     yield return null;
                 }
 
-                currentActionProperty?.SetValue(instance, Unit_Askard.EAction.Darkness);
-                if (bloodyRainCoroutineField?.GetValue(instance) is Coroutine bloodyRainCoroutine)
+                CurrentActionSetter!(instance, Unit_Askard.EAction.Darkness);
+                if (BloodyRainCoroutineRef!(instance) is Coroutine bloodyRainCoroutine)
                 {
                     instance.StopCoroutine(bloodyRainCoroutine);
-                    bloodyRainCoroutineField?.SetValue(instance, null);
+                    BloodyRainCoroutineRef!(instance) = null;
                 }
 
-                AskardTentacle_Glitch? curGlitchTentacle = curGlitchTentacleField?.GetValue(instance) as AskardTentacle_Glitch;
+                AskardTentacle_Glitch? curGlitchTentacle = CurGlitchTentacleRef!(instance);
                 curGlitchTentacle?.Hide();
                 if (!phaseStartMode)
                 {
@@ -115,7 +144,7 @@ namespace SPMod.MonsterAI
                         timer += Time.deltaTime;
                         if (timer > 0.75f)
                         {
-                            forceEndFastMoveMethod?.Invoke(instance, null);
+                            ForceEndFastMoveDelegate!(instance);
                             break;
                         }
                         yield return null;
@@ -130,10 +159,10 @@ namespace SPMod.MonsterAI
                 float bottom = instance.darknessTeleportPoint.y - 7.625f;
                 float right = instance.darknessTeleportPoint.x + 10f;
                 float left = instance.darknessTeleportPoint.x - 10f;
-                bool darknessPlayerPrevent = darknessPlayerPreventField?.GetValue(instance) as bool? ?? false;
+                bool darknessPlayerPrevent = DarknessPlayerPreventRef!(instance);
                 if (!darknessPlayerPrevent)
                 {
-                    darknessPlayerPreventField?.SetValue(instance, true);
+                    DarknessPlayerPreventRef!(instance) = true;
                     foreach (PlayerSpawner playerSpawner in PlayerSpawner.MultiplayerList)
                     {
                         if (playerSpawner && playerSpawner.PlayerAvatar.TopdownRigidbody.preventPositionServer)
@@ -148,18 +177,18 @@ namespace SPMod.MonsterAI
                 instance.RpcStartDarkness();
                 yield return new WaitForSeconds(0.5f);
 
-                List<AskardTentacle> tentacleList = tentacleListField?.GetValue(instance) as List<AskardTentacle> ?? [];
+                List<AskardTentacle> tentacleList = TentacleListRef!(instance);
                 foreach (AskardTentacle askardTentacle in tentacleList)
                 {
                     askardTentacle?.BreakForce();
                 }
                 tentacleList.Clear();
-                tentacleListField?.SetValue(instance, tentacleList);
+                TentacleListRef!(instance) = tentacleList;
 
                 instance.DespawnAllBullet();
                 instance.NetworkisRuningDarknessAnimation = true;
 
-                isHoveringField?.SetValue(instance, false);
+                IsHoveringRef!(instance) = false;
                 instance.RpcSetShadow(false);
                 if (!phaseStartMode)
                 {
@@ -386,7 +415,7 @@ namespace SPMod.MonsterAI
                 yield return new WaitForSeconds(3f);
                 instance.RpcOnEndDarkness();
 
-                darknessPlayerPrevent = darknessPlayerPreventField?.GetValue(instance) as bool? ?? false;
+                darknessPlayerPrevent = DarknessPlayerPreventRef!(instance);
                 if (darknessPlayerPrevent)
                 {
                     foreach (PlayerSpawner playerSpawner3 in PlayerSpawner.MultiplayerList)
@@ -396,7 +425,7 @@ namespace SPMod.MonsterAI
                             playerSpawner3.PlayerAvatar.TopdownRigidbody.preventPositionServer.ResetPreventPositionServerAuthority();
                         }
                     }
-                    darknessPlayerPreventField?.SetValue(instance, false);
+                    DarknessPlayerPreventRef!(instance) = false;
                 }
 
                 yield return new WaitForSeconds(2f);
@@ -404,8 +433,8 @@ namespace SPMod.MonsterAI
                 {
                     int Value = instance.GetCustomStatUnsafe(TextFile.ReceivedDamageReduction);
                     if (Value > 0) instance.AddCustomStatUnsafe(TextFile.ReceivedDamageReduction, -Value);
-                    instance.AddCustomStatUnsafe(TextFile.ReceivedDamageReduction, 60);
-                    StarSephiriaPatches.EvilGuardianEffect[instance] = new CountingTimer(30, 1f);
+                    instance.AddCustomStatUnsafe(TextFile.ReceivedDamageReduction, 40);
+                    StarSephiriaPatches.EvilGuardianEffect[instance] = new CountingTimer(20, 1f);
                 }
                 instance.StopInvulnerable();
                 instance.NetworkcanBeTarget = (sbyte)(instance.canBeTarget + 1);
@@ -413,8 +442,8 @@ namespace SPMod.MonsterAI
 
                 curGlitchTentacle?.Show();
                 instance.NetworkisRuningDarknessAnimation = false;
-                isHoveringField?.SetValue(instance, true);
-                currentActionProperty?.SetValue(instance, Unit_Askard.EAction.None);
+                IsHoveringRef!(instance) = true;
+                CurrentActionSetter!(instance, Unit_Askard.EAction.None);
                 yield break;
             }
 
@@ -445,13 +474,12 @@ namespace SPMod.MonsterAI
                         return true;
                     }
 
-                    // 通过反射获取私有字段的值
-                    List<int> patterns = (List<int>)patternsField.GetValue(__instance);
-                    int patternCounter = (int)patternCounterField.GetValue(__instance);
-                    int curPatternIndex = (int)curPatternIndexField.GetValue(__instance);
-                    Transform centerPoint = (Transform)centerPointField.GetValue(__instance);
-                    BossEnvironment_Askard askardEnvironment = (BossEnvironment_Askard)askardEnvironmentField.GetValue(__instance);
-                    Unit_Askard_Chapter2 askard = (Unit_Askard_Chapter2)askardField.GetValue(__instance);
+                    List<int> patterns = PatternsRef!(__instance);
+                    int patternCounter = PatternCounterRef!(__instance);
+                    int curPatternIndex = CurPatternIndexRef!(__instance);
+                    Transform centerPoint = CenterPointRef!(__instance);
+                    BossEnvironment_Askard askardEnvironment = AskardEnvironmentRef!(__instance);
+                    Unit_Askard_Chapter2 askard = AskardRef!(__instance);
 
                     if (!askard.isBattlePhase || __instance.IsLifeDecreased || __instance.IsDramaticDying)
                     {
@@ -465,70 +493,19 @@ namespace SPMod.MonsterAI
                         float AttackSpeed = 1.25f + Hard * 0.25f;
                         if (__instance.tentaclePatternDelay.Update(Time.deltaTime * AttackSpeed))
                         {
-                            int currentPhase = askard.currentPhase;
-                            if (patterns.Count == 0)
-                            {
-                                patterns.Add(0);
-                                patterns.Add(1);
-                                patterns.Add(2);
-                                patterns.Add(3);
-                                patterns.Add(4);
-                                patterns.Add(5);
-                                patterns.Add(6);
-                                patterns.Shuffle();
-                                if (Oldpattern >= 0)
-                                {
-                                    patterns.Remove(Oldpattern);
-                                    patterns.Insert(patterns.Count / 2, Oldpattern);
-                                }
-                                if (askard.currentPhase >= 1)
-                                    patterns.Add(7);
-                            }
+                            if (patterns.Count == 0) RefillPatterns(patterns, askard);
+
                             curPatternIndex = patterns[0];
                             patterns.RemoveAt(0);
-                            if (curPatternIndex != 7)
-                                Oldpattern = curPatternIndex;
+                            if (curPatternIndex != 7) Oldpattern = curPatternIndex;
                             StarSephiriaMod.LogInfoBoss($"主教当前技能：{curPatternIndex}");
-                            switch (curPatternIndex)
-                            {
-                                case 0:
-                                    askard.StartTentacle_Point(__instance.CurrentTarget.transform);
-                                    break;
-                                case 1:
-                                    startFastMoveFarawayMethod.Invoke(__instance,
-                                    [
-                                        __instance.CurrentTarget.transform.position,
-                                        (Action)delegate { askard.StartTentacle_Line(__instance.CurrentTarget.transform); }
-                                    ]);
-                                    break;
-                                case 2:
-                                    askard.StartTentacle_Fill(__instance.CurrentTarget.transform);
-                                    break;
-                                case 3:
-                                    askard.StartTentacle_Wave(__instance.CurrentTarget.transform);
-                                    break;
-                                case 4:
-                                    askard.StartHomingBullet(__instance.CurrentTarget.transform, centerPoint.position, askard.currentPhase >= 1);
-                                    break;
-                                case 5:
-                                    askard.StartLaser(__instance.CurrentTarget.transform, askard.currentPhase >= 1);
-                                    break;
-                                case 6:
-                                    askard.StartStomp(__instance.CurrentTarget.transform, centerPoint.position, askard.currentPhase >= 1);
-                                    break;
-                                case 7:
-                                    askard.StartDarkness(__instance.CurrentTarget.transform, false);
-                                    break;
-                                case 8:
-                                    askard.StartSimpleBullet();
-                                    break;
-                            }
+                            LaunchPattern(__instance, askard, centerPoint, curPatternIndex);
 
                             curPatternIndex = -1;
                             patternCounter++;
-                            curPatternIndexField.SetValue(__instance, curPatternIndex);
-                            patternCounterField.SetValue(__instance, patternCounter);
-                            patternsField.SetValue(__instance, patterns);
+                            CurPatternIndexRef!(__instance) = curPatternIndex;
+                            PatternCounterRef!(__instance) = patternCounter;
+                            PatternsRef!(__instance) = patterns;
                             return false;
                         }
                         else if (__instance.hardPatternActivated && askardEnvironment != null && __instance.bloodyRainPatternTimer.Update(0f))
@@ -547,6 +524,54 @@ namespace SPMod.MonsterAI
                 {
                     StarSephiriaMod.LogError($"[UnitAI_Askard_Chapter2][OnAIUpdate_FoundEnemy]出现错误{ex}");
                     return true;
+                }
+            }
+
+            /// <summary>下一轮技能池：0~6 洗牌，阶段 1 后追加黑暗技能 7。</summary>
+            private static void RefillPatterns(List<int> patterns, Unit_Askard_Chapter2 askard)
+            {
+                for (int i = 0; i <= 6; i++) patterns.Add(i);
+                patterns.Shuffle();
+                if (Oldpattern >= 0)
+                {
+                    patterns.Remove(Oldpattern);
+                    patterns.Insert(patterns.Count / 2, Oldpattern);
+                }
+                if (askard.currentPhase >= 1) patterns.Add(7);
+            }
+
+            /// <summary>按编号释放技能。</summary>
+            private static void LaunchPattern(UnitAI_Askard_Chapter2 __instance, Unit_Askard_Chapter2 askard, Transform centerPoint, int curPatternIndex)
+            {
+                switch (curPatternIndex)
+                {
+                    case 0:
+                        askard.StartTentacle_Point(__instance.CurrentTarget.transform);
+                        break;
+                    case 1:
+                        StartFastMoveFarawayDelegate!(__instance, __instance.CurrentTarget.transform.position, (Action)delegate { askard.StartTentacle_Line(__instance.CurrentTarget.transform); });
+                        break;
+                    case 2:
+                        askard.StartTentacle_Fill(__instance.CurrentTarget.transform);
+                        break;
+                    case 3:
+                        askard.StartTentacle_Wave(__instance.CurrentTarget.transform);
+                        break;
+                    case 4:
+                        askard.StartHomingBullet(__instance.CurrentTarget.transform, centerPoint.position, askard.currentPhase >= 1);
+                        break;
+                    case 5:
+                        askard.StartLaser(__instance.CurrentTarget.transform, askard.currentPhase >= 1);
+                        break;
+                    case 6:
+                        askard.StartStomp(__instance.CurrentTarget.transform, centerPoint.position, askard.currentPhase >= 1);
+                        break;
+                    case 7:
+                        askard.StartDarkness(__instance.CurrentTarget.transform, false);
+                        break;
+                    case 8:
+                        askard.StartSimpleBullet();
+                        break;
                 }
             }
         }

@@ -31,6 +31,15 @@ namespace SPMod.MonsterAI
         private static readonly FieldInfo? qBossField;
         private static readonly FieldInfo? currentPatternCoroutineField;
         private static readonly MethodInfo? patternTreeLaserCoroutineMethod;
+
+        private static readonly AccessTools.FieldRef<Unit_QBoss, float>? LevitationTimerRef;
+        private static readonly AccessTools.FieldRef<Unit_QBoss, Coroutine?>? GeometryProjectileCoroutineRef;
+        private static readonly Action<Unit_QBoss, int>? RpcSetSortingOrderDelegate;
+        private static readonly Action<Unit_QBoss, Vector2, Unit_QBoss.GeometryShapeData>? SpawnGeometryShapeDelegate;
+        private static readonly Action<Unit_QBoss>? RpcGeometryProjectileEndDelegate;
+        private static readonly AccessTools.FieldRef<UnitAI_QBossAdv, Unit_QBoss>? QBossRef;
+        private static readonly AccessTools.FieldRef<UnitAI_QBossAdv, Coroutine?>? CurrentPatternCoroutineRef;
+        private static readonly Func<UnitAI_QBossAdv, IEnumerator>? PatternTreeLaserCoroutineDelegate;
         static QBoss()
         {
             try
@@ -40,6 +49,9 @@ namespace SPMod.MonsterAI
                 qBossField = AccessTools.Field(type, "qBoss");
                 currentPatternCoroutineField = AccessTools.Field(type, "currentPatternCoroutine");
                 patternTreeLaserCoroutineMethod = AccessTools.Method(type, "PatternTreeLaserCoroutine");
+                QBossRef = ReflectionCache.FieldRef<UnitAI_QBossAdv, Unit_QBoss>(type, "qBoss");
+                CurrentPatternCoroutineRef = ReflectionCache.FieldRef<UnitAI_QBossAdv, Coroutine?>(type, "currentPatternCoroutine");
+                PatternTreeLaserCoroutineDelegate = ReflectionCache.Delegate<Func<UnitAI_QBossAdv, IEnumerator>>(patternTreeLaserCoroutineMethod, "PatternTreeLaserCoroutine");
                 StarSephiriaMod.LogInfoBoss("[UnitAI_QBossAdv]初始化反射成功");
 
                 Type bossType = typeof(Unit_QBoss);
@@ -48,6 +60,11 @@ namespace SPMod.MonsterAI
                 RpcSetSortingOrderMethod = AccessTools.Method(bossType, "RpcSetSortingOrder");
                 SpawnGeometryShapeMethod = AccessTools.Method(bossType, "SpawnGeometryShape");
                 RpcGeometryProjectileEndMethod = AccessTools.Method(bossType, "RpcGeometryProjectileEnd");
+                LevitationTimerRef = ReflectionCache.FieldRef<Unit_QBoss, float>(bossType, "levitationTimer");
+                GeometryProjectileCoroutineRef = ReflectionCache.FieldRef<Unit_QBoss, Coroutine?>(bossType, "geometryProjectileCoroutine");
+                RpcSetSortingOrderDelegate = ReflectionCache.Delegate<Action<Unit_QBoss, int>>(RpcSetSortingOrderMethod, "RpcSetSortingOrder");
+                SpawnGeometryShapeDelegate = ReflectionCache.Delegate<Action<Unit_QBoss, Vector2, Unit_QBoss.GeometryShapeData>>(SpawnGeometryShapeMethod, "SpawnGeometryShape");
+                RpcGeometryProjectileEndDelegate = ReflectionCache.Delegate<Action<Unit_QBoss>>(RpcGeometryProjectileEndMethod, "RpcGeometryProjectileEnd");
                 StarSephiriaMod.LogInfoBoss("[Unit_QBoss]初始化反射成功");
             }
             catch (Exception ex)
@@ -400,8 +417,8 @@ namespace SPMod.MonsterAI
                 }
                 __instance.NetworklevitationPhase = Unit_QBoss.ELevitationPhase.Rising;
 
-                levitationTimerField.SetValue(__instance, 0f);
-                RpcSetSortingOrderMethod.Invoke(__instance, [5]);
+                LevitationTimerRef!(__instance) = 0f;
+                RpcSetSortingOrderDelegate!(__instance, 5);
                 while (__instance.levitationPhase == Unit_QBoss.ELevitationPhase.Rising)
                 {
                     yield return null;
@@ -428,7 +445,7 @@ namespace SPMod.MonsterAI
                             for (int s = 0; s < shapes.Length; s++)
                             {
                                 Vector2 vector = target ? target.transform.position : __instance.transform.position;
-                                SpawnGeometryShapeMethod.Invoke(__instance, [vector, shapes[s]]);
+                                SpawnGeometryShapeDelegate!(__instance, vector, shapes[s]);
                                 yield return new WaitForSeconds(travelTime + 0.5f);
                                 if (s < shapes.Length - 1)
                                 {
@@ -483,14 +500,7 @@ namespace SPMod.MonsterAI
                                 NetworkServer.Spawn(gameObject3);
                                 if (ExAttack > 6)
                                 {
-                                    SpawnGeometryShapeMethod.Invoke(__instance,
-                                    [
-                                        Pos, new Unit_QBoss.GeometryShapeData()
-                                        {
-                                            vertexCount = 4,
-                                            angleOffset = Hard >= 4 ? 45 : 0
-                                        }
-                                    ]);
+                                    SpawnGeometryShapeDelegate!(__instance, Pos, new Unit_QBoss.GeometryShapeData() { vertexCount = 4, angleOffset = Hard >= 4 ? 45 : 0 });
                                     ExAttack = 0;
                                 }
                                 ExAttack += 1;
@@ -501,7 +511,7 @@ namespace SPMod.MonsterAI
                         break;
                 }
                 __instance.NetworkgeometryProjectileTarget = null;
-                RpcGeometryProjectileEndMethod.Invoke(__instance, null);
+                RpcGeometryProjectileEndDelegate!(__instance);
                 __instance.NetworklevitationPhase = Unit_QBoss.ELevitationPhase.Descending;
                 while (__instance.levitationPhase == Unit_QBoss.ELevitationPhase.Descending)
                 {
@@ -509,7 +519,7 @@ namespace SPMod.MonsterAI
                 }
                 __instance.NetworkcurrentAction = Unit_QBoss.EAnimation.None;
                 __instance.steeringSpeed = 1f;
-                geometryProjectileCoroutineField.SetValue(__instance, null);
+                GeometryProjectileCoroutineRef!(__instance) = null;
                 yield break;
             }
         }
@@ -541,8 +551,8 @@ namespace SPMod.MonsterAI
                     }
 
                     // 通过反射获取字段值
-                    Unit_QBoss qBoss = (Unit_QBoss)qBossField.GetValue(__instance);
-                    Coroutine currentPatternCoroutine = (Coroutine)currentPatternCoroutineField.GetValue(__instance);
+                    Unit_QBoss qBoss = QBossRef!(__instance);
+                    Coroutine? currentPatternCoroutine = CurrentPatternCoroutineRef!(__instance);
                     if (__instance.hardPatternActivated && __instance.additionalCrackTimer.Update(Time.deltaTime))
                     {
                         List<UnitAvatar> list = [];
@@ -603,10 +613,10 @@ namespace SPMod.MonsterAI
                                     break;
                                 }
                             case 1:
-                                if (patternTreeLaserCoroutineMethod.Invoke(__instance, null) is IEnumerator coroutine)
+                                if (PatternTreeLaserCoroutineDelegate!(__instance) is IEnumerator coroutine)
                                 {
                                     currentPatternCoroutine = __instance.StartCoroutine(coroutine);
-                                    currentPatternCoroutineField.SetValue(__instance, currentPatternCoroutine);
+                                    CurrentPatternCoroutineRef!(__instance) = currentPatternCoroutine;
                                 }
                                 break;
                             case 2:
