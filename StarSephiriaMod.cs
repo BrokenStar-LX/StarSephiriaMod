@@ -111,6 +111,7 @@ namespace SPMod
                 LocalizationManager.Instance.OnLanguageChanged -= OnLanguageChanged;
                 _languageSubscribed = false;
             }
+            EffectHudLayout.RestoreAll();
             _harmony?.UnpatchAll(_harmony.Id);
             _harmony = null;
             WeaponType.Clear();
