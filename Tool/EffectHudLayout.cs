@@ -29,11 +29,7 @@ internal static class EffectHudLayout
         if (entity == null || !EffectRowPlan.IsSpm(entity.name) ||
             !___instantiatedConditions.ContainsKey(__1) ||
             !___instantiatedHUDs.TryGetValue(__1, out var icon) || icon == null) return;
-        EffectHudFlow? flow = null;
-        // Unity destroys components at frame end. A same-frame reconnect must not
-        // reuse the inactive component that has already been scheduled for removal.
-        foreach (var candidate in __instance.GetComponents<EffectHudFlow>())
-            if (candidate.Active) { flow = candidate; break; }
+        var flow = FindActive(__instance);
         if (flow == null)
         {
             flow = __instance.gameObject.AddComponent<EffectHudFlow>();
@@ -45,28 +41,41 @@ internal static class EffectHudLayout
         Refresh.Invoke(__instance, null);
     }
 
+    [HarmonyPatch("OnEffectHUDDestroyed")]
+    [HarmonyPostfix]
+    private static void Destroyed(UI_PlayerEffectHUD __instance, string __0)
+    {
+        FindActive(__instance)?.EffectDestroyed(__0);
+    }
+
     [HarmonyPatch("Disconnect")]
     [HarmonyPrefix]
     private static void Disconnect(UI_PlayerEffectHUD __instance)
     {
-        EffectHudFlow? flow = null;
-        // Unity destroys components at frame end. A same-frame reconnect must not
-        // reuse the inactive component that has already been scheduled for removal.
-        foreach (var candidate in __instance.GetComponents<EffectHudFlow>())
-            if (candidate.Active) { flow = candidate; break; }
-        if (flow == null) return;
+        var flow = FindActive(__instance);
+        if (flow != null) Retire(flow);
+    }
+
+    private static EffectHudFlow? FindActive(UI_PlayerEffectHUD hud)
+    {
+        // 同一帧重新接管时，跳过已安排销毁的旧组件。
+        foreach (var candidate in hud.GetComponents<EffectHudFlow>())
+            if (candidate.Active) return candidate;
+        return null;
+    }
+
+    internal static void Retire(EffectHudFlow flow)
+    {
         flow.Restore();
-        Object.Destroy(flow);
         Flows.Remove(flow);
+        Object.Destroy(flow);
     }
 
     internal static void RestoreAll()
     {
         foreach (var flow in Flows.ToArray())
         {
-            if (flow == null) continue;
-            flow.Restore();
-            Object.Destroy(flow);
+            if (flow != null) Retire(flow);
         }
         Flows.Clear();
     }
@@ -162,6 +171,14 @@ internal sealed class EffectHudFlow : MonoBehaviour
         _layoutDirty = true;
     }
 
+    internal void EffectDestroyed(string id)
+    {
+        if (!_moved.TryGetValue(id, out var icon) ||
+            (_all.TryGetValue(id, out var current) && ReferenceEquals(current, icon))) return;
+        _moved.Remove(id);
+        if (_moved.Count == 0) EffectHudLayout.Retire(this);
+    }
+
     private void Render()
     {
         if (!_active || (_lastFrame == Time.frameCount && !NeedsLayout())) return;
@@ -213,6 +230,13 @@ internal sealed class EffectHudFlow : MonoBehaviour
     private void Arrange()
     {
         _arrangeCount++;
+        // Unity 在帧末销毁图标，包括原生 Boon。只保留仍存活的快照。
+        _children.Clear();
+        foreach (var icon in _icons.Keys)
+            if (icon == null) _children.Add(icon!);
+        foreach (var icon in _children) _icons.Remove(icon);
+        _children.Clear();
+        _sizes.Clear();
         if (_top == null) return;
         // The native VerticalLayoutGroup controls this row's width. Disabling
         // its HorizontalLayoutGroup also removes its preferred-width provider;
@@ -230,7 +254,6 @@ internal sealed class EffectHudFlow : MonoBehaviour
         }
         float width = _top.rect.width - _paddingLeft - _paddingRight;
         if (!(width > 0)) return; // Hidden/unlaid-out canvases are retried.
-        _children.Clear(); _sizes.Clear();
         for (int i = 0; _top.gameObject.activeInHierarchy && i < _top.childCount; i++)
         {
             if (!(_top.GetChild(i) is RectTransform child) || !child.gameObject.activeSelf) continue;
