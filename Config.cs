@@ -86,6 +86,8 @@ public static class ModConfig
         }
     }
 
+    internal static bool RosionDisabled => RosionMode == 1;
+
     public static bool RosionEnabled
     {
         get

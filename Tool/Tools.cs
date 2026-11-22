@@ -80,8 +80,13 @@ namespace SPMod.Tool
 
         public static int GetRosionStack(this UnitAvatar Player)
         {
-            if (!ModConfig.RosionEnabled) return 0;
+            if (ModConfig.RosionDisabled) return 0;
+            return Player.GetLegacyRosionStack();
+        }
 
+        // Seren_2 在低苦难也使用原始侵蚀层数反算续盾。
+        internal static int GetLegacyRosionStack(this UnitAvatar Player)
+        {
             int i = Player.GetCustomStatUnsafe(TextFile.CurrentRosion);
             if (ModConfig.HardMode >= 4) i *= 3;
             if (PlayerSpawner.MultiplayerList.Count > 1) return Mathf.Min(90, i);  
