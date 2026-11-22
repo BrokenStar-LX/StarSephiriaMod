@@ -83,17 +83,22 @@ public static class ModConfig
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]BossRushMode_Level", 0) > 0;
         }
     }
-    public static bool PollutedBlood
+    internal const string PollutedBloodKey = "[Star's Sephiria Mod]PollutedBlood";
+    // 第1档保留50%，兼容旧存档。
+    internal static readonly int[] PollutedBloodEffects = [50, 100, 200, 300];
+    public static bool PollutedBlood => PollutedBloodRecoveryPercent > 0;
+    internal static int PollutedBloodRecoveryPercent
     {
         get
         {
-            if (DungeonManager.Instance)
+            if (DungeonManager.Instance && DungeonManager.Instance.hardModeEnvironment.TryGetValue(PollutedBloodKey, out int Value))
             {
-                if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]PollutedBlood", out int Value))
-                    return Value > 0;
+                if (Value <= 0) return 0;
+                return Array.IndexOf(PollutedBloodEffects, Value) >= 0 ? Value : PollutedBloodEffects[0];
             }
-            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return false;
-            return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]PollutedBlood_Level", 0) > 0;
+            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return 0;
+            int Level = SaveManager.Current.GetInt("HardModeShard_" + PollutedBloodKey + "_Level", 0);
+            return Level > 0 && Level <= PollutedBloodEffects.Length ? PollutedBloodEffects[Level - 1] : 0;
         }
     }
     public static bool EvilGuardian

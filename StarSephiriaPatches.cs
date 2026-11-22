@@ -1964,7 +1964,8 @@ namespace SPMod
 
             private static void UpdatePollutedBlood(PlayerAvatar __instance)
             {
-                if (!ModConfig.PollutedBlood) return;
+                int Percent = ModConfig.PollutedBloodRecoveryPercent;
+                if (Percent == 0) return;
 
                 if (!PollutedBloodRecovery.ContainsKey(__instance))
                     PollutedBloodRecovery.Add(__instance, new PollutedBloodData(100));
@@ -1979,34 +1980,25 @@ namespace SPMod
                 }
                 else
                 {
+                    float Max = __instance.MaxHp * (Percent / 100f);
                     if (__instance.hp > PBD.CurrentHP)
                     {
-                        float Max = __instance.MaxHp * 0.5f;
-                        if (PBD.RecoveryHP < Max)
+                        float Recovery = __instance.hp - PBD.CurrentHP;
+                        float Allowed = Mathf.Min(Recovery, Mathf.Max(0f, Max - PBD.RecoveryHP));
+                        PBD.RecoveryHP += Allowed;
+                        if (Allowed < Recovery)
                         {
-                            PBD.RecoveryHP += __instance.hp - PBD.CurrentHP;
-                            if (PBD.RecoveryHP > Max)
-                            {
-                                float Down = PBD.RecoveryHP - Max;
-                                PBD.CurrentHP = __instance.hp - Down;
-                                if (PBD.CurrentHP < 1) PBD.CurrentHP = 1;
-                                PBD.RecoveryHP = Max;
-                                PBD.NoHPUp = true;
-                                __instance.SetHp(PBD.CurrentHP);
-                            }
-                            else
-                            {
-                                PBD.CurrentHP = __instance.hp;
-                                if (PBD.CurrentHP < 1) PBD.CurrentHP = 1;
-                            }
+                            PBD.CurrentHP = Mathf.Max(1f, PBD.CurrentHP + Allowed);
+                            __instance.SetHp(PBD.CurrentHP);
                         }
-                        else PBD.NoHPUp = true;
+                        else PBD.CurrentHP = __instance.hp;
                     }
                     else if (__instance.hp < PBD.CurrentHP)
                     {
                         PBD.CurrentHP = __instance.hp;
                         if (PBD.CurrentHP < 1) PBD.CurrentHP = 1;
                     }
+                    PBD.NoHPUp = PBD.RecoveryHP >= Max;
                 }
             }
 
