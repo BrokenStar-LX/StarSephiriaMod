@@ -1980,21 +1980,22 @@ namespace SPMod
                 }
                 else
                 {
-                    float Max = __instance.MaxHp * (Percent / 100f);
+                    float Max = Percent == 50 ? 0f : __instance.MaxHp * (Percent / 100f);
                     if (__instance.hp > PBD.CurrentHP)
                     {
                         if (Percent == 50)
                         {
                             // 旧存档第1档保留恰好达到上限时的治疗判定。
-                            if (PBD.RecoveryHP < Max)
+                            float LegacyMax = __instance.MaxHp * 0.5f;
+                            if (PBD.RecoveryHP < LegacyMax)
                             {
                                 PBD.RecoveryHP += __instance.hp - PBD.CurrentHP;
-                                if (PBD.RecoveryHP > Max)
+                                if (PBD.RecoveryHP > LegacyMax)
                                 {
-                                    float Down = PBD.RecoveryHP - Max;
+                                    float Down = PBD.RecoveryHP - LegacyMax;
                                     PBD.CurrentHP = __instance.hp - Down;
                                     if (PBD.CurrentHP < 1) PBD.CurrentHP = 1;
-                                    PBD.RecoveryHP = Max;
+                                    PBD.RecoveryHP = LegacyMax;
                                     PBD.NoHPUp = true;
                                     __instance.SetHp(PBD.CurrentHP);
                                 }
