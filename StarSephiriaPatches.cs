@@ -1983,22 +1983,48 @@ namespace SPMod
                     float Max = __instance.MaxHp * (Percent / 100f);
                     if (__instance.hp > PBD.CurrentHP)
                     {
-                        float Recovery = __instance.hp - PBD.CurrentHP;
-                        float Allowed = Mathf.Min(Recovery, Mathf.Max(0f, Max - PBD.RecoveryHP));
-                        PBD.RecoveryHP += Allowed;
-                        if (Allowed < Recovery)
+                        if (Percent == 50)
                         {
-                            PBD.CurrentHP = Mathf.Max(1f, PBD.CurrentHP + Allowed);
-                            __instance.SetHp(PBD.CurrentHP);
+                            // 旧存档第1档保留恰好达到上限时的治疗判定。
+                            if (PBD.RecoveryHP < Max)
+                            {
+                                PBD.RecoveryHP += __instance.hp - PBD.CurrentHP;
+                                if (PBD.RecoveryHP > Max)
+                                {
+                                    float Down = PBD.RecoveryHP - Max;
+                                    PBD.CurrentHP = __instance.hp - Down;
+                                    if (PBD.CurrentHP < 1) PBD.CurrentHP = 1;
+                                    PBD.RecoveryHP = Max;
+                                    PBD.NoHPUp = true;
+                                    __instance.SetHp(PBD.CurrentHP);
+                                }
+                                else
+                                {
+                                    PBD.CurrentHP = __instance.hp;
+                                    if (PBD.CurrentHP < 1) PBD.CurrentHP = 1;
+                                }
+                            }
+                            else PBD.NoHPUp = true;
                         }
-                        else PBD.CurrentHP = __instance.hp;
+                        else
+                        {
+                            float Recovery = __instance.hp - PBD.CurrentHP;
+                            float Allowed = Mathf.Min(Recovery, Mathf.Max(0f, Max - PBD.RecoveryHP));
+                            PBD.RecoveryHP += Allowed;
+                            if (Allowed < Recovery)
+                            {
+                                PBD.CurrentHP = Mathf.Max(1f, PBD.CurrentHP + Allowed);
+                                __instance.SetHp(PBD.CurrentHP);
+                            }
+                            else PBD.CurrentHP = __instance.hp;
+                        }
                     }
                     else if (__instance.hp < PBD.CurrentHP)
                     {
                         PBD.CurrentHP = __instance.hp;
                         if (PBD.CurrentHP < 1) PBD.CurrentHP = 1;
                     }
-                    PBD.NoHPUp = PBD.RecoveryHP >= Max;
+                    if (Percent != 50) PBD.NoHPUp = PBD.RecoveryHP >= Max;
                 }
             }
 
