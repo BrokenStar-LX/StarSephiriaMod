@@ -38,6 +38,8 @@ public class ModConfigData
 
 public static class ModConfig
 {
+    internal const string RosionModeKey = "[Star's Sephiria Mod]RosionMode";
+
     private static int _hardModeFrame = -1;
     private static int _hardModeValue;
     public static int HardMode
@@ -70,6 +72,33 @@ public static class ModConfig
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]InfiniteMode_Level", 0) > 0;
         }
     }
+
+    private static int RosionMode
+    {
+        get
+        {
+            if (DungeonManager.Instance && DungeonManager.Instance.hardModeEnvironment.TryGetValue(RosionModeKey, out int Value))
+                return Value;
+            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return 0;
+            if (DungeonManager.Instance && DungeonManager.Instance.dungeonEnvironment.TryGetValue("IsInDungeon", out int InDungeon) && InDungeon != 0)
+                return 0;
+            return SaveManager.Current?.GetInt($"HardModeShard_{RosionModeKey}_Level", 0) ?? 0;
+        }
+    }
+
+    public static bool RosionEnabled
+    {
+        get
+        {
+            return RosionMode switch
+            {
+                1 => false,
+                2 => true,
+                _ => HardMode >= 3,
+            };
+        }
+    }
+
     public static bool BossRushMode
     {
         get

@@ -44,6 +44,7 @@ namespace SPMod.ModContent
             new ModHardModeShardEntity("BossRushMode", "[Star's Sephiria Mod]BossRushMode", EHardModeShardType.World, 1, [1], [0]).EndCreate(),
             new ModHardModeShardEntity("InfiniteMode", "[Star's Sephiria Mod]InfiniteMode", EHardModeShardType.World, 1, [1], [0]).EndCreate(),
             new ModHardModeShardEntity("HardMode", "[Star's Sephiria Mod]HardMode", EHardModeShardType.World, 3, [1, 2, 3], [5, 10, 15]).EndCreate(),
+            new ModHardModeShardEntity("RosionMode", ModConfig.RosionModeKey, EHardModeShardType.World, 2, [1, 2], [0, 0]).EndCreate(),
             new ModHardModeShardEntity("PollutedBlood", "[Star's Sephiria Mod]PollutedBlood", EHardModeShardType.Plan, 1, [50], [3]).EndCreate(),
             new ModHardModeShardEntity("EvilGuardian", "[Star's Sephiria Mod]EvilGuardian", EHardModeShardType.Demon, 1, [40], [4]).EndCreate(),
         ];

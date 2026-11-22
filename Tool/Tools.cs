@@ -80,6 +80,8 @@ namespace SPMod.Tool
 
         public static int GetRosionStack(this UnitAvatar Player)
         {
+            if (!ModConfig.RosionEnabled) return 0;
+
             int i = Player.GetCustomStatUnsafe(TextFile.CurrentRosion);
             if (ModConfig.HardMode >= 4) i *= 3;
             if (PlayerSpawner.MultiplayerList.Count > 1) return Mathf.Min(90, i);  

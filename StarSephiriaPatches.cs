@@ -105,7 +105,7 @@ namespace SPMod
             [HarmonyPostfix]
             static void GetMaxHp_Postfix(UnitAvatar __instance, ref float __result)
             {
-                if (ModConfig.HardMode < 3) return;
+                if (!ModConfig.RosionEnabled) return;
                 if (__result >= 50)
                 {
                     if (__instance.IsWeapon(WeaponIDs.BloodlettingGearblade) && __instance.GetCustomStatUnsafe(TextFile.ReceivedDamageReduction) > 0) return;
@@ -778,7 +778,7 @@ namespace SPMod
             [HarmonyPrefix]
             public static void AddShield_Prefix(UnitAvatar __instance, ref float shield, string key)
             {
-                if (ModConfig.HardMode >= 3)
+                if (ModConfig.RosionEnabled)
                 {
                     shield *= 1f - __instance.GetRosionStack() * 0.01f;
                     if (shield <= 0) shield = 0f;
@@ -1369,11 +1369,12 @@ namespace SPMod
 
                 if (!__instance.isServer) return;
 
-                if (ModConfig.HardMode >= 3 && __instance.isInDungeon > 0)
+                if (ModConfig.RosionEnabled && __instance.isInDungeon > 0)
                 {
                     if (RosionList.Add(__instance))
                     {
                         __instance.CreateEffectHUD("Rosion", "CurrentRosion");
+                        __instance.SetEffectHUDValue("CurrentRosion", __instance.GetRosionStack().ToString());
                     }
                 }
                 else if (RosionList.Remove(__instance))
@@ -2585,7 +2586,21 @@ namespace SPMod
             [HarmonyPostfix]
             static void GetConvertedDescription_Postfix(HardModeShardEntity __instance, int level, ref string __result)
             {
-                if (__instance == null || __instance.shardKey != HardModeShardKey) return;
+                if (__instance == null) return;
+
+                if (__instance.shardKey == ModConfig.RosionModeKey)
+                {
+                    int RosionLevel = Mathf.Clamp(level, 0, 2);
+                    string RosionKey = "ModHardModeShard_RosionMode_Description";
+                    if (RosionLevel > 0) RosionKey += $"_{RosionLevel}";
+                    string RosionText = Tools.GetLocalization(RosionKey);
+                    if (string.IsNullOrEmpty(RosionText) || RosionText == RosionKey) return;
+
+                    __result = RosionText;
+                    return;
+                }
+
+                if (__instance.shardKey != HardModeShardKey) return;
 
                 int Level = Mathf.Clamp(level, 0, 4);
                 string Key = "ModHardModeShard_HardMode_Description";
