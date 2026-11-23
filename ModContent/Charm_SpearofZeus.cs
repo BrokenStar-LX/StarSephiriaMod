@@ -172,9 +172,8 @@ namespace SPMod.ModContent
             float Base = BaseByLevel.SafeRandomAccess(CurrentLevelToIdx());
             float Damage = (NetworkAvatar.GetCustomStatUnsafe(flag ? TextFile.FireDamage : TextFile.IceDamage) + NetworkAvatar.GetCustomStatUnsafe(TextFile.LightningDamage));
             float Mult = MultByLevel.SafeRandomAccess(CurrentLevelToIdx()) * 0.01f;
-            Mult *= 1f + avatar.GetCustomStatUnsafe(TextFile.DarkCloudDamage) * 0.01f;
+            Mult *= avatar.GetDarkCloudMultiplier();
             Mult *= 1f + avatar.GetCustomStatUnsafe(TextFile.FrostRelicDamage) * 0.01f;
-            Mult *= 1f + Math.Min(100, avatar.GetCustomStatUnsafe(TextFile.DarkCloudLuck)) * 0.01f;
             return Base + Damage * Mult + CharmPatch.FrostRelicAddMult(avatar);
         }
 

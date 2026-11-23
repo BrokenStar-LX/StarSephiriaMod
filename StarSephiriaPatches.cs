@@ -177,10 +177,9 @@ namespace SPMod
                             if (UnityEngine.Random.Range(0, 100) < Player.GetCustomStatUnsafe(TextFile.ElectricLuck) * 0.5f)
                             {
                                 float BaseDamage = Player.GetCustomStatUnsafe(TextFile.LightningDamage) * 2.4f;
-                                BaseDamage *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
-                                BaseDamage *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                                BaseDamage *= Player.GetDebuffMultiplier();
                                 BaseDamage *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDuration) * 0.01f;
-                                BaseDamage *= 1f + Player.GetCustomStatUnsafe(TextFile.ElectricDamage) * 0.01f;
+                                BaseDamage *= Player.GetStatMultiplier(TextFile.ElectricDamage);
                                 if (Tools.GetPro("LightningTouch", out var Pro))
                                 {
                                     EDamageElementalType Elemental = EDamageElementalType.Lightning;
@@ -311,7 +310,7 @@ namespace SPMod
                     {
                         if (Damage.id == "Ability_FlameSword")
                         {
-                            Damage.damage *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
+                            Damage.damage *= Player.GetSpecialAttackMultiplier();
                             Damage.damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
                         }
                     }
@@ -363,8 +362,7 @@ namespace SPMod
                             {
                                 int Count = Buff.CurrentStack;
                                 float AddDamage = Leader.GetCustomStatUnsafe(TextFile.PhysicalDamage) * 0.8f;
-                                AddDamage *= 1f + Leader.GetCustomStatUnsafe(TextFile.BasicAttackDamageBonus) * 0.01f;
-                                AddDamage *= 1f + Leader.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
+                                AddDamage *= Leader.GetBasicAttackMultiplier(IncludeWeaponDamage: true);
 
                                 Damage.damage += AddDamage * Count;
                                 WeaponPatch.DarkVeilBuff.Remove(Leader);
@@ -1551,32 +1549,27 @@ namespace SPMod
 
             private static readonly List<PlayerAvatar> UseHolyRabbitEffect = [];
 
+            private static void QueueHolyRabbitEffect(PlayerAvatar Owner, PlayerAvatar Patient)
+            {
+                if (!Tools.CostumeSkinUse(Owner.Name, "HolyRabbit_2", false)) return;
+                if (!UseHolyRabbitEffect.Contains(Owner))
+                    UseHolyRabbitEffect.Add(Owner);
+                if (!UseHolyRabbitEffect.Contains(Patient))
+                    UseHolyRabbitEffect.Add(Patient);
+            }
+
             [HarmonyPatch("ReviveAnotherPlayer")]
             [HarmonyPostfix]
             static void ReviveAnotherPlayer_Postfix(PlayerAvatar __instance, PlayerAvatar patient)
             {
-                if (Tools.CostumeSkinUse(__instance.Name, "HolyRabbit_2", false))
-                {
-                    if (!UseHolyRabbitEffect.Contains(__instance))
-                        UseHolyRabbitEffect.Add(__instance);
-                    if (!UseHolyRabbitEffect.Contains(patient))
-                        UseHolyRabbitEffect.Add(patient);
-                    StarSephiriaMod.LogError("触发翼耳兔2的治疗效果");
-                }
+                QueueHolyRabbitEffect(__instance, patient);
             }
 
             [HarmonyPatch("UserCode_CmdReviveAnotherPlayer__PlayerAvatar")]
             [HarmonyPostfix]
             static void UserCode_CmdReviveAnotherPlayer__PlayerAvatar_Postfix(PlayerAvatar __instance, PlayerAvatar patient)
             {
-                if (Tools.CostumeSkinUse(__instance.Name, "HolyRabbit_2", false))
-                {
-                    if (!UseHolyRabbitEffect.Contains(__instance))
-                        UseHolyRabbitEffect.Add(__instance);
-                    if (!UseHolyRabbitEffect.Contains(patient))
-                        UseHolyRabbitEffect.Add(patient);
-                    StarSephiriaMod.LogError("触发翼耳兔2的治疗效果");
-                }
+                QueueHolyRabbitEffect(__instance, patient);
             }
 
             private static IEnumerator HolyRabbitEffect(PlayerAvatar Player)
@@ -2010,10 +2003,10 @@ namespace SPMod
                 }
             }
 
-            private static readonly List<string> DeerAddStats =
+            private static readonly (string ID, string Status)[] DeerAddStats =
             [
-                "DIMENSION_POCKET/3",
-                "MAX_DIMENSION_POCKET/3"
+                ("DIMENSION_POCKET", "DIMENSION_POCKET/3"),
+                ("MAX_DIMENSION_POCKET", "MAX_DIMENSION_POCKET/3")
             ];
             private static readonly List<StatusInstance> DeerStatsList = [];
             private static void UpdateMaxDimensionPocket(PlayerAvatar __instance)
@@ -2038,16 +2031,16 @@ namespace SPMod
                     if (__instance.GetCustomStatUnsafe(TextFile.MaxDimensionPocket) < 3)
                     {
                         List<StatusInstance> costumeStats = (List<StatusInstance>)costumeStatsField.GetValue(__instance);
-                        foreach (string Stats in DeerAddStats)
+                        foreach ((string ID, string Status) in DeerAddStats)
                         {
-                            StatusInstance UseStat = StatusDatabase.CreateStatusEntity(Stats);
-                            if (!costumeStats.Contains(UseStat))
-                            {
-                                UseStat.SetTarget(__instance);
-                                UseStat.ApplyStatus(true);
-                                costumeStats.Add(UseStat);
-                                DeerStatsList.Add(UseStat);
-                            }
+                            // 已有对应鹿1状态就不再创建，避免每帧 new StatusInstance
+                            if (costumeStats.Exists(S => S != null && S.ID == ID && DeerStatsList.Contains(S))) continue;
+                            StatusInstance UseStat = StatusDatabase.CreateStatusEntity(Status);
+                            if (UseStat == null) continue;
+                            UseStat.SetTarget(__instance);
+                            UseStat.ApplyStatus(true);
+                            costumeStats.Add(UseStat);
+                            DeerStatsList.Add(UseStat);
                         }
                         costumeStatsField.SetValue(__instance, costumeStats);
                     }
@@ -2182,8 +2175,7 @@ namespace SPMod
                 {
                     float Damage = CharacterDebuff_WindErosion.GetWindErosionDamage(Player) / 24f * 50f;
                     Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                    Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
-                    Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                    Damage *= Player.GetDebuffMultiplier();
                     WindDagger_Vortex.Data.CreateAttack(EDamageFromType.DirectAttack, Damage, "[Star's Sephiria Mod]Vortex", true, Player, Pos, Pos, 0.5f, null);
                 }
             }
@@ -2482,9 +2474,14 @@ namespace SPMod
                                     {
                                         Random random = new(__instance.CurrentSeed + 1999);
                                         EItemRarity key = Sephirite.RarityDice(__instance.type, random, Player.GetCustomStatUnsafe(TextFile.Luck) * 0.01f);
-                                        WeightedItem TargetItem = StoneList[key].GetRandom(random);
-                                        __instance.rewards.Add(new SephiriteRewardMetadata(ItemDatabase.GenerateInstanceID(random), TargetItem.item.id));
-                                        __instance.appearedItems.Enqueue(TargetItem.item.id);
+                                        if (!StoneList.TryGetValue(key, out WeightedItemSelector? Selector) || Selector == null)
+                                            Selector = StoneList.Values.FirstOrDefault();   // 该稀有度没有可用石板时退回任意有货稀有度
+                                        if (Selector != null)
+                                        {
+                                            WeightedItem TargetItem = Selector.GetRandom(random);
+                                            __instance.rewards.Add(new SephiriteRewardMetadata(ItemDatabase.GenerateInstanceID(random), TargetItem.item.id));
+                                            __instance.appearedItems.Enqueue(TargetItem.item.id);
+                                        }
                                     }
                                 }
                             }
@@ -2790,16 +2787,14 @@ namespace SPMod
                 {
                     Damage += Player.GetCustomStatUnsafe(TextFile.FireDamage);
                     Damage /= 2f;
-                    Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.BurnDamage) * 0.01f;
-                    Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.PlasmaDamage) * 0.01f;
-                    if (Player.GetCustomStatUnsafe(TextFile.BurnEvo) > 0)
-                        Damage *= 28f / 18f;
+                    Damage *= Player.GetBurnMultiplier();
+                    Damage *= Player.GetStatMultiplier(TextFile.PlasmaDamage);
                 }
                 Damage *= 0.4f * MaxFreezeCount;
                 Damage *= 1f + MaxFreezeCount / FreezeCount * 0.1f;
                 Damage *= 1f + 0.25f * Player.GetCustomStatUnsafe(TextFile.FreezeThreshold);
-                Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FreezeDamage) * 0.01f;
-                Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.ElectricDamage) * 0.01f;
+                Damage *= Player.GetStatMultiplier(TextFile.FreezeDamage);
+                Damage *= Player.GetStatMultiplier(TextFile.ElectricDamage);
                 Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDuration) * 0.01f * 0.5f;
                 return Damage;
             }
@@ -2867,9 +2862,7 @@ namespace SPMod
                 float Rand = UnityEngine.Random.Range(0f, 360f);
                 float Damage = Player.GetCustomStatUnsafe(TextFile.IceDamage) * 0.5f;
                 Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FreezeDamage) * 0.01f;
-                Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
-                Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                Damage *= Player.GetStatMultiplier(TextFile.FreezeDamage, true);
                 for (float i = 0f; i < 360f; i += 360f / Stack)
                 {
                     Vector2 Offset = HorayUtility.GetVector2FromAngle(i + Rand);

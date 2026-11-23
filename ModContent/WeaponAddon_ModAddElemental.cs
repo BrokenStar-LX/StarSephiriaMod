@@ -66,13 +66,13 @@ namespace SPMod.ModContent
             switch (UseType)
             {
                 case AttackType.BasicAttack:
-                    Damage *= 1f + unitAvatar.GetCustomStatUnsafe(TextFile.BasicAttackDamageBonus) * 0.01f;
+                    Damage *= unitAvatar.GetBasicAttackMultiplier();
                     break;
                 case AttackType.SpecialAttack:
-                    Damage *= 1f + unitAvatar.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
+                    Damage *= unitAvatar.GetSpecialAttackMultiplier();
                     break;
                 case AttackType.DashAttack:
-                    Damage *= 1f + unitAvatar.GetCustomStatUnsafe(TextFile.DashAttackDamageBonus) * 0.01f;
+                    Damage *= unitAvatar.GetDashAttackMultiplier();
                     break;
             }
             DamageInstance damage = DamageInstance.GetDamage(unitAvatar, DamageId, instance.damagePoint, instance.targetFactionLayers, Damage, instance.damageType, EDamageFromType.None, default, 0, 0f);

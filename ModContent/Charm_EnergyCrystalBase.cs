@@ -12,7 +12,7 @@ namespace SPMod.ModContent
 
         protected float Energy;
         private int LastHudValue = -1;
-        private readonly Timer GainCooldown = new(0.1f, resetOnTime: false);
+        private readonly Timer GainCooldown = new(0.08f, resetOnTime: false);
 
         protected abstract float MaxEnergyValue { get; }
         protected abstract int GetEnergyGainByLevel(int level);

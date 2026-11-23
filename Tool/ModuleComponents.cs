@@ -290,7 +290,7 @@ namespace SPMod.Tool
                 float BaseDamage = Tools.BaseStatToMax(Player) * 5f;
                 BaseDamage *= 1f - EffectTimer.Ratio;
                 float Mult = 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
+                Mult *= Player.GetSpecialAttackMultiplier();
                 Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.MPSkillDamage) * 0.01f;
                 float Damage = BaseDamage * Mult;
                 var Dam = DamageInstance.GetDamage(Player, DamageId, Target.transform.position, 4294967295L, Damage, EDamageType.Slice, EDamageFromType.DirectAttack, Vector2.zero, 0, 0f);
@@ -378,11 +378,8 @@ namespace SPMod.Tool
             public float GetDamage()
             {
                 float Value = BaseDamage * 0.8f;
-                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
-                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.DirectWeaponDamage) * 0.01f;
-                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
-                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                Value *= Player.GetSpecialAttackMultiplier(IncludeWeaponDamage: true, IncludeDirectWeaponDamage: true);
+                Value *= Player.GetDebuffMultiplier();
                 return Value;
             }
             public IEnumerator UpdateMomentAttack(WeaponSimple_Katana Weapon)
@@ -487,8 +484,7 @@ namespace SPMod.Tool
             {
                 int Gen = ++Generation;
                 float Damage = Player.GetCustomStatUnsafe(TextFile.WindDamage) * 0.2f;
-                Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
-                Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
+                Damage *= Player.GetSpecialAttackMultiplier(IncludeWeaponDamage: true);
                 for (int i = 0; i < TickCount; i++)
                 {
                     if (Gen != Generation) yield break;
@@ -556,8 +552,7 @@ namespace SPMod.Tool
                 if (WindSword != null)
                     Value *= 1f + WindSword.RequestCharmDamageBonusOnRoot() * 0.01f;
                 Value *= 1f + Player.GetCustomStatUnsafe(TextFile.WindSwordDamage) * 0.01f;
-                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                Value *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
+                Value *= Player.GetSpecialAttackMultiplier(IncludeWeaponDamage: true);
                 return Value;
             }
 

@@ -30,11 +30,7 @@ namespace SPMod.ModContent
             {
                 return 1f;
             }
-            float Mult = 0.24f + Player.GetCustomStatUnsafe(TextFile.WindErosionMult) * 0.01f;
-            float Damage = Player.GetCustomStatUnsafe(TextFile.WindDamage);
-            Damage *= Mult;
-            Damage *= 1f + Player.GetCustomStatUnsafe(TextFile.WindErosionDamage) * 0.01f;
-            return Damage;
+            return Player.GetCustomStatUnsafe(TextFile.WindDamage) * 0.24f * Player.GetWindErosionMultiplier();
         }
 
         public void DownWindErosionStack()

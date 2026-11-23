@@ -253,6 +253,7 @@ namespace SPMod.Tool
         public const string WindSwordCritDamage = "STAT_WINDSWORDCRITDAMAGE";                               // 模组属性：风之刃暴击伤害
         public const string WindSwordMult = "STAT_WINDSWORDMULT";                                           // 模组属性：风之刃基础倍率
         public const string WindSwordGreatSword = "STAT_WINDSWORD_GREATSWORD";                              // 模组属性：风之刃·狂澜
+        public const string WindSwordTurbulence = "STAT_WINDSWORD_TURBULENCE";                              // 模组属性：风之刃·湍流
         public const string WindPivotEffect = "STAT_WIND_PIVOT_EFFECT";                                     // 模组属性：风枢效果
 
         #endregion

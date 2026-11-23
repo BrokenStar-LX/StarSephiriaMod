@@ -123,6 +123,7 @@ namespace SPMod.Tool
         public const int WindDagger = ModWeaponId + 1200;           // 层流
         public const int Vortex = ModWeaponId + 1201;               // 漩涡
         public const int VacuumBlade = ModWeaponId + 1202;          // 真空刃
+        public const int Turbulence = ModWeaponId + 1203;           // 湍流
 
         //弩系列
         public const int ColossalCrossbow = 100;                    // 重型弩

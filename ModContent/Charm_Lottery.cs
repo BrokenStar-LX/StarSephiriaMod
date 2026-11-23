@@ -96,7 +96,10 @@ namespace SPMod.ModContent
                 if (!int.TryParse(S1, out int ItemId)) return;
                 ItemEntity? Entity = ItemDatabase.FindItemById(ItemId);
                 if (Entity == null) return;
-                NetworkAvatar.WriteSystemMessage(string.Format(Tools.GetLocalization("UI_Message_MysteryBox_1"), Entity.Name), 2.5f, false);
+                string Message = string.Format(Tools.GetLocalization("UI_Message_MysteryBox_1"), Entity.Name);
+                if (NetworkAvatar is PlayerAvatar Player)
+                    DungeonManager.Instance.Chat(Player, "[Star's Sephiria Mod]", Message);
+                StartRarityFlash(ItemDatabase.GetColorViaItemRarity(GetLotteryRarity()));
                 return;
             }
             if (Event < 2 || Event > 6) return;
@@ -124,6 +127,53 @@ namespace SPMod.ModContent
                     break;
             }
             NetworkAvatar.WriteSystemMessage(Text, 5f, false);
+        }
+
+        private Coroutine? RarityFlashRoutine;
+        private Color RarityFlashColor;
+        private bool RarityFlashActive;
+        private void StartRarityFlash(Color FlashColor)
+        {
+            RarityFlashColor = FlashColor;
+            RarityFlashActive = true;
+            RarityFlashRoutine ??= StartCoroutine(RarityFlashLoop());
+        }
+
+        private IEnumerator RarityFlashLoop()
+        {
+            while (RarityFlashActive)
+            {
+                if (NetworkAvatar is not PlayerAvatar)
+                {
+                    RarityFlashActive = false;
+                    break;
+                }
+                try
+                {
+                    UI_CharacterStatusPanel Panel = UIManager.Instance.GetElement<UI_CharacterStatusPanel>();
+                    if (Panel != null && Panel.IsOpened)
+                    {
+                        UI_NewInventoryIcon? Icon = Panel.GetItemIcon(Item.Position);
+                        if (Icon == null)
+                        {
+                            RarityFlashActive = false;
+                            break;
+                        }
+                        if (UIManager.Instance.GetElement<UI_NewItemPicker>().CurrentPickedUp == Icon ||
+                            UIManager.Instance.GetElement<UI_NewItemPicker_Controller>().CurrentPickedUp == Icon)
+                        {
+                            RarityFlashActive = false;
+                            break;
+                        }
+                        Icon.CreateFlash(RarityFlashColor);
+                    }
+                }
+                catch (System.Exception)
+                {
+                }
+                yield return new WaitForSeconds(1f);
+            }
+            RarityFlashRoutine = null;
         }
 
         private void BroadcastCooldown()
@@ -194,9 +244,8 @@ namespace SPMod.ModContent
             if (NetworkAvatar is PlayerAvatar Player)
             {
                 if (Player.savableParameters.Contains("Lottery_MoveFloor/" + $"{Item.InstanceID}/" + f))
-                {
                     return;
-                }
+
                 Player.savableParameters.Add("Lottery_MoveFloor/" + $"{Item.InstanceID}/" + f);
                 float Value = GetLevelUpValue(Player.GetCustomStatUnsafe(TextFile.Luck));
                 LuckValue = Random.value * 100f;
@@ -213,10 +262,6 @@ namespace SPMod.ModContent
         {
             yield return new WaitForSeconds(1f);
             if (!NetworkAvatar) yield break;
-            while (!NetworkAvatar.NetworkisInputReceived)
-            {
-                yield return new WaitForSeconds(0.1f);
-            }
             ModNetwork.SendEventToOwner(netId, 1, NetworkAvatar.transform.position, ItemId.ToString());
         }
 

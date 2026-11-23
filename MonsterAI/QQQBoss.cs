@@ -216,7 +216,7 @@ namespace SPMod.MonsterAI
             try
             {
                 UpdateObeliskSummonerAvailabilityAction = UpdateObeliskSummonerAvailabilityMethod == null ? null
-                    : AccessTools.MethodDelegate<Action<UnitAI_QQQBoss>>(UpdateObeliskSummonerAvailabilityMethod);
+                    : (Action<UnitAI_QQQBoss>)UpdateObeliskSummonerAvailabilityMethod.CreateDelegate(typeof(Action<UnitAI_QQQBoss>));
             }
             catch (Exception ex)
             {

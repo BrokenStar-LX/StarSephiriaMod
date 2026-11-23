@@ -531,6 +531,114 @@ namespace SPMod.Tool
             return (int)((BaseVale + result) * Multiplier);
         }
 
+        /// <summary>燃烧倍率：余烬10 ×28/18 × 燃烧伤害；可选再乘减益伤害。</summary>
+        public static float GetBurnMultiplier(this UnitAvatar? Avatar, bool IncludeDebuff = false)
+        {
+            if (Avatar == null) return 1f;
+            float Mult = (Avatar.GetCustomStatUnsafe(TextFile.BurnEvo) > 0 ? 28f / 18f : 1f)
+                       * (1f + Avatar.GetCustomStatUnsafe(TextFile.BurnDamage) * 0.01f);
+            if (IncludeDebuff) Mult *= Avatar.GetDebuffMultiplier();
+            return Mult;
+        }
+
+        /// <summary>减益伤害倍率：减益伤害 × 毒减益伤害。</summary>
+        public static float GetDebuffMultiplier(this UnitAvatar? Avatar)
+        {
+            if (Avatar == null) return 1f;
+            return (1f + Avatar.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f)
+                 * (1f + Avatar.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f);
+        }
+
+        /// <summary>通用属性加成倍率：1 + stat%；可选再乘减益伤害。</summary>
+        public static float GetStatMultiplier(this UnitAvatar? Avatar, string Stat, bool IncludeDebuff = false)
+        {
+            if (Avatar == null) return 1f;
+            float Mult = 1f + Avatar.GetCustomStatUnsafe(Stat) * 0.01f;
+            if (IncludeDebuff) Mult *= Avatar.GetDebuffMultiplier();
+            return Mult;
+        }
+
+        private static float GetAttackMultiplier(this UnitAvatar? Avatar, string AttackTypeStat, bool IncludeWeaponDamage, bool IncludeDirectWeaponDamage, bool IncludeMeleeDamage)
+        {
+            if (Avatar == null) return 1f;
+            float Mult = Avatar.GetStatMultiplier(AttackTypeStat);
+            if (IncludeWeaponDamage) Mult *= Avatar.GetStatMultiplier(TextFile.FinalWeaponDamage);
+            if (IncludeDirectWeaponDamage) Mult *= Avatar.GetStatMultiplier(TextFile.DirectWeaponDamage);
+            if (IncludeMeleeDamage) Mult *= Avatar.GetStatMultiplier(TextFile.MeleeDamage);
+            return Mult;
+        }
+
+        /// <summary>普通攻击伤害加成；可选武器伤害 / 武器直接伤害 / 近战伤害。</summary>
+        public static float GetBasicAttackMultiplier(this UnitAvatar? Avatar, bool IncludeWeaponDamage = false, bool IncludeDirectWeaponDamage = false, bool IncludeMeleeDamage = false)
+        {
+            return Avatar.GetAttackMultiplier(TextFile.BasicAttackDamageBonus, IncludeWeaponDamage, IncludeDirectWeaponDamage, IncludeMeleeDamage);
+        }
+
+        /// <summary>特殊攻击伤害加成；可选武器伤害 / 武器直接伤害 / 近战伤害。</summary>
+        public static float GetSpecialAttackMultiplier(this UnitAvatar? Avatar, bool IncludeWeaponDamage = false, bool IncludeDirectWeaponDamage = false, bool IncludeMeleeDamage = false)
+        {
+            return Avatar.GetAttackMultiplier(TextFile.SpecialAttackDamageBonus, IncludeWeaponDamage, IncludeDirectWeaponDamage, IncludeMeleeDamage);
+        }
+
+        /// <summary>冲刺攻击伤害加成；可选武器伤害 / 武器直接伤害 / 近战伤害。</summary>
+        public static float GetDashAttackMultiplier(this UnitAvatar? Avatar, bool IncludeWeaponDamage = false, bool IncludeDirectWeaponDamage = false, bool IncludeMeleeDamage = false)
+        {
+            return Avatar.GetAttackMultiplier(TextFile.DashAttackDamageBonus, IncludeWeaponDamage, IncludeDirectWeaponDamage, IncludeMeleeDamage);
+        }
+
+        /// <summary>乌云伤害加成：乌云伤害 × 乌云概率强化（概率强化最多 +100%）。</summary>
+        public static float GetDarkCloudMultiplier(this UnitAvatar? Avatar)
+        {
+            if (Avatar == null) return 1f;
+            return Avatar.GetStatMultiplier(TextFile.DarkCloudDamage) * (1f + Math.Min(1f, Avatar.GetCustomStatUnsafe(TextFile.DarkCloudLuck) * 0.01f));
+        }
+
+        /// <summary>乌云冰雷基础伤害（DARKCLOUDICE）：较高者 ×1.1 + 较低者 ×0.15，再除以 1.1。</summary>
+        public static float GetDarkCloudIceDamage(this UnitAvatar? Avatar)
+        {
+            if (Avatar == null) return 0f;
+            int Ice = Avatar.GetCustomStatUnsafe(TextFile.IceDamage);
+            int Lightning = Avatar.GetCustomStatUnsafe(TextFile.LightningDamage);
+            return (Math.Max(Ice, Lightning) * 1.1f + Math.Min(Ice, Lightning) * 0.15f) / 1.1f;
+        }
+
+        /// <summary>
+        /// 太阳剑伤害倍率。默认乘太阳剑伤害和概率强化；可按需加入额外触发加成（×33%/次）。
+        /// 同时输出暴击率、暴击伤害、无视防御三项加成。
+        /// </summary>
+        public static float GetFlameSwordDamageMultiplier(this UnitAvatar? Avatar,
+            out float CriticalChance, out int CriticalDamageRate, out int IgnoreDefense,
+            bool IncludeDamage = true, bool IncludeLuck = true, bool IncludeAdditionalAttack = false)
+        {
+            CriticalChance = 0f;
+            CriticalDamageRate = 0;
+            IgnoreDefense = 0;
+            if (Avatar == null) return 1f;
+
+            CriticalChance = Avatar.GetCustomStatUnsafe(TextFile.FlameSwordCritical) * 0.01f;
+            CriticalDamageRate = Avatar.GetCustomStatUnsafe(TextFile.FlameSwordCriticalDamageRate);
+            IgnoreDefense = Avatar.GetCustomStatUnsafe(TextFile.FlameSwordIgnoreDefense);
+
+            float Mult = 1f;
+            if (IncludeDamage) Mult *= Avatar.GetStatMultiplier(TextFile.FlameSwordDamage);
+            if (IncludeLuck)
+            {
+                float Luck = Mathf.Clamp(Avatar.GetCustomStatUnsafe(TextFile.FlameSwordLuck), 0f, 100f);
+                Mult *= 1f + Luck * 0.33f * 0.01f;
+            }
+            if (IncludeAdditionalAttack)
+                Mult *= 1f + Avatar.GetCustomStatUnsafe(TextFile.FlameSwordAdditionalAttack) * 0.33f;
+            return Mult;
+        }
+
+        /// <summary>风蚀伤害倍率：风蚀伤害 × 风蚀基础倍率（0.24 为基准）。</summary>
+        public static float GetWindErosionMultiplier(this UnitAvatar? Avatar)
+        {
+            if (Avatar == null) return 1f;
+            return (1f + Avatar.GetCustomStatUnsafe(TextFile.WindErosionDamage) * 0.01f)
+                 * (1f + Avatar.GetCustomStatUnsafe(TextFile.WindErosionMult) / 0.24f * 0.01f);
+        }
+
         public static int GetComboCount(this UnitAvatar avatar, string ComboName)
         {
             if (avatar != null && avatar.Inventory != null)
@@ -862,20 +970,33 @@ namespace SPMod.Tool
             return Target;
         }
 
-        // 值计算辅助方法
+        // 当前生效的模组数量（含本模组；加载失败的不计）
+        public static int GetLoadedModCount()
+        {
+            try
+            {
+                int a = Math.Max(1, WorkshopModRuntime.Active.Values.Count(A => A != null && A.SatisfiesDependents)) - 1;
+                return a * a;
+            }
+            catch
+            {
+                return 1;
+            }
+        }
+
         public static float CalculateValue(float Base, float Mult)
         {
             int Stack = DungeonPatchs.NumberofReincarnations;
             if (Stack <= 0) return Base;
 
             Stack -= 1;
-            float BaseMult = Mult;
+            float BaseMult = Mult + Stack * 0.1f * GetLoadedModCount();
             while (Stack > 0)
             {
                 Mult *= BaseMult;
                 Stack -= 1;
             }
-            Mult += 4f;
+            Mult += 5f;
             return Base * Mult;
         }
 

@@ -218,6 +218,7 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_Moment", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_AirValve", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_Vortex", true, WindColor),
+            new ModKeyWord("ModWeaponEffect_Turbulence", true, WindColor),
             new ModKeyWord("ModWeaponEffect_Tornado", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_GaleQuell", true, WindColor),
             new ModKeyWord("ModWeaponEffect_KeenEyedRapier", true, WeaponColor),
@@ -1411,7 +1412,7 @@ namespace SPMod.ModContent
                 Charm_Lottery Effect = Action.resourcePrefab.AddComponent<Charm_Lottery>();
                 Effect.isWeaponRelatedCharm = false;
                 Effect.effectsString = [new("ModCharmEffect_Lottery_Random")];
-                Effect.LuckMult = 0.75f;
+                Effect.LuckMult = 1f;
                 Effect.RandomLottery = true;
                 Effect.AddStatus =
                 [
@@ -2068,7 +2069,7 @@ namespace SPMod.ModContent
                     BulletData.bulletPrefab = WindArrow.Template;
                 }
             });
-        public static ModFireData WindCrossbow_AirValve = ModFireData.Special(WeaponIDs.ColossalCrossbow, 0).SetDamage(3.2f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
+        public static ModFireData WindCrossbow_AirValve = ModFireData.Special(WeaponIDs.ColossalCrossbow, 0).SetDamage(4f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
             .CustomSet(Data =>
             {
                 if (Data is NewWeaponFireData_Bullet BulletData)
@@ -2423,6 +2424,43 @@ namespace SPMod.ModContent
                 Weapon.addons = Addons.ToArray();
             }),
 
+            new ModWeapon("Turbulence", WeaponIDs.Turbulence, WeaponIDs.LightningDagger)
+            .SetEnhanceFrom(WeaponIDs.WindDagger)
+            .SetSprite("Dagger_Tier2_Lightning", "ModWeapon_Turbulence", "Weapon")
+            .SetSprite("Dagger_Tier2_Lightning_Blade", "ModWeapon_Turbulence_1", "Weapon")
+            .SetBasicAttacks(WindDagger_Basic.ToArray())
+            .SetSpecialAttack(0, WindDagger_Fury)
+            .SetSpecialAttack(1, WindDagger_Parry)
+            .SetDashAttack(0, WindDagger_Dash)
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = [];
+                WeaponAddon_ModAddElemental Effect = Weapon.gameObject.AddComponent<WeaponAddon_ModAddElemental>();
+                Effect.parent = Weapon;
+                Effect.DamageId = "[Star's Sephiria Mod]AdditionalWeaponDamageWind";
+                Effect.ValueName = TextFile.WindDamage;
+                Effect.DamageMult = 40;
+                Effect.elementalType = Wind;
+                Effect.effectText = new LocalizedString("ModWeapon_WindDagger_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddonCommon_StatusUnsafe Effect2 = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect2.parent = Weapon;
+                Effect2.effectText = new LocalizedString("ModWeapon_Turbulence_Effect");
+                Effect2.status =
+                [
+                    new()
+                    {
+                        statId = TextFile.WindSwordTurbulence,
+                        value = 1,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                ];
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
             new ModWeapon("WindCrossbow", WeaponIDs.WindCrossbow, WeaponIDs.ColossalCrossbow)
             .SetEnhanceFrom(WeaponIDs.ColossalCrossbow)
             .SetSprite("Crossbow_Tier1_0", "ModWeapon_WindCrossbow_0", "Weapon")
@@ -2531,6 +2569,7 @@ namespace SPMod.ModContent
             {
                 if (Weapon is WeaponSimple_Katana Katana)
                 {
+                    Katana.attackWeightPerSwing = 0.2475f;
                     Katana.stuckBladeAttack_FireDatas = [WindKatana_Kusanagi.Data, WindKatana_Kusanagi_2.Data];
                 }
 
@@ -2607,6 +2646,12 @@ namespace SPMod.ModContent
                     new() {
                         statId = TextFile.WeaponRange,
                         value = 30,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                    new() {
+                        statId = TextFile.StaffExtend,
+                        value = 5,
                         displayMultiplier = 1f,
                         displaySymbol = "",
                     },

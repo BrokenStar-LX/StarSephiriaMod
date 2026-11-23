@@ -5,7 +5,7 @@ public class ModConfigData
 {
     public bool IsTestMode { get; set; } = false;
     public bool DisplayDisabledItems { get; set; } = false;
-    public bool DebugLogging { get; set; } = true;
+    public bool DebugLogging { get; set; } = false;
     public bool DebugLoggingWeapon { get; set; } = false;
     public bool DebugLoggingDungeon { get; set; } = false;
     public bool DebugLoggingBoss { get; set; } = false;
@@ -38,6 +38,9 @@ public class ModConfigData
 
 public static class ModConfig
 {
+    /// <summary>联机会话中。单机也是本地 Host，此值同样为 true。</summary>
+    private static bool InNetworkSession => Mirror.NetworkServer.active || Mirror.NetworkClient.active;
+
     private static int _hardModeFrame = -1;
     private static int _hardModeValue;
     public static int HardMode
@@ -49,7 +52,8 @@ public static class ModConfig
 
             int Value = 0;
             bool Found = DungeonManager.Instance && DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]HardMode", out Value);
-            if (!Found && !Mirror.NetworkServer.active && !Mirror.NetworkClient.active)
+            // 会话中字典缺键 = 房主该规则为 0，不能回退本地存档（客户端存档可能非 0）
+            if (!Found && !InNetworkSession)
                 Value = SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]HardMode_Level", 0);
 
             _hardModeFrame = Frame;
@@ -66,7 +70,7 @@ public static class ModConfig
                 if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]InfiniteMode", out int Value))
                     return Value > 0;
             }
-            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return false;
+            if (InNetworkSession) return false;
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]InfiniteMode_Level", 0) > 0;
         }
     }
@@ -79,7 +83,7 @@ public static class ModConfig
                 if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]BossRushMode", out int Value))
                     return Value > 0;
             }
-            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return false;
+            if (InNetworkSession) return false;
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]BossRushMode_Level", 0) > 0;
         }
     }
@@ -92,7 +96,7 @@ public static class ModConfig
                 if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]PollutedBlood", out int Value))
                     return Value > 0;
             }
-            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return false;
+            if (InNetworkSession) return false;
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]PollutedBlood_Level", 0) > 0;
         }
     }
@@ -105,7 +109,7 @@ public static class ModConfig
                 if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]EvilGuardian", out int Value))
                     return Value > 0;
             }
-            if (Mirror.NetworkServer.active || Mirror.NetworkClient.active) return false;
+            if (InNetworkSession) return false;
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]EvilGuardian_Level", 0) > 0;
         }
     }

@@ -480,7 +480,6 @@ namespace SPMod
                 {"PARTYBUFF", "翼耳兔共享增益效果"},
                 {"REVIVEPLAYERHASTE", "复活队友的速度"},
                 {"FURYINVINCIBLETIME", "狂怒无敌时间"},
-                {"FURYINVINCIBLETIMEPERCENT", "狂怒无敌时间增加"},
                 {"REDSNAKEEYEDAMAGEBONUS", "红蛇之眼造成的伤害"},
                 {"CROSSBOWAMMO", "弹匣容量"},
                 {"ICEBUFF_DECREASEATTACKSPEED", "扩展装置攻击速度减少"},
@@ -630,12 +629,6 @@ namespace SPMod
                 {"STAT_WINDEROSIONLUCK", "风蚀额外触发概率"},
                 {"STAT_WINDEROSIONOVERFLOW", "风帆倍率"},
                 {"STAT_WINDEROSIONOVERFLOWADD", "风帆额外倍率"},
-                {"STAT_WINDSWORDSPEED", "风之刃攻击速度"},
-                {"STAT_WINDSWORDDAMAGE", "风之刃伤害"},
-                {"STAT_WINDSWORDCRITDAMAGE", "风之刃暴击伤害"},
-                {"STAT_WINDSWORDCOUNT", "风之刃额外攻击次数"},
-                {"STAT_WINDSWORDMULT", "风之刃基础倍率"},
-                {"STAT_WINDSWORDRANGE", "风之刃攻击范围"},
                 {"STAT_GOLDOBTAINED", "总获取叶子数量"},
                 {"WOUNDDAMAGE", "伤口恶化伤害"},
                 {"ATKSPDCHAKRAM", "查克拉姆受攻速影响"},
@@ -994,21 +987,21 @@ namespace SPMod
                 {
                     WeaponSimple Target = WeaponDatabase.FindWeaponById(513).mainWeaponPrefab.GetComponent<WeaponSimple>();
                     NewWeaponFireData_MeleeAttack Dash = (NewWeaponFireData_MeleeAttack)Object.Instantiate(Target.dashAttacks[0]);
-                    Dash.attackDashSpeed = 32f;
+                    Dash.attackDashSpeed = 30f;
                     Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>().dashAttacks[0] = Dash;
                 });// 极简主义
                 WeaponDatabase.Modify(WeaponIDs.TheSecond, Weapon =>
                 {
                     WeaponSimple Target = WeaponDatabase.FindWeaponById(513).mainWeaponPrefab.GetComponent<WeaponSimple>();
                     NewWeaponFireData_MeleeAttack Dash = (NewWeaponFireData_MeleeAttack)Object.Instantiate(Target.dashAttacks[0]);
-                    Dash.attackDashSpeed = 32f;
+                    Dash.attackDashSpeed = 30f;
                     Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>().dashAttacks[0] = Dash;
                 });// 第二次
                 WeaponDatabase.Modify(WeaponIDs.BlackIronHalberd, Weapon =>
                 {
                     WeaponSimple Target = WeaponDatabase.FindWeaponById(513).mainWeaponPrefab.GetComponent<WeaponSimple>();
                     NewWeaponFireData_MeleeAttack Dash = (NewWeaponFireData_MeleeAttack)Object.Instantiate(Target.dashAttacks[0]);
-                    Dash.attackDashSpeed = 32f;
+                    Dash.attackDashSpeed = 30f;
                     Weapon.mainWeaponPrefab.GetComponent<WeaponSimple>().dashAttacks[0] = Dash;
                 });// 黑铁戟
                 WeaponDatabase.Modify(WeaponIDs.Negligence, Weapon => Weapon.ChangeAddon<WeaponAddonGreatsword_SuperQuick>(Addon =>
@@ -1335,8 +1328,16 @@ namespace SPMod
                 //—— 棍 ——
                 WeaponDatabase.Modify(WeaponIDs.StaffOfGreatMight, Weapon => Weapon.SetAddonStat(TextFile.BasicAttackDamageBonus, 30));//大力棍
                 WeaponDatabase.Modify(WeaponIDs.RuadhsleaSpear, Weapon => Weapon.SetAddonStat(TextFile.AttackSpeed, 0));//突击枪卢阿施蕾娅
-                WeaponDatabase.Modify(WeaponIDs.SolisBraca, Weapon => Weapon.SetAddonStat(TextFile.WeaponRange, 33));//索利斯·布拉卡
-                WeaponDatabase.Modify(WeaponIDs.OraclesStaff, Weapon => Weapon.SetAddonStat(TextFile.WeaponRange, 30));//巫女的预言
+                WeaponDatabase.Modify(WeaponIDs.SolisBraca, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.WeaponRange, 30);
+                    Weapon.SetAddonStat(TextFile.StaffExtend, 5);
+                });//索利斯·布拉卡
+                WeaponDatabase.Modify(WeaponIDs.OraclesStaff, Weapon =>
+                {
+                    Weapon.SetAddonStat(TextFile.WeaponRange, 30);
+                    Weapon.SetAddonStat(TextFile.StaffExtend, 5);
+                });//巫女的预言
                 WeaponDatabase.Modify(WeaponIDs.Malaspina, Weapon =>
                 {
                     Weapon.SetAddonStat(TextFile.IceDamage, 0);
@@ -2020,21 +2021,22 @@ namespace SPMod
         {
             string ValueId = id.ToString().ToUpperInvariant();
             int OrigValue = result;
-
-            ModifiedCustomStatAdd(__instance, ValueId, ref result);
-            ModifiedCustomStatMult(__instance, ValueId, ref result);
-            ModifiedCustomStatMultAdd(__instance, ValueId, ref result);
+            // 一次属性查询只查一次服装，下面四个阶段共用
+            string SkinKey = ModConfig.Instance.EnableCostumeModifier && CostumeSkinKey.TryGetValue(__instance.Name, out string Key) ? Key : "";
+            ModifiedCustomStatAdd(__instance, ValueId, ref result, SkinKey);
+            ModifiedCustomStatMult(__instance, ValueId, ref result, SkinKey);
+            ModifiedCustomStatMultAdd(__instance, ValueId, ref result, SkinKey);
             int customStatAmp = __instance.GetCustomStatAmp(id);
             if (customStatAmp != 0)
             {
                 int AddValue = result - OrigValue;
                 result += AddValue.IntMult(customStatAmp * 0.01f);
             }
-            ModifiedCustomStatFinally(__instance, ValueId, ref result);
+            ModifiedCustomStatFinally(__instance, ValueId, ref result, SkinKey);
             return result;
         }
 
-        public static void ModifiedCustomStatAdd(UnitAvatar Player, string ID, ref int Result)
+        public static void ModifiedCustomStatAdd(UnitAvatar Player, string ID, ref int Result, string SkinKey)
         {
 
             if (ID.EqualsAny(TextFile.ExtraWeaponChoices))
@@ -2374,6 +2376,10 @@ namespace SPMod
                 }
             }//天丛云剑
 
+            if (Player.IsWeaponUseNet(WeaponIDs.Kusanagi))
+            {
+            }
+
             if (StarTwinkle_AddDamage.Count > 0)
             {
                 if (ID.EqualsAny("PLANETDAMAGE", "PLANETATTACKSPEED"))
@@ -2382,7 +2388,7 @@ namespace SPMod
                 }
             }//星光闪烁 所有玩家的行星伤害和攻速增加10%
 
-            if (Tools.CostumeSkinUse(Player.Name, "Skeleton_1", false))
+            if (SkinKey == "Skeleton_1")
             {
                 if (ID.EqualsAny(TextFile.DamageReduction))
                 {
@@ -2396,7 +2402,7 @@ namespace SPMod
                 }
             }//骷髅1 防御力增加基于生命值
 
-            if (Tools.CostumeSkinUse(Player.Name, "BrownRabbit_3", false))
+            if (SkinKey == "BrownRabbit_3")
             {
                 if (ID.EqualsAny("PHYSICALDAMAGE"))
                 {
@@ -2405,7 +2411,7 @@ namespace SPMod
                 }
             }//棕兔3 物理伤害增加基于闪避率
 
-            if (Tools.CostumeSkinUse(Player.Name, "FireCat_2", false))
+            if (SkinKey == "FireCat_2")
             {
                 if (ID.EqualsAny("FLAMESWORDADDITIONALATTACK"))
                 {
@@ -2413,7 +2419,7 @@ namespace SPMod
                 }
             }//火猫2 太阳剑额外触发次数增加1
 
-            if (Tools.CostumeSkinUse(Player.Name, "Luck_2", false))
+            if (SkinKey == "Luck_2")
             {
                 if (ID.EqualsAny(TextFile.TrueDamage))
                 {
@@ -2422,7 +2428,7 @@ namespace SPMod
                 }
             }//幸运2 真实伤害减少 真实伤害增加基于平均攻击力
 
-            if (Tools.CostumeSkinUse(Player.Name, "Mole_2", false))
+            if (SkinKey == "Mole_2")
             {
                 if (Player.followers.Count == 1)
                 {
@@ -2437,7 +2443,7 @@ namespace SPMod
                 }
             }//鼹鼠2 同伴防御+100（仅当同伴数小于等于1时）
 
-            if (Tools.CostumeSkinUse(Player.Name, "Mole_3", false))
+            if (SkinKey == "Mole_3")
             {
                 if (ID.EqualsAny(TextFile.FollowerDefense))
                 {
@@ -2449,7 +2455,7 @@ namespace SPMod
                 }
             }//鼹鼠3 根据同伴数量增加无视防御伤害 同伴防御增加基于防御力
 
-            if (Tools.CostumeSkinUse(Player.Name, "HolyRabbit_3", false))
+            if (SkinKey == "HolyRabbit_3")
             {
                 if (ID.EqualsAny(TextFile.AllDamageBonus))
                 {
@@ -2457,7 +2463,7 @@ namespace SPMod
                 }
             }//圣兔3 每有1个玩家增加所有伤害
 
-            if (Tools.CostumeSkinUse(Player.Name, "ArmoredRabbit_2", false))
+            if (SkinKey == "ArmoredRabbit_2")
             {
                 if (ID.EqualsAny(TextFile.DashRecovery))
                 {
@@ -2469,7 +2475,7 @@ namespace SPMod
                 }
             }//盔甲兔2
 
-            if (Tools.CostumeSkinUse(Player.Name, "ArmoredRabbit_3", false))
+            if (SkinKey == "ArmoredRabbit_3")
             {
                 if (ID.EqualsAny(TextFile.PhysicalDamage))
                 {
@@ -2477,7 +2483,7 @@ namespace SPMod
                 }
             }//盔甲兔3 防御力增加物理属性
 
-            if (Tools.CostumeSkinUse(Player.Name, "Otter_3", false))
+            if (SkinKey == "Otter_3")
             {
                 if (ID.EqualsAny("CRITICAL"))
                 {
@@ -2488,7 +2494,7 @@ namespace SPMod
                 }
             }//水獭3 有被动时增加20%暴击率
 
-            if (Tools.CostumeSkinUse(Player.Name, "Bat_2", false))
+            if (SkinKey == "Bat_2")
             {
                 if (ID.EqualsAny(TextFile.AllDamageBonus))
                 {
@@ -2497,7 +2503,7 @@ namespace SPMod
                 }
             }//蝙蝠2 增加所有伤害加成
 
-            if (Tools.CostumeSkinUse(Player.Name, "Seren_2", false))
+            if (SkinKey == "Seren_2")
             {
                 if (ID.EqualsAny(TextFile.MagicDamageBonus))
                 {
@@ -2505,7 +2511,7 @@ namespace SPMod
                 }
             }//蜥蜴2 根据护盾量增加魔法书伤害
 
-            if (Tools.CostumeSkinUse(Player.Name, "RedHolyRabbit_2", false))
+            if (SkinKey == "RedHolyRabbit_2")
             {
                 if (ID.EqualsAny("MPREGENMULTIPLE") && Player.IsInBattle)
                 {
@@ -2513,7 +2519,7 @@ namespace SPMod
                 }
             }//红圣兔2 战斗中MP恢复减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "Luck_3", false))
+            if (SkinKey == "Luck_3")
             {
                 if (ID.EqualsAny(TextFile.Luck))
                 {
@@ -2522,7 +2528,7 @@ namespace SPMod
             }//幸运草3 幸运值随暴击率增加 
         }
 
-        public static void ModifiedCustomStatMult(UnitAvatar Player, string ID, ref int Result)
+        public static void ModifiedCustomStatMult(UnitAvatar Player, string ID, ref int Result, string SkinKey)
         {
 
             if (Player.IsWeaponUseNet(WeaponIDs.GunpowderSynthesis))
@@ -2563,7 +2569,7 @@ namespace SPMod
                 }
             }//烧火棍
 
-            if (Tools.CostumeSkinUse(Player.Name, "Frog_2", false))
+            if (SkinKey == "Frog_2")
             {
                 if (ID.EqualsAny(TextFile.DarkCloudAtkSpeedBonus, TextFile.DarkCloudSpeed))
                 {
@@ -2571,7 +2577,7 @@ namespace SPMod
                 }
             }//青蛙2 乌云消耗速度增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "FireCat_3", false))
+            if (SkinKey == "FireCat_3")
             {
                 if (ID.EqualsAny(TextFile.BurnDamage))
                 {
@@ -2579,7 +2585,7 @@ namespace SPMod
                 }
             }//火猫3 灼烧伤害乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "WizardRabbit_3", false))
+            if (SkinKey == "WizardRabbit_3")
             {
                 if (ID.EqualsAny(TextFile.FreezeDamage))
                 {
@@ -2587,7 +2593,7 @@ namespace SPMod
                 }
             }//冰兔3 冰冻伤害乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "Luck_2", false))
+            if (SkinKey == "Luck_2")
             {
                 if (ID.EqualsAny(TextFile.AllDamageBonus))
                 {
@@ -2595,7 +2601,7 @@ namespace SPMod
                 }
             }//幸运草2 减少所有伤害
 
-            if (Tools.CostumeSkinUse(Player.Name, "Skeleton_3", false))
+            if (SkinKey == "Skeleton_3")
             {
                 if (ID.EqualsAny(TextFile.MeleeDamage))
                 {
@@ -2603,7 +2609,7 @@ namespace SPMod
                 }
             }//骷髅3 近战伤害乘算减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "Seren_3", false))
+            if (SkinKey == "Seren_3")
             {
                 if (ID.EqualsAny(TextFile.CrossbowReloadSpeed))
                 {
@@ -2611,7 +2617,7 @@ namespace SPMod
                 }
             }//蜥蜴3 填装速度乘算减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit_2", false))
+            if (SkinKey == "MandarinRabbit_2")
             {
                 if (ID.EqualsAny("DEBUFFDAMAGE"))
                 {
@@ -2619,7 +2625,7 @@ namespace SPMod
                 }
             }//橙兔2 减益伤害乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "DarkBrownRabbit_2", false))
+            if (SkinKey == "DarkBrownRabbit_2")
             {
                 if (ID.EqualsAny("BASICATTACKDAMAGEBONUS"))
                 {
@@ -2631,7 +2637,7 @@ namespace SPMod
                 }
             }//深棕兔2 普通攻击伤害乘算减少 攻击速度乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "Otter_3", false))
+            if (SkinKey == "Otter_3")
             {
                 if (ID.EqualsAny("ALLDAMAGEBONUS"))
                 {
@@ -2643,7 +2649,7 @@ namespace SPMod
                 }
             }//水獭3 所有伤害乘算减少 暴击伤害乘算增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "BrownRabbit_2", false))
+            if (SkinKey == "BrownRabbit_2")
             {
                 if (ID.EqualsAny(TextFile.BuffDuration))
                 {
@@ -2652,9 +2658,9 @@ namespace SPMod
             }//棕兔2 乘算减少增益持续时间
         }
 
-        public static void ModifiedCustomStatMultAdd(UnitAvatar Player, string ID, ref int Result)
+        public static void ModifiedCustomStatMultAdd(UnitAvatar Player, string ID, ref int Result, string SkinKey)
         {
-            if (Tools.CostumeSkinUse(Player.Name, "ArmoredRabbit_3", false))
+            if (SkinKey == "ArmoredRabbit_3")
             {
                 if (ID.EqualsAny(TextFile.PhysicalDamage))
                 {
@@ -2662,7 +2668,7 @@ namespace SPMod
                 }
             }//盔甲3 物理属性获取减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "Luck_3", false))
+            if (SkinKey == "Luck_3")
             {
                 if (ID.EqualsAny(TextFile.Critical))
                 {
@@ -2674,7 +2680,7 @@ namespace SPMod
                 }
             }//幸运草3 暴击几率, 暴击伤害获取减少
 
-            if (Tools.CostumeSkinUse(Player.Name, "MandarinRabbit_3", false))
+            if (SkinKey == "MandarinRabbit_3")
             {
                 if (Result > 0)
                 {
@@ -2682,7 +2688,7 @@ namespace SPMod
                 }
             }//橙兔3 全属性增加
 
-            if (Tools.CostumeSkinUse(Player.Name, "Skeleton_3", false))
+            if (SkinKey == "Skeleton_3")
             {
                 if (ID.EqualsAny(TextFile.AttackSpeed))
                 {
@@ -2691,7 +2697,7 @@ namespace SPMod
             }//骷髅3 攻击速度获取减少
         }
 
-        public static void ModifiedCustomStatFinally(UnitAvatar Player, string ID, ref int Result)
+        public static void ModifiedCustomStatFinally(UnitAvatar Player, string ID, ref int Result, string SkinKey)
         {
             if (ModConfig.Instance.ModifyCharm)
             {
@@ -2817,7 +2823,7 @@ namespace SPMod
                 }
             }//霜针花园 不再启用原本的效果
 
-            if (Tools.CostumeSkinUse(Player.Name, "WhiteRabbit_3", false))
+            if (SkinKey == "WhiteRabbit_3")
             {
                 if (ID.EqualsAny(TextFile.BasicAttackDamageBonus, TextFile.SpecialAttackDamageBonus, TextFile.DashAttackDamageBonus))
                 {
@@ -2827,7 +2833,7 @@ namespace SPMod
                 }
             }//白兔3 普攻加成、特攻加成、冲刺攻击不会低于武器伤害
 
-            if (Tools.CostumeSkinUse(Player.Name, "DarkBrownRabbit_3", false))
+            if (SkinKey == "DarkBrownRabbit_3")
             {
                 if (ID.EqualsAny(TextFile.AttackSpeed))
                 {

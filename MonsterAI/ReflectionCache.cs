@@ -45,7 +45,8 @@ namespace SPMod.MonsterAI
             if (Method == null) return null;
             try
             {
-                return AccessTools.MethodDelegate<TDelegate>(Method);
+                // 不依赖 AccessTools.MethodDelegate，兼容游戏自带 Harmony 与 BepInEx 的 HarmonyX
+                return (TDelegate)Method.CreateDelegate(typeof(TDelegate));
             }
             catch (Exception ex)
             {

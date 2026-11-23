@@ -320,7 +320,7 @@ namespace SPMod
                     }//乌龟2
                     if (Tools.CostumeSkinUse(Player.Name, "Bird_3", false))
                     {
-                        if (__instance is Charm_Active && __instance is not Charm_SpearofZeus)
+                        if (__instance is Charm_Active)
                             __result += Player.GetCustomStatUnsafe(TextFile.DashAttackDamageBonus).IntMult(0.8f);
                     }//老鹰3
                 }
@@ -532,14 +532,8 @@ namespace SPMod
                 UnitAvatar Player = __instance.NetworkAvatar;
                 if (Player.IsWeapon(WeaponIDs.RedSnakeCrush))
                 {
-                    if (Player.GetCustomStatUnsafe(TextFile.BurnEvo) > 0)
-                    {
-                        __result *= 28f / 18f;
-                    }
                     __result *= 1f + Player.GetCustomStatUnsafe(TextFile.BurnStack) * 0.2f;
-                    __result *= 1f + Player.GetCustomStatUnsafe(TextFile.BurnDamage) * 0.01f;
-                    __result *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
-                    __result *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                    __result *= Player.GetBurnMultiplier(true);
                 }
             }
         }
@@ -588,9 +582,7 @@ namespace SPMod
                     if (avatar.IsWeapon(WeaponIDs.SilenceofEverfrost))
                     {
                         Mult += 1f;
-                        Mult *= 1f + avatar.GetCustomStatUnsafe(TextFile.FreezeDamage) * 0.01f;
-                        Mult *= 1f + avatar.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
-                        Mult *= 1f + avatar.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                        Mult *= avatar.GetStatMultiplier(TextFile.FreezeDamage, true);
                     }
                     __result = Damage * Mult;
                 }
@@ -618,9 +610,7 @@ namespace SPMod
             {
                 if (__instance.NetworkAvatar.IsWeapon(WeaponIDs.Malaspina))
                 {
-                    __result *= 1f + avatar.GetCustomStatUnsafe(TextFile.FreezeDamage) * 0.01f;
-                    __result *= 1f + avatar.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
-                    __result *= 1f + avatar.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
+                    __result *= avatar.GetStatMultiplier(TextFile.FreezeDamage, true);
                 }
             }
         }
@@ -656,14 +646,8 @@ namespace SPMod
                     StarSephiriaPatches.HeatedBladeStack[Player.Name] = Stack;
                     if (Stack < 5) continue;
 
-                    float Mult = Charm_Basic.CalculateDamage(__instance);
-                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.BurnDamage) * 0.01f;
-                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.DebuffDamage) * 0.01f;
-                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.PoisonDebuffDamageBonus) * 0.01f;
-                    if (Player.GetCustomStatUnsafe(TextFile.BurnEvo) > 0)
-                        Mult *= 28f / 18f;
-                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                    Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.SpecialAttackDamageBonus) * 0.01f;
+                    float Mult = Charm_Basic.CalculateDamage(__instance) * Player.GetBurnMultiplier(true);
+                    Mult *= Player.GetSpecialAttackMultiplier(IncludeWeaponDamage: true);
 
                     Vector3 Pos = Attack.Target.transform.position;
                     Bullet.Pool.Spawn(__instance.bulletPrefab, Pos, true, EDamageFromType.None, __instance.damageId, Mult * 0.75f, 0, 0f, Player, Player.GetHostileFactionLayers(EDamageFromType.None), 10, Pos, Pos + Vector3.down, null, null, 0f, EDamageElementalType.Fire, true);

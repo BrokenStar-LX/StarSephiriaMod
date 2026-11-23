@@ -152,7 +152,7 @@ namespace SPMod.MonsterAI
                 float randomOffset = Random.Range(0f, 360f);
                 yield return new WaitForSeconds(0.2f);
                 FireBulletRing(__instance, randomOffset, angleStep);
-                float Rot = Hard >= 4 ? 0.33f : 0.5f;
+                float Rot = 0.5f;
                 float RTime = Hard >= 4 ? 0.3f : 0.4f;
                 if (Hard >= 3)
                 {
@@ -236,7 +236,7 @@ namespace SPMod.MonsterAI
                         for (int i = 0; i < 2; i++)
                         {
                             yield return new WaitForSeconds(0.3f);
-                            List<GameObject> shuffledPrefabs = new(__instance.crackPrefabs);
+                            List<GameObject> shuffledPrefabs = [.. __instance.crackPrefabs];
                             SpawnShuffled(__instance, shuffledPrefabs[i], Target.transform.position);
                         }
                     }
@@ -248,7 +248,7 @@ namespace SPMod.MonsterAI
                     float randomOffset = Random.Range(0f, 360f);
                     yield return new WaitForSeconds(0.1f);
                     FireBulletRing(__instance, randomOffset, angleStep, 1.5f);
-                    float Rot = Hard >= 4 ? 0.33f : 0.5f;
+                    float Rot = 0.5f;
                     float RTime = Hard >= 4 ? 0.2f : 0.3f;
                     if (Hard >= 3)
                     {
@@ -432,7 +432,8 @@ namespace SPMod.MonsterAI
                 {
                     case 0:
                         {
-                            travelTime *= 1f - 0.12f * Hard;
+                            travelTime += 0.5f;
+                            travelTime *= 1f - 0.1f * Hard;
                             int Count = Hard >= 4 ? 8 : 4;
                             Unit_QBoss.GeometryShapeData[] shapes =
                             [
@@ -446,7 +447,7 @@ namespace SPMod.MonsterAI
                             {
                                 Vector2 vector = target ? target.transform.position : __instance.transform.position;
                                 SpawnGeometryShapeDelegate!(__instance, vector, shapes[s]);
-                                yield return new WaitForSeconds(travelTime + 0.5f);
+                                yield return new WaitForSeconds(travelTime);
                                 if (s < shapes.Length - 1)
                                 {
                                     yield return new WaitForSeconds(__instance.geometryShapeInterval);
@@ -459,22 +460,25 @@ namespace SPMod.MonsterAI
                             travelTime += 0.5f;
                             Vector2 vector = __instance.transform.position + Vector3.up * 0.5f;
                             long hostileFactionLayers = __instance.GetHostileFactionLayers(EDamageFromType.DirectAttack);
-                            float angleStep = 360f / 108;
+                            int Count = 60;
+                            if (Hard >= 4) Count = 72;
+                            float angleStep = 360f / Count;
+                            int Stack = 16;
+                            float baseTravel = travelTime * 0.5f;
                             float randomOffset = Random.Range(0f, 360f);
-                            int Stack = 8;
                             for (int s = 0; s < Stack; s++)
                             {
+                                float waveOffset = randomOffset + angleStep * 0.5f * s;  // 每波多转半格
                                 if (Tools.GetPro("QBossRootExplosionBullet", out var Pro) && Pro != null)
                                 {
-                                    for (int i = 0; i < 108; i++)
+                                    for (int i = 0; i < Count; i++)
                                     {
-                                        Vector2 vector2FromAngle = HorayUtility.GetVector2FromAngle(randomOffset + angleStep * i);
+                                        Vector2 vector2FromAngle = HorayUtility.GetVector2FromAngle(waveOffset + angleStep * i);
                                         Bullet.Pool.Spawn(Pro, vector, false, EDamageFromType.DirectAttack, "RootExplosion", __instance.RequestStandardDamage() * 0.5f, 0, 0f,
                                             __instance, hostileFactionLayers, 0f, vector, vector + vector2FromAngle * 20f, null, null, 0f, EDamageElementalType.Physical, true);
                                     }
                                 }
-                                travelTime *= 1f - s * 0.05f;
-                                yield return new WaitForSeconds(travelTime);
+                                yield return new WaitForSeconds(baseTravel * (1f - 0.04f * s));  // 线性衰减，不累乘
                                 if (s < Stack - 1)
                                 {
                                     yield return new WaitForSeconds(__instance.geometryShapeInterval);

@@ -96,9 +96,9 @@ namespace SPMod.MonsterAI
                     MethodInfo? HandStateGet = HandStateProperty?.GetGetMethod(true);
                     MethodInfo? HandStateSet = HandStateProperty?.GetSetMethod(true);
                     HandStateGetter = HandStateGet == null ? null
-                        : AccessTools.MethodDelegate<Func<Unit_ArmadilloGolem, Unit_ArmadilloGolem.EHandState>>(HandStateGet);
+                        : (Func<Unit_ArmadilloGolem, Unit_ArmadilloGolem.EHandState>)HandStateGet.CreateDelegate(typeof(Func<Unit_ArmadilloGolem, Unit_ArmadilloGolem.EHandState>));
                     HandStateSetter = HandStateSet == null ? null
-                        : AccessTools.MethodDelegate<Action<Unit_ArmadilloGolem, Unit_ArmadilloGolem.EHandState>>(HandStateSet);
+                        : (Action<Unit_ArmadilloGolem, Unit_ArmadilloGolem.EHandState>)HandStateSet.CreateDelegate(typeof(Action<Unit_ArmadilloGolem, Unit_ArmadilloGolem.EHandState>));
                 }
                 catch (Exception ex)
                 {
@@ -236,19 +236,19 @@ namespace SPMod.MonsterAI
                                 for (int i = -1; i <= 1; i += 2)
                                 {
                                     float Rot = HorayUtility.GetAngleFromVector(PlayerSpawner.transform.position - Origin);
-                                    Vector2 Offset = HorayUtility.GetVector2FromAngle(Rot + i * 60f);
+                                    Vector2 Offset = HorayUtility.GetVector2FromAngle(Rot + i * 52f);
                                     Vector3 Pos = Origin + (Vector3)Offset * 2f;
-                                    SpawnBullet(__instance, Prefab, FirePos, BulletDamage, Layers, Origin, Pos, 0.8f);
+                                    SpawnBullet(__instance, Prefab, FirePos, BulletDamage, Layers, Origin, Pos, 0.85f);
                                 }
                                 Count += 1;
                             }
                             SpawnBullet(__instance, Prefab, FirePos, BulletDamage, Layers, Origin, PlayerSpawner.transform.position);
                         }
-                        if (Counter % 5 == 0)
+                        if (Counter % 12 == 0)
                         {
                             SpawnFan(__instance, Prefab, FirePos, BulletDamage, Layers, Origin, 5f);
                         }
-                        Stack = 18;
+                        Stack = 66;
                     }
                     else if (Hard >= 2)
                     {
@@ -504,21 +504,22 @@ namespace SPMod.MonsterAI
                     {
                         if (UnitAI_ArmadilloGolem_Patch.Stomp == 1 || Hard >= 4)
                         {
-                            Vector3 Vec = Vector3.zero;
-                            int Stack = 3;
                             if (Hard >= 4)
                             {
-                                Stack = 4;
-                                Vec = (HeadAI.CurrentTarget.transform.position - __instance.transform.position).normalized * 4f;
-                                Vec.y *= 0.5f;
+                                for (int i = -1; i <= 1; i++)
+                                    for (int k = -1; k <= 1; k++)
+                                        MissilePositions.Add(__instance.transform.position + new Vector3(4f * i, 2f * k, 0f));
                             }
-                            for (int i = 1; i <= Stack; i++)
-                                MissilePositions.Add(__instance.transform.position + Vec * i);
+                            else
+                            {
+                                for (int i = -1; i <= 1; i++)
+                                    MissilePositions.Add(__instance.transform.position + new Vector3(4f * i, 0f, 0f));
+                            }
                         }
                     }
                     for (int i = 0; i < MissilePositions.Count; i++)
                     {
-                        float Delay = HeadAI.missileWarning + HeadAI.missileFireInterval * i * 1.25f;
+                        float Delay = HeadAI.missileWarning + HeadAI.missileFireInterval * i * 0.75f;
                         Head.LaunchMissile(MissilePositions[i] + (Vector3)Random.insideUnitCircle * HeadAI.missileError,
                             Delay, Delay - HeadAI.missileWarning, HeadAI.missileWarning);
                     }
@@ -571,7 +572,7 @@ namespace SPMod.MonsterAI
                 }
                 else if (Hard >= 4)
                 {
-                    __instance.spreadBulletTimer.time = 0.2f;
+                    __instance.spreadBulletTimer.time = 0.08f;
                 }
                 else
                 {

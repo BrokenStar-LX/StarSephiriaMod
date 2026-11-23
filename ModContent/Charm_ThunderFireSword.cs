@@ -41,12 +41,11 @@ namespace SPMod.ModContent
             }
             else if (instance.id == "Ability_DarkCloud")
             {
-                float Mult = 1f + Player.GetCustomStatUnsafe(TextFile.FlameSwordDamage) * 0.01f;
-                Mult *= 1f + MathF.Max(33f, Player.GetCustomStatUnsafe(TextFile.FlameSwordLuck) * 0.33f) * 0.01f;
+                float Mult = Player.GetFlameSwordDamageMultiplier(out float FlameCritChance, out int FlameCritDamage, out int FlameIgnoreDefense);
                 instance.damage *= Mult;
-                instance.criticalChancePercent += Player.GetCustomStatUnsafe(TextFile.FlameSwordCritical) * 0.01f;
-                instance.criticalDamageRate += Player.GetCustomStatUnsafe(TextFile.FlameSwordCriticalDamageRate);
-                instance.ignoreDefense += Player.GetCustomStatUnsafe(TextFile.FlameSwordIgnoreDefense);
+                instance.criticalChancePercent += FlameCritChance;
+                instance.criticalDamageRate += FlameCritDamage;
+                instance.ignoreDefense += FlameIgnoreDefense;
             }
         }
 
