@@ -121,6 +121,7 @@ namespace SPMod
             CostumeSkinIdToName.Clear();
             Projectile.Clear();
             DPSData.Clear();
+            StarSephiriaPatches.ResetErosionState();
             Otter3_AddCrit.Clear();
             BrownRabbit2Hit.Clear();
             StarTwinkle_AddDamage.Clear();

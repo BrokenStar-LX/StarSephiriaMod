@@ -77,6 +77,61 @@ namespace SPMod
         public static Dictionary<UnitAvatar, int> PurpleJacketStack = [];
         public static HashSet<UnitAvatar> RosionList = [];
 
+        private sealed class ErosionCombat
+        {
+            internal int BossHits;
+            internal bool WasInBattle;
+        }
+
+        private static ConditionalWeakTable<PlayerAvatar, ErosionCombat> erosionCombat = new();
+
+        private static ErosionCombat GetErosionCombat(PlayerAvatar player) =>
+            erosionCombat.GetValue(player, static _ => new ErosionCombat());
+
+        internal static int BossHitCount(PlayerAvatar player) => ErosionRules.IsLegacy(ModConfig.RosionMode)
+            ? player.GetCustomStatUnsafe(TextFile.CurrentRosion)
+            : GetErosionCombat(player).BossHits;
+
+        internal static void ResetErosionState()
+        {
+            erosionCombat = new();
+            RosionTime.Clear();
+            RosionList.Clear();
+        }
+
+        private static void RecordErosionHit(PlayerAvatar player)
+        {
+            int mode = ModConfig.RosionMode;
+            bool legacy = ErosionRules.IsLegacy(mode);
+            if (!legacy && (!player.isServer || player.isInDungeon <= 0)) return;
+            if (RosionTime.TryGetValue(player, out float remaining) && remaining > 0f) return;
+
+            RosionTime[player] = 0.75f;
+            if (!legacy)
+            {
+                var combat = GetErosionCombat(player);
+                combat.BossHits++;
+                if (mode == ErosionRules.ClearOnExit && player.IsInBattle) combat.WasInBattle = true;
+                if (!ErosionRules.IsEnabled(mode)) return;
+            }
+
+            player.AddOrphanedStatusInstance(StatusDatabase.CreateStatusEntity("CURRENT_ROSION/1"));
+            if (RosionList.Contains(player)) player.SetEffectHUDValue("CurrentRosion", player.GetRosionStack().ToString());
+        }
+
+        private static void ClearErosionAfterBattle(PlayerAvatar player)
+        {
+            var combat = GetErosionCombat(player);
+            bool inBattle = player.IsInBattle;
+            bool clear = combat.WasInBattle && !inBattle;
+            combat.WasInBattle = inBattle;
+            if (!clear) return;
+
+            int stacks = player.GetCustomStatUnsafe(TextFile.CurrentRosion);
+            if (stacks > 0) player.AddCustomStatUnsafe(TextFile.CurrentRosion, -stacks);
+            if (RosionList.Contains(player)) player.SetEffectHUDValue("CurrentRosion", "0");
+        }
+
         public static List<CloudAttackData> ModCloudAttack = [];
         public static List<HeatedBladeAttackData> ModHeatedBladeAttack = [];
 
@@ -285,14 +340,7 @@ namespace SPMod
                     if (Damage.victim is PlayerAvatar Player)
                     {
                         if (NPC.monsterType == EMonsterType.Boss && Damage.damage > 0)
-                        {
-                            if (!RosionTime.ContainsKey(Player) || RosionTime.TryGetValue(Player, out float Time) && Time <= 0f)
-                            {
-                                Player.AddOrphanedStatusInstance(StatusDatabase.CreateStatusEntity("CURRENT_ROSION/1"));
-                                if (RosionList.Contains(Player)) Player.SetEffectHUDValue("CurrentRosion", Player.GetRosionStack().ToString());
-                                RosionTime[Player] = 0.75f;
-                            }
-                        }
+                            RecordErosionHit(Player);
                     }
                 }
             }
@@ -478,23 +526,13 @@ namespace SPMod
                     if (damage.origin is UnitAvatar NPC)
                     {
                         bool falg = (Type == "Guard" || Type == "Evade");
-                        if (ModConfig.HardMode >= 4)
+                        if (ErosionRules.IsLegacy(ModConfig.RosionMode) && ModConfig.HardMode >= 4)
                         {
                             if (Type == "SpecialEvade" && UnityEngine.Random.Range(0, 100) < 33)
                                 falg = true;
                         }
-                        if (falg)
-                        {
-                            if (NPC.monsterType == EMonsterType.Boss && damage.damage > 0)
-                            {
-                                if (!RosionTime.ContainsKey(Player) || RosionTime.TryGetValue(Player, out float Time) && Time <= 0f)
-                                {
-                                    Player.AddOrphanedStatusInstance(StatusDatabase.CreateStatusEntity("CURRENT_ROSION/1"));
-                                    if (RosionList.Contains(Player)) Player.SetEffectHUDValue("CurrentRosion", Player.GetRosionStack().ToString());
-                                    RosionTime[Player] = 0.75f;
-                                }
-                            }
-                        }
+                        if (falg && NPC.monsterType == EMonsterType.Boss && damage.damage > 0)
+                            RecordErosionHit(Player);
                     }
                     if (Player.IsWeaponUseNet(WeaponIDs.WinterSmithsDraftblade, WeaponIDs.SilenceofEverfrost, WeaponIDs.FragmentofNastrond))
                     {
@@ -525,7 +563,13 @@ namespace SPMod
                     itemController.OnDrinkPotionServerside -= OnDrinkPotion;
                 }
                 if (__instance is PlayerAvatar HudPlayer)
+                {
                     PlayerAvatar_Patches.RemoveHudState(HudPlayer);
+                    RosionList.Remove(HudPlayer);
+                    RosionTime.Remove(HudPlayer);
+                    erosionCombat.Remove(HudPlayer);
+                    NoHitCount.Remove(HudPlayer);
+                }
                 ModNetwork.RemoveHudCache(__instance);
             }
 
@@ -933,7 +977,7 @@ namespace SPMod
                 if (PlayerSpawner.MultiplayerList.Count <= 1)
                 {
                     PlayerAvatar Player = PlayerSpawner.MultiplayerList[0].PlayerAvatar;
-                    NoHitCount.Add(Player, new NoHitRecord(Player.GetCustomStatUnsafe(TextFile.CurrentRosion)));
+                    NoHitCount.Add(Player, new NoHitRecord(BossHitCount(Player)));
                 }
                 yield break;
             }
@@ -1376,6 +1420,7 @@ namespace SPMod
                         __instance.CreateEffectHUD("Rosion", "CurrentRosion");
                         __instance.SetEffectHUDValue("CurrentRosion", __instance.GetRosionStack().ToString());
                     }
+                    if (ModConfig.RosionMode == ErosionRules.ClearOnExit) ClearErosionAfterBattle(__instance);
                 }
                 else if (RosionList.Remove(__instance))
                 {
@@ -1384,6 +1429,8 @@ namespace SPMod
 
                 if (__instance.isInDungeon <= 0)
                 {
+                    erosionCombat.Remove(__instance);
+                    RosionTime.Remove(__instance);
                     if (UseDPS)
                     {
                         DPSData.Clear();
@@ -1894,14 +1941,14 @@ namespace SPMod
                         if (totalDamage > 0f)
                         {
                             Target.InBattle = true;
-                            Target.CurrenHit = __instance.GetCustomStatUnsafe(TextFile.CurrentRosion);
+                            Target.CurrenHit = BossHitCount(__instance);
                             StarSephiriaMod.LogInfo("[UpdateNoHit]进入战斗");
                         }
                     }
                 }
                 else if (Target.InBattle)
                 {
-                    int CurrenHitCount = __instance.GetCustomStatUnsafe(TextFile.CurrentRosion) - Target.CurrenHit;
+                    int CurrenHitCount = BossHitCount(__instance) - Target.CurrenHit;
                     string Text = $"Hit Count：{CurrenHitCount}!";
                     if (CurrenHitCount == 0 &&
                         ModConfig.Instance.ModifyCharm &&
@@ -2574,6 +2621,19 @@ namespace SPMod
                     }
                 }
             }
+
+            [HarmonyPatch("ActivateHardModeOnServer")]
+            [HarmonyPostfix]
+            private static void ActivateHardModeOnServer_Postfix()
+            {
+                var dungeon = DungeonManager.Instance;
+                var customGame = dungeon.CurrentCustomGame;
+                if (customGame != null && !customGame.applyHardModeShards) return;
+                var environment = dungeon.hardModeEnvironment;
+                environment.TryGetValue(ModConfig.RosionModeKey, out int selected);
+                environment.TryGetValue(ErosionRules.HardModeKey, out int hardship);
+                environment[ModConfig.RosionModeKey] = ErosionRules.ResolveForRun(SaveManager.CurrentRun, selected, hardship);
+            }
         }
 
         public static List<int> BondingItems = [];
@@ -2590,7 +2650,7 @@ namespace SPMod
 
                 if (__instance.shardKey == ModConfig.RosionModeKey)
                 {
-                    int RosionLevel = Mathf.Clamp(level, 0, 2);
+                    int RosionLevel = Mathf.Clamp(level, 0, 3);
                     string RosionKey = "ModHardModeShard_RosionMode_Description";
                     if (RosionLevel > 0) RosionKey += $"_{RosionLevel}";
                     string RosionText = Tools.GetLocalization(RosionKey);

@@ -1520,7 +1520,7 @@ namespace SPMod
                     if (PlayerSpawner.MultiplayerList.Count <= 1)
                     {
                         PlayerAvatar Player = PlayerSpawner.MultiplayerList[0].PlayerAvatar;
-                        NoHitCount.Add(Player, new NoHitRecord(Player.GetCustomStatUnsafe(TextFile.CurrentRosion)));
+                        NoHitCount.Add(Player, new NoHitRecord(BossHitCount(Player)));
                     }
                     if (ModConfig.HardMode > 0)
                     {

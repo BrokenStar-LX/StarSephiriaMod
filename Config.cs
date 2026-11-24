@@ -50,7 +50,7 @@ public static class ModConfig
             if (Frame == _hardModeFrame) return _hardModeValue;
 
             int Value = 0;
-            bool Found = DungeonManager.Instance && DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]HardMode", out Value);
+            bool Found = DungeonManager.Instance && DungeonManager.Instance.hardModeEnvironment.TryGetValue(SPMod.Tool.ErosionRules.HardModeKey, out Value);
             if (!Found && !Mirror.NetworkServer.active && !Mirror.NetworkClient.active)
                 Value = SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]HardMode_Level", 0);
 
@@ -73,7 +73,7 @@ public static class ModConfig
         }
     }
 
-    private static int RosionMode
+    internal static int RosionMode
     {
         get
         {
@@ -86,20 +86,7 @@ public static class ModConfig
         }
     }
 
-    internal static bool RosionDisabled => RosionMode == 1;
-
-    public static bool RosionEnabled
-    {
-        get
-        {
-            return RosionMode switch
-            {
-                1 => false,
-                2 => true,
-                _ => HardMode >= 3,
-            };
-        }
-    }
+    public static bool RosionEnabled => SPMod.Tool.ErosionRules.IsEnabled(RosionMode);
 
     public static bool BossRushMode
     {
