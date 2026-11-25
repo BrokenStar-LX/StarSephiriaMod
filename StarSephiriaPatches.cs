@@ -2561,9 +2561,11 @@ namespace SPMod
             [HarmonyPrefix]
             public static void ActivateHardModeOnServer_Prefix(HardModeManager __instance)
             {
-                foreach (HardModeShardEntity hardModeShardEntity in HardModeDatebase.GetAll())
+                foreach (HardModeShardEntity hardModeShardEntity in ModHardModeShard)
                 {
-                    if (hardModeShardEntity.isActive)
+                    if (HardModeDatebase.data.TryGetValue(hardModeShardEntity.shardKey, out HardModeShardEntity registeredShard)
+                        && ReferenceEquals(registeredShard, hardModeShardEntity)
+                        && hardModeShardEntity.isActive)
                     {
                         int HardLevel = SaveManager.Current.GetInt("HardModeShard_" + hardModeShardEntity.shardKey + "_Level", 0);
                         if (HardLevel > hardModeShardEntity.effectPerLevel.Length)
