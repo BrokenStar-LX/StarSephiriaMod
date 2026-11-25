@@ -938,10 +938,56 @@ namespace SPMod
                 yield break;
             }
 
+            private sealed class TaxRefundScope(UnitAvatar buyer, TaxRefundScope? previous)
+            {
+                public readonly UnitAvatar Buyer = buyer;
+                public readonly TaxRefundScope? Previous = previous;
+                public int? Amount;
+                public bool Paying;
+            }
+
+            [ThreadStatic]
+            private static TaxRefundScope? taxRefundScope;
+
+            [HarmonyPatch("set_NetworkcurrentMoney")]
+            [HarmonyPrefix]
+            static void CaptureTaxRefund(UnitAvatar __instance, int __0, out TaxRefundScope? __state)
+            {
+                __state = null;
+                if (!NetworkServer.activeHost || !__instance.isServer ||
+                    __instance.Money <= 0 || __0 >= __instance.Money ||
+                    ReferenceEquals(taxRefundScope?.Buyer, __instance)) return;
+
+                __state = new TaxRefundScope(__instance, taxRefundScope);
+                taxRefundScope = __state;
+            }
+
+            [HarmonyPatch("set_NetworkcurrentMoney")]
+            [HarmonyPostfix]
+            static void PayTaxRefund(UnitAvatar __instance, TaxRefundScope? __state)
+            {
+                if (__state?.Amount is not int Paid) return;
+
+                // Mirror has released its money hook guard. Let the refund notify the HUD,
+                // while keeping SPMod's original accounting for the refund itself.
+                __state.Paying = true;
+                __instance.AddMoney(Paid);
+                CompleteTaxRefund(__instance, Paid);
+            }
+
+            [HarmonyPatch("set_NetworkcurrentMoney")]
+            [HarmonyFinalizer]
+            static void ReleaseTaxRefund(TaxRefundScope? __state)
+            {
+                if (__state != null) taxRefundScope = __state.Previous;
+            }
+
             [HarmonyPatch("HandleMoneyChanged")]
             [HarmonyPostfix]
             static void HandleMoneyChanged_Postfix(UnitAvatar __instance, int oldMoney, int newMoney)
             {
+                TaxRefundScope? Scope = taxRefundScope;
+                if (Scope?.Paying == true && ReferenceEquals(Scope.Buyer, __instance)) return;
                 if (oldMoney <= 0) return;
                 if (oldMoney > newMoney)
                 {
@@ -950,11 +996,15 @@ namespace SPMod
                     {
                         float DownValue = Down * 0.4f;
                         DownValue *= (1f + __instance.GetCustomStatUnsafe(TextFile.MoneyDrop) * 0.01f);
-                        __instance.AddMoney((int)DownValue);
-                        AddGoldObtained(__instance, (int)DownValue);
-                        UseCoinToExp(__instance, (int)DownValue);
-                        __instance.TargetSendCustomMessage(__instance.connectionToClient, "TradeMoneyAdded/" + ((int)DownValue).ToString());
-                        __instance.AddCustomStatUnsafe(TextFile.ReturnCoin, -1);
+                        int Paid = (int)DownValue;
+                        if (Scope != null && ReferenceEquals(Scope.Buyer, __instance))
+                        {
+                            Scope.Amount ??= Paid;
+                            return;
+                        }
+
+                        __instance.AddMoney(Paid);
+                        CompleteTaxRefund(__instance, Paid);
                     }
                 }
                 else if (newMoney > oldMoney)
@@ -963,6 +1013,14 @@ namespace SPMod
                     AddGoldObtained(__instance, Add);
                     UseCoinToExp(__instance, Add);
                 }
+            }
+
+            private static void CompleteTaxRefund(UnitAvatar Buyer, int Paid)
+            {
+                AddGoldObtained(Buyer, Paid);
+                UseCoinToExp(Buyer, Paid);
+                Buyer.TargetSendCustomMessage(Buyer.connectionToClient, "TradeMoneyAdded/" + Paid.ToString());
+                Buyer.AddCustomStatUnsafe(TextFile.ReturnCoin, -1);
             }
 
             private static void AddGoldObtained(UnitAvatar __instance, int Value)
