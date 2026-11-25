@@ -349,6 +349,8 @@ namespace SPMod
             }
         }
 
+        private static readonly List<HardModeShardEntity> RankCappedShards = [];
+
         [HarmonyPatch(typeof(HardModeDatebase))]
         public static class HardModeDatebase_Patch
         {
@@ -360,6 +362,7 @@ namespace SPMod
                 {
                     StarSephiriaMod.LogInfoProjectile($"困难模式条目：{shard.Name} ID：{shard.shardKey}");
                 }
+                RankCappedShards.Clear();
                 foreach (HardModeShardEntity shard in ModHardModeShard)
                 {
                     if (shard.shardKey == "[Star's Sephiria Mod]HardMode")
@@ -369,12 +372,14 @@ namespace SPMod
                         shard.stepIncreasePerLevel = [10, 10, 10, 1];
                     }
                     HardModeDatebase.data[shard.shardKey] = shard;
+                    RankCappedShards.Add(shard);
                 }
                 if (HardModeDatebase.data.TryGetValue("DIZZINESS", out HardModeShardEntity Dizziness))
                 {
                     Dizziness.shardMaxLevel = 3;
                     Dizziness.effectPerLevel = [1, 2, 3];
                     Dizziness.stepIncreasePerLevel = [2, 2, 2];
+                    RankCappedShards.Add(Dizziness);
                 }
             }
         }
