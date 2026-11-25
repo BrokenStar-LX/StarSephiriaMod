@@ -348,14 +348,18 @@ namespace SPMod.ModContent
         {
             if (Event == EventRuneValues)
             {
+                // 主机的符文顺序和值已在服务端更新。
+                if (isServer) return;
                 DisplayBonuses.Clear();
+                RuneOrder.Clear();
                 if (!string.IsNullOrEmpty(S1))
                 {
                     foreach (string Entry in S1.Split(','))
                     {
                         string[] Parts = Entry.Split('=');
-                        if (Parts.Length != 2) continue;
-                        if (int.TryParse(Parts[1], out int Value)) DisplayBonuses[Parts[0]] = Value;
+                        if (Parts.Length != 2 || !int.TryParse(Parts[1], out int Value)) continue;
+                        if (!DisplayBonuses.ContainsKey(Parts[0])) RuneOrder.Add(Parts[0]);
+                        DisplayBonuses[Parts[0]] = Value;
                     }
                 }
                 itemUpdateDirtyBit = true;
