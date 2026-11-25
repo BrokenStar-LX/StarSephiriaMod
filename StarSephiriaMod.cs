@@ -27,6 +27,12 @@ namespace SPMod
 {
     public class StarSephiriaMod : WorkshopModBase
     {
+        /// <summary>
+        /// 游戏启动时，在 SPMod 的启用物品和难度碎片完成注册后触发。
+        /// 请在模组加载时订阅，并在卸载时取消订阅。
+        /// </summary>
+        public static event Action? OnContentReady;
+
         public static Dictionary<string, int> AddPassivePoint = [];
         public static Dictionary<string, int> WeaponType = [];
 
@@ -2006,6 +2012,39 @@ namespace SPMod
             ModFxPool.RegisterFromPath("WindyWeatherParticle", "Bullet", 8, 32, 12f, false, "FX", 0,
                 "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
                 "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5");
+            NotifyContentReady();
+        }
+
+        private static void NotifyContentReady()
+        {
+            Action? callbacks = OnContentReady;
+            if (callbacks == null) return;
+
+            foreach (ModItem data in ModItemEntityData)
+            {
+                if (data.IsCharm && !ModConfig.Instance.ModifyCharm) continue;
+                ItemEntity? item = data.Item;
+                if (item == null) return;
+                if (item.activeType != EItemActiveType.Disabled &&
+                    !ReferenceEquals(ItemDatabase.FindItemById(item.id), item)) return;
+            }
+            foreach (HardModeShardEntity shard in ModHardModeShard)
+            {
+                if (!HardModeDatebase.data.TryGetValue(shard.shardKey, out HardModeShardEntity? registeredShard) ||
+                    !ReferenceEquals(registeredShard, shard)) return;
+            }
+
+            foreach (Action callback in callbacks.GetInvocationList())
+            {
+                try
+                {
+                    callback();
+                }
+                catch (Exception ex)
+                {
+                    LogError($"[StarSephiria] 内容就绪回调失败: {ex}");
+                }
+            }
         }
 
         public static void InitializeModStat(string Name)
