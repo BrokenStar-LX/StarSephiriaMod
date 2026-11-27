@@ -779,5 +779,14 @@
   "ModOption_Monochrome_1": "White",
   "ModOption_Monochrome_2": "Blue",
   "ModOption_Monochrome_3": "Gold",
-  "ModOption_Monochrome_4": "Red"
+  "ModOption_Monochrome_4": "Red",
+  "TrainingMainBag_Menu": "Training main backpack: {0}/{1} slots",
+  "TrainingMainBag_Claim": "Add one main backpack slot",
+  "TrainingMainBag_Reset": "Reset training slots",
+  "TrainingMainBag_Leave": "Leave the training school",
+  "TrainingMainBag_Cancel": "Cancel",
+  "TrainingMainBag_Occupied": "Move items out of the extra slots before resetting.",
+  "TrainingMainBag_Claimed": "Main backpack: {0}/{1} slots.",
+  "TrainingMainBag_ResetDone": "Training slots removed. Main backpack: {0} slots.",
+  "TrainingMainBag_Unavailable": "Could not add a main backpack slot."
 }

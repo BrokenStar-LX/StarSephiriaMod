@@ -779,5 +779,14 @@
   "ModOption_Monochrome_1": "白",
   "ModOption_Monochrome_2": "青",
   "ModOption_Monochrome_3": "金",
-  "ModOption_Monochrome_4": "赤"
+  "ModOption_Monochrome_4": "赤",
+  "TrainingMainBag_Menu": "訓練場のメインバッグ：{0}/{1} マス",
+  "TrainingMainBag_Claim": "メインバッグを1マス拡張",
+  "TrainingMainBag_Reset": "訓練用の拡張を戻す",
+  "TrainingMainBag_Leave": "訓練場を出る",
+  "TrainingMainBag_Cancel": "キャンセル",
+  "TrainingMainBag_Occupied": "追加したマスのアイテムを移動してから戻してください。",
+  "TrainingMainBag_Claimed": "メインバッグ：{0}/{1} マス。",
+  "TrainingMainBag_ResetDone": "訓練用の拡張を戻しました。メインバッグ：{0} マス。",
+  "TrainingMainBag_Unavailable": "メインバッグを拡張できませんでした。"
 }

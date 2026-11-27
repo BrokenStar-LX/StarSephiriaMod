@@ -779,5 +779,14 @@
   "ModOption_Monochrome_1": "白",
   "ModOption_Monochrome_2": "藍",
   "ModOption_Monochrome_3": "金",
-  "ModOption_Monochrome_4": "紅"
+  "ModOption_Monochrome_4": "紅",
+  "TrainingMainBag_Menu": "訓練場主背包：{0}/{1} 格",
+  "TrainingMainBag_Claim": "領取一格主背包",
+  "TrainingMainBag_Reset": "還原訓練擴充",
+  "TrainingMainBag_Leave": "離開訓練場",
+  "TrainingMainBag_Cancel": "取消",
+  "TrainingMainBag_Occupied": "請移走擴充格內的物品再還原。",
+  "TrainingMainBag_Claimed": "主背包：{0}/{1} 格。",
+  "TrainingMainBag_ResetDone": "已還原訓練擴充。主背包：{0} 格。",
+  "TrainingMainBag_Unavailable": "未能增加主背包格子。"
 }
