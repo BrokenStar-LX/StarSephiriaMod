@@ -1,7 +1,7 @@
 using System;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using HarmonyLib;
 using Mirror;
 using SPMod.Tool;
@@ -12,6 +12,8 @@ namespace SPMod.ModContent
     internal static class WindSwordTraining
     {
         private static readonly FieldInfo? ItemInstanceId = AccessTools.Field(typeof(Charm_Basic), "itemInstanceID");
+        private static readonly Regex ItemSaveKey = new(
+            @"^Player[0-9]*(?:Inventory[0-9]+,[0-9]+|Potion[0-9]+)_Entity$");
         private static bool OpeningNativeClear;
 
         internal static bool CanPractice(PlayerAvatar? Player)
@@ -30,7 +32,7 @@ namespace SPMod.ModContent
         internal static void Message(string Key) =>
             UIManager.Instance?.GetElement<UI_SystemMessage>()?.Open(Tools.GetLocalization(Key), 4f, false);
 
-        [HarmonyPatch(typeof(UI_ItemBoxPanel), "IsItemVisible")]
+        [HarmonyPatch(typeof(UI_ItemBoxPanel), "IsItemVisible", new[] { typeof(ItemEntity) })]
         [HarmonyPostfix]
         private static void ShowPracticeItems(UI_ItemBoxPanel __instance, PlayerAvatar ___avatar, ItemEntity __0,
             ref bool __result)
@@ -41,7 +43,7 @@ namespace SPMod.ModContent
                 __result = true;
         }
 
-        [HarmonyPatch(typeof(UI_ItemBoxPanel), "OnClearInventoryButtonClicked")]
+        [HarmonyPatch(typeof(UI_ItemBoxPanel), "OnClearInventoryButtonClicked", new Type[] { })]
         [HarmonyPrefix]
         private static bool ChooseReset(UI_ItemBoxPanel __instance, PlayerAvatar ___avatar, MethodBase __originalMethod)
         {
@@ -77,7 +79,7 @@ namespace SPMod.ModContent
             return false;
         }
 
-        [HarmonyPatch(typeof(PlayerSpawner), nameof(PlayerSpawner.SaveCurrentSessionData))]
+        [HarmonyPatch(typeof(PlayerSpawner), nameof(PlayerSpawner.SaveCurrentSessionData), new Type[] { })]
         [HarmonyPostfix]
         private static void ExcludePracticeItems(PlayerSpawner __instance, bool __runOriginal)
         {
@@ -85,19 +87,23 @@ namespace SPMod.ModContent
             SaveData Save = SaveManager.CurrentRun;
             if (!__runOriginal || !NetworkServer.active || Player == null || !Player.isLocalPlayer ||
                 Player.Inventory == null || Save == null) return;
-            int PlayerIndex = __instance.currentPlayerIdxForSave;
-            if (SaveManager.SaveVersion != 0 && PlayerIndex < 0) return;
-            string Prefix = SaveManager.SaveVersion == 0 ? "Player" :
-                "Player" + PlayerIndex.ToString(CultureInfo.InvariantCulture);
+            var PracticeInstances = new System.Collections.Generic.Dictionary<int, int>();
             foreach (var Position in Player.Inventory.inventoryMatrix.Keys)
             {
                 var Item = Player.Inventory.FindItem(Position.x, Position.y);
                 if (Item == null || Item.Charm is not (Charm_WindSword or Charm_WindSwordRune) ||
                     !GridInventory.IsDestructibleItem(Item.InstanceID)) continue;
-                string Key = FormattableString.Invariant($"{Prefix}Inventory{Position.x},{Position.y}");
-                if (Save.GetInt(Key + "_Entity", -1) == Item.EntityID &&
-                    Save.GetInt(Key + "_InstanceID", -1) == Item.InstanceID)
-                    Save.SetInt(Key + "_Entity", -1);
+                PracticeInstances[Item.InstanceID] = Item.EntityID;
+            }
+            if (PracticeInstances.Count == 0) return;
+
+            // Both unindexed and player-indexed saves can hold an inventory or potion entry.
+            // Match the native instance and entity before shadowing any copy of its saved slot.
+            foreach (string Key in Save.BakedData.Select(Row => Row.Key).Where(Key => ItemSaveKey.IsMatch(Key)).ToArray())
+            {
+                int Instance = Save.GetInt(Key.Substring(0, Key.Length - "_Entity".Length) + "_InstanceID", -1);
+                if (PracticeInstances.TryGetValue(Instance, out int Entity) && Save.GetInt(Key, -1) == Entity)
+                    Save.SetInt(Key, -1);
             }
         }
     }

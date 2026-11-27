@@ -104,8 +104,7 @@ namespace SPMod.ModContent
             GridInventory Inventory = Player.Inventory;
             if (!Inventory.HasItem(WindSword, out X, out Y, out _)) return false;
             var Match = Inventory.FindItem(X, Y);
-            if (Match == null || !GridInventory.IsDestructibleItem(Match.InstanceID) ||
-                !WindSwordTraining.CanPractice(Player)) return true;
+            if (Match != null && !GridInventory.IsDestructibleItem(Match.InstanceID)) return true;
 
             foreach (var Position in Inventory.inventoryMatrix.Keys)
             {
