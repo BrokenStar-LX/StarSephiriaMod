@@ -470,13 +470,20 @@ namespace SPMod.ModContent
             if (Event == EventRuneValues)
             {
                 DisplayBonuses.Clear();
+                // RuneOrder 只在服务端 AddRune/LoadItemOnServer 里维护，客户端要按广播顺序重建，
+                // 否则 BuildKeywords 遍历 RuneOrder 时为空，符文加成不会显示。
+                RuneOrder.Clear();
                 if (!string.IsNullOrEmpty(S1))
                 {
                     foreach (string Entry in S1.Split(','))
                     {
                         string[] Parts = Entry.Split('=');
                         if (Parts.Length != 2) continue;
-                        if (int.TryParse(Parts[1], out int Value)) DisplayBonuses[Parts[0]] = Value;
+                        if (int.TryParse(Parts[1], out int Value))
+                        {
+                            DisplayBonuses[Parts[0]] = Value;
+                            if (!RuneOrder.Contains(Parts[0])) RuneOrder.Add(Parts[0]);
+                        }
                     }
                 }
                 itemUpdateDirtyBit = true;

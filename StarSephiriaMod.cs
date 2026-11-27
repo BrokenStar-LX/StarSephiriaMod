@@ -2760,7 +2760,7 @@ namespace SPMod
                 {
                     Result = 1;
                 }
-            }
+            }//神器词条更改
 
             if (ModConfig.BossRushMode)
             {
@@ -2772,7 +2772,7 @@ namespace SPMod
                 {
                     Result -= 1;
                 }//BOSS骰子掉落
-            }
+            }//BossRush模式
 
             if (DungeonPatchs.NumberofReincarnations > 0)
             {
@@ -2785,7 +2785,19 @@ namespace SPMod
                 {
                     Result = Result.IntMult(1f - Count * 0.1f);
                 }
-            }
+            }//轮回衰减
+
+            if (ModConfig.ExtremeSimulation)
+            {
+                if (ID.EqualsAny(TextFile.ExtraItemChoices))
+                {
+                    Result += 5;
+                }
+                if (ID.EqualsAny(TextFile.FreeItemReroll))
+                {
+                    Result += 10;
+                }
+            }//极限模拟战
 
             if (ModConfig.Instance.EnableWeaponModifier && ID.EqualsAny(TextFile.FixedAttackSpeed) && Result != 0)
             {

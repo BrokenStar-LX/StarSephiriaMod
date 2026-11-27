@@ -479,8 +479,13 @@
 
   "ModHardModeShard_BossRushMode_Name": "Boss Rush Mode",
   "ModHardModeShard_BossRushMode_Description": "Alter game flow to challenge all bosses consecutively\nGain 10 inventory slots when entering a dungeon\nReduces healing received by 50%",
+  "ModModeRow_BossRush": "BossRush",
   "ModHardModeShard_InfiniteMode_Name": "Infinite Mode",
   "ModHardModeShard_InfiniteMode_Description": "Return to Mole Stronghold after defeating Qliphoth\nMonster stats increase with each cycle\nGain inventory slots when leveling up and entering new cycles",
+  "ModModeRow_Infinite": "Infinite",
+  "ModHardModeShard_ExtremeSimulation_Name": "Extreme Simulation",
+  "ModHardModeShard_ExtremeSimulation_Description": "Can reroll items infinitely\nGreatly increases enemy HP as you progress",
+  "ModModeRow_Simulation": "Simulation",
   "ModHardModeShard_HardMode_Name": "Torment Mode",
   "ModHardModeShard_HardMode_Description": "Current Difficulty: {EFFECT}\nGain 5 Ability Points per level\nBoss AI is strengthened based on the Torment level",
   "ModHardModeShard_HardMode_Description_1": "Current Difficulty: {EFFECT}\nGain 5 Ability Points\nSlightly strengthens Boss AI\nLevel 1: Defeating a boss increases the HP of all enemies",

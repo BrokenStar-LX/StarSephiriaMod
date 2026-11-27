@@ -362,12 +362,6 @@ namespace SPMod
                 }
                 foreach (HardModeShardEntity shard in ModHardModeShard)
                 {
-                    if (shard.shardKey == "[Star's Sephiria Mod]HardMode")
-                    {
-                        shard.shardMaxLevel = 4;
-                        shard.effectPerLevel = [1, 2, 3, 4];
-                        shard.stepIncreasePerLevel = [10, 10, 10, 1];
-                    }
                     HardModeDatebase.data[shard.shardKey] = shard;
                 }
                 if (HardModeDatebase.data.TryGetValue("DIZZINESS", out HardModeShardEntity Dizziness))

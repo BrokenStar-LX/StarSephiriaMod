@@ -479,8 +479,13 @@
 
   "ModHardModeShard_BossRushMode_Name": "보스 러시 모드",
   "ModHardModeShard_BossRushMode_Description": "게임 흐름을 변경하여 모든 보스를 연속으로 도전합니다\n던전 입장 시 인벤토리 슬롯 10개 획득\n받는 회복량 50% 감소",
+  "ModModeRow_BossRush": "BossRush",
   "ModHardModeShard_InfiniteMode_Name": "무한 모드",
   "ModHardModeShard_InfiniteMode_Description": "클리포트 처치 후 두더지 기지로 귀환\n매 회차마다 적들의 능력치가 증가합니다\n레벨업 및 새로운 회차 진입마다 인벤토리 슬롯을 획득합니다",
+  "ModModeRow_Infinite": "Infinite",
+  "ModHardModeShard_ExtremeSimulation_Name": "극한 모의전",
+  "ModHardModeShard_ExtremeSimulation_Description": "아이템을 무한히 리롤할 수 있습니다\n진행도에 따라 적의 체력을 대폭 증가시킵니다",
+  "ModModeRow_Simulation": "Simulation",
   "ModHardModeShard_HardMode_Name": "고난 모드",
   "ModHardModeShard_HardMode_Description": "현재 난이도: {EFFECT}\n레벨마다 능력 포인트 5 획득\n난이도에 따라 보스 AI가 강화됩니다",
   "ModHardModeShard_HardMode_Description_1": "현재 난이도: {EFFECT}\n능력 포인트 5 획득\n보스 AI를 소폭 강화합니다\n레벨 1: 보스를 처치하면 모든 몬스터의 체력이 증가합니다",

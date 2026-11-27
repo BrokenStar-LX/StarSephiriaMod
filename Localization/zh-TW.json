@@ -479,8 +479,13 @@
 
   "ModHardModeShard_BossRushMode_Name": "Boss Rush模式",
   "ModHardModeShard_BossRushMode_Description": "更改遊戲流程，連續挑戰所有BOSS\n進入地牢時獲得10個背包空間\n減少50%受到的治療效果",
+  "ModModeRow_BossRush": "BossRush",
   "ModHardModeShard_InfiniteMode_Name": "無盡模式",
   "ModHardModeShard_InfiniteMode_Description": "擊敗克里弗後回歸鼴鼠基地\n每個輪迴都會增加怪物的屬性\n升級和進入新輪迴會獲得背包空間",
+  "ModModeRow_Infinite": "Infinite",
+  "ModHardModeShard_ExtremeSimulation_Name": "極限模擬戰",
+  "ModHardModeShard_ExtremeSimulation_Description": "可以無限刷新道具\n隨進度大幅提升敵人的生命值",
+  "ModModeRow_Simulation": "Simulation",
   "ModHardModeShard_HardMode_Name": "苦難模式",
   "ModHardModeShard_HardMode_Description": "當前難度：{EFFECT}\n每個等級給予5能力點數\n根據苦難等級強化BOSS的AI強度",
   "ModHardModeShard_HardMode_Description_1": "當前難度：{EFFECT}\n給予5點能力點數\n小幅強化BOSS的AI強度\n等級1：擊敗BOSS時提升所有怪物的血量",

@@ -87,6 +87,19 @@ public static class ModConfig
             return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]BossRushMode_Level", 0) > 0;
         }
     }
+    public static bool ExtremeSimulation
+    {
+        get
+        {
+            if (DungeonManager.Instance)
+            {
+                if (DungeonManager.Instance.hardModeEnvironment.TryGetValue("[Star's Sephiria Mod]ExtremeSimulation", out int Value))
+                    return Value > 0;
+            }
+            if (InNetworkSession) return false;
+            return SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]ExtremeSimulation_Level", 0) > 0;
+        }
+    }
     public static bool PollutedBlood
     {
         get

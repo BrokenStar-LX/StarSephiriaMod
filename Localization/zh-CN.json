@@ -477,8 +477,13 @@
 
   "ModHardModeShard_BossRushMode_Name": "Boss Rush模式",
   "ModHardModeShard_BossRushMode_Description": "更改游戏流程，连续挑战所有BOSS\n进入地牢时获得10个背包空间\n减少50%受到的治疗效果",
+  "ModModeRow_BossRush": "BossRush",
   "ModHardModeShard_InfiniteMode_Name": "无尽模式",
   "ModHardModeShard_InfiniteMode_Description": "击败克里弗后回归鼹鼠基地\n每个轮回都会增加怪物的属性\n升级和进入新轮回会获得背包空间",
+  "ModModeRow_Infinite": "Infinite",
+  "ModHardModeShard_ExtremeSimulation_Name": "极限模拟战",
+  "ModHardModeShard_ExtremeSimulation_Description": "可以无限刷新道具\n随进度大幅提升敌人的生命值",
+  "ModModeRow_Simulation": "Simulation",
   "ModHardModeShard_HardMode_Name": "苦难模式",
   "ModHardModeShard_HardMode_Description": "当前难度：{EFFECT}\n每个等级给予5能力点数\n根据苦难等级强化BOSS的AI强度",
   "ModHardModeShard_HardMode_Description_1": "当前难度：{EFFECT}\n给予5点能力点数\n小幅强化BOSS的AI强度\n等级1：击败BOSS时提升所有怪物的血量",

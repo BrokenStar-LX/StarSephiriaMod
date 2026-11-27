@@ -479,8 +479,13 @@
 
   "ModHardModeShard_BossRushMode_Name": "ボスラッシュモード",
   "ModHardModeShard_BossRushMode_Description": "ゲームの流れを変更し、全てのボスに連続で挑戦する\nダンジョン進入時にバッグ枠を10獲得\n受ける回復量が50%減少",
+  "ModModeRow_BossRush": "BossRush",
   "ModHardModeShard_InfiniteMode_Name": "インフィニティモード",
   "ModHardModeShard_InfiniteMode_Description": "クリフォト撃破後、モールの拠点に戻る\n周回ごとにモンスターのステータスが上昇\nレベルアップ時と新しい周回進入時にバッグ枠を獲得",
+  "ModModeRow_Infinite": "Infinite",
+  "ModHardModeShard_ExtremeSimulation_Name": "極限模擬戦",
+  "ModHardModeShard_ExtremeSimulation_Description": "アイテムを無限にリロールできる\n進行に応じて敵のHPを大幅に増加",
+  "ModModeRow_Simulation": "Simulation",
   "ModHardModeShard_HardMode_Name": "苦行モード",
   "ModHardModeShard_HardMode_Description": "現在の難易度：{EFFECT}\nレベルごとに能力ポイント5獲得\n苦行レベルに応じてボスAIが強化される",
   "ModHardModeShard_HardMode_Description_1": "現在の難易度：{EFFECT}\n能力ポイント5獲得\nボスAIがわずかに強化\nレベル1：ボス撃破で全敵のHPが増加",

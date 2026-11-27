@@ -119,6 +119,7 @@ namespace SPMod
 
                 int Use = 0;
                 if (component.replenishmentTryCount >= 5) Use = int.MaxValue;
+                if (ModConfig.ExtremeSimulation) Use = 0;
                 if (GameCamera.Instance.Observer.TryGetComponent<PlayerLocalDataStorage>(out var component2) && GameCamera.Instance.Observer.TryGetComponent<PlayerSpawner>(out var _))
                 {
                     if (component2.GetSapphire() >= Use)
@@ -154,8 +155,28 @@ namespace SPMod
                     return false;
                 }
                 string Use = (5 - component.replenishmentTryCount).ToString();
+                if (ModConfig.ExtremeSimulation) Use = "免费";
                 __instance.replenishmentCostText.text = Use;
                 return false;
+            }
+
+            private static readonly FieldInfo? TradeMoneyFxField = AccessTools.Field(typeof(UI_ShopPanel), "tradeMoneyFx");
+            [HarmonyPatch("HandleCustomMessageReceived")]
+            [HarmonyPostfix]
+            static void HandleCustomMessageReceived_Postfix(UI_ShopPanel __instance, string obj)
+            {
+                if (!obj.StartsWith("TradeMoneyAdded/") || !obj.EndsWith("/ReturnGold", StringComparison.Ordinal)) return;
+                if (TradeMoneyFxField?.GetValue(__instance) is not UI_ShopPanelTradeMoneyFx Fx || Fx == null) return;
+
+                Image? Icon = Fx.transform.Find("Image")?.GetComponent<Image>();
+                if (Icon == null)
+                {
+                    Icon = Fx.GetComponentsInChildren<Image>(true).FirstOrDefault(I => I.enabled && I.sprite != null && I.sprite.name == "QuestGoldIcon");
+                }
+                Sprite? ModIcon = Tools.LoadModSprite("Item_TaxTreaty");
+                if (Icon == null || ModIcon == null) return;
+                Icon.sprite = ModIcon;
+                Icon.preserveAspect = true;
             }
         }
 
@@ -1031,6 +1052,105 @@ namespace SPMod
                 float HalfSpan = Step * (Group.Count - 1) * 0.5f;
                 for (int i = 0; i < Group.Count; i++)
                     Group[i].anchoredPosition = Center + Dir * (-HalfSpan + Step * i);
+            }
+        }
+
+        [HarmonyPatch(typeof(UI_HardModeIndicator))]
+        public static class UI_HardModeIndicator_Patch
+        {
+            private const float ModeRowGap = 2f;
+            private const float ModeFontScale = 0.7f;
+            private static GameObject? BossRushRow;
+            private static GameObject? InfiniteRow;
+            private static GameObject? SimulationRow;
+            // 以后要替换右侧图标：给这里赋 Sprite；null 表示隐藏。
+            private static Sprite? ModeRowIconSprite = null;
+
+            [HarmonyPatch("CheckHUDMapVisible")]
+            [HarmonyPostfix]
+            static void CheckHUDMapVisible_Postfix(UI_HardModeIndicator __instance)
+            {
+                if (__instance == null || __instance.indicator == null) return;
+
+                float FontSize = __instance.stageText != null && __instance.stageText.fontSize > 1f ? __instance.stageText.fontSize : 20f;
+                float FirstStep = Mathf.Max(FontSize * 1.1f, 16f) + ModeRowGap;
+                float RowStep = Mathf.Max(FontSize * ModeFontScale * 1.05f, 10f) + ModeRowGap;
+                float Y = __instance.indicator.gameObject.activeSelf ? -FirstStep : 0f;
+                RefreshModeRow(__instance, ref BossRushRow, "ModeRow_BossRush", ModConfig.BossRushMode, "ModModeRow_BossRush", ref Y, RowStep);
+                RefreshModeRow(__instance, ref InfiniteRow, "ModeRow_Infinite", ModConfig.InfiniteMode, "ModModeRow_Infinite", ref Y, RowStep);
+                RefreshModeRow(__instance, ref SimulationRow, "ModeRow_Simulation", ModConfig.ExtremeSimulation, "ModModeRow_Simulation", ref Y, RowStep);
+            }
+
+            private static void RefreshModeRow(UI_HardModeIndicator Owner, ref GameObject? Row, string Name, bool Show, string LabelKey, ref float Y, float RowStep)
+            {
+                Transform? Parent = Owner.indicator.parent;
+                if (Parent == null) return;
+
+                if (Row == null)
+                {
+                    Row = Object.Instantiate(Owner.indicator.gameObject, Parent);
+                    Row.name = Name;
+                }
+                else if (Row.transform.parent != Parent)
+                {
+                    Row.transform.SetParent(Parent, false);
+                }
+
+                Row.SetActive(Show);
+                if (!Show) return;
+
+                RectTransform Original = Owner.indicator;
+                RectTransform RowRect = Row.GetComponent<RectTransform>();
+                if (RowRect != null)
+                {
+                    RowRect.anchorMin = Original.anchorMin;
+                    RowRect.anchorMax = Original.anchorMax;
+                    RowRect.pivot = Original.pivot;
+                    RowRect.localScale = Original.localScale;
+                    RowRect.localRotation = Original.localRotation;
+                    RowRect.anchoredPosition = new Vector2(
+                        Original.anchoredPosition.x,
+                        Original.anchoredPosition.y + Y);
+                }
+                Y -= RowStep;
+
+                TextMeshProUGUI? Text = Row.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (Text != null)
+                {
+                    Text.text = Tools.GetLocalization(LabelKey);
+                    Text.enableAutoSizing = false;
+                    if (Owner.stageText != null) Text.fontSize = Owner.stageText.fontSize * ModeFontScale;
+                    Text.alignment = TextAlignmentOptions.MidlineLeft;
+                    Text.overflowMode = TextOverflowModes.Overflow;
+                }
+
+                foreach (Image Icon in Row.GetComponentsInChildren<Image>(true))
+                {
+                    if (Icon.sprite == null) continue;
+                    if (ModeRowIconSprite != null) Icon.sprite = ModeRowIconSprite;
+                    Icon.enabled = ModeRowIconSprite != null;
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(UI_MiraclePanel))]
+        public static class UI_MiraclePanel_Patch
+        {
+            [HarmonyPatch("SetController")]
+            [HarmonyPostfix]
+            static void SetController_Postfix(UI_MiraclePanel __instance)
+            {
+                if (ModConfig.ExtremeSimulation && __instance.rerollButton != null)
+                    __instance.rerollButton.SetActive(true);
+            }
+
+            [HarmonyPatch("UpdateRerollText")]
+            [HarmonyPostfix]
+            static void UpdateRerollText_Postfix(UI_MiraclePanel __instance)
+            {
+                if (!ModConfig.ExtremeSimulation || __instance.rerollButton == null) return;
+                if (__instance.rerollButton.TryGetComponent<UI_HorayButton>(out UI_HorayButton Button))
+                    Button.interactable = true;
             }
         }
     }

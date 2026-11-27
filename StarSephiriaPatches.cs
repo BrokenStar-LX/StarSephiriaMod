@@ -22,6 +22,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using static AvatarStatsHooker;
 using static ComboEffect_Debuff;
+using static HarmonyLib.Code;
 using static Miracle;
 using static SPMod.ModContent.LoadModContent;
 using static SPMod.MonsterAI.ArmadilloGolem;
@@ -637,19 +638,24 @@ namespace SPMod
                                 __instance.HealPercent(100f);
                             }
                         }
-
-                        if (DungeonPatchs.NumberofReincarnations > 0) TName += $"(轮回{DungeonPatchs.NumberofReincarnations})";
-                        DungeonManager.Instance.hardModeEnvironment.TryGetValue("FEROCIOUSCLAWS", out int V);
-                        (string, float, int, int) Date = (TName, __instance.NetworkmaxHp, __instance.Networkattack.IntMult(1f + V * 0.01f), __instance.GetCustomStat(ECustomStat.DamageReduction));
-                        if (!Monster.Contains(Date))
-                        {
-                            Monster.Add(Date);
-                        }
                     }
                     else __instance.AddMaxHp(float.MaxValue * 0.1f);
                     __instance.AddCustomStatUnsafe(TextFile.ModAddCustomerIntensity, 1);
                 }//通用怪物属性加成
                 else if (__instance.GetCustomStatUnsafe(TextFile.ModAddCustomerIntensity) <= 1)
+                {
+                    if (ModConfig.ExtremeSimulation)
+                    {
+                        float Add = __instance.GetCustomStatUnsafe(TextFile.DamageReduction) * 0.03f;
+                        if (Add > 0f)
+                        {
+                            __instance.AddMaxHp(__instance.MaxHp * Add);
+                            if (__instance.isServer) __instance.HealPercent(100f);
+                        }
+                    }
+                    __instance.AddCustomStatUnsafe(TextFile.ModAddCustomerIntensity, 1);
+                }// 极限模拟战属性
+                else if (__instance.GetCustomStatUnsafe(TextFile.ModAddCustomerIntensity) <= 2)
                 {
                     if (__instance.monsterType != EMonsterType.Dummy)
                     {
@@ -664,11 +670,7 @@ namespace SPMod
                         }
                     }
                     __instance.AddCustomStatUnsafe(TextFile.ModAddCustomerIntensity, 1);
-                }//轮回属性加成
-                else if (__instance.GetCustomStatUnsafe(TextFile.ModAddCustomerIntensity) <= 2)
-                {
-                    __instance.AddCustomStatUnsafe(TextFile.ModAddCustomerIntensity, 1);
-                }//额外计算多人血量（已移除，保留强度计数推进）
+                }// 轮回属性加成
                 else if (__instance.GetCustomStatUnsafe(TextFile.ModAddCustomerIntensity) <= 3)
                 {
                     string TName = __instance.name.Replace("(Clone)", "");
@@ -708,6 +710,14 @@ namespace SPMod
                         }
                     }
                     __instance.AddCustomStatUnsafe(TextFile.ModAddCustomerIntensity, 1);
+
+                    if (DungeonPatchs.NumberofReincarnations > 0) TName += $"(轮回{DungeonPatchs.NumberofReincarnations})";
+                    DungeonManager.Instance.hardModeEnvironment.TryGetValue("FEROCIOUSCLAWS", out int V);
+                    (string, float, int, int) Date = (TName, __instance.NetworkmaxHp, __instance.Networkattack.IntMult(1f + V * 0.01f), __instance.GetCustomStat(ECustomStat.DamageReduction));
+                    if (!Monster.Contains(Date))
+                    {
+                        Monster.Add(Date);
+                    }
                 }//独立怪物属性加成
             }
 
@@ -806,6 +816,16 @@ namespace SPMod
                     return false;
                 }
                 return true;
+            }
+
+            [HarmonyPatch("HookLeaderValue")]
+            [HarmonyPostfix]
+            public static void HookLeaderValue_Postfix(UnitAvatar __instance, UnitAvatar newValue)
+            {
+                if (newValue is PlayerAvatar && __instance.HPBar != null)
+                {
+                    Object.Destroy(__instance.HPBar.gameObject);
+                }
             }
 
             [HarmonyPatch("Heal", [typeof(float), typeof(bool), typeof(bool)])]
@@ -948,11 +968,7 @@ namespace SPMod
                     {
                         float DownValue = Down * 0.4f;
                         DownValue *= (1f + __instance.GetCustomStatUnsafe(TextFile.MoneyDrop) * 0.01f);
-                        __instance.AddMoney((int)DownValue);
-                        AddGoldObtained(__instance, (int)DownValue);
-                        UseCoinToExp(__instance, (int)DownValue);
-                        __instance.TargetSendCustomMessage(__instance.connectionToClient, "TradeMoneyAdded/" + ((int)DownValue).ToString());
-                        __instance.AddCustomStatUnsafe(TextFile.ReturnCoin, -1);
+                        __instance.StartCoroutine(AddReturnCoin(__instance, (int)DownValue));
                     }
                 }
                 else if (newMoney > oldMoney)
@@ -961,6 +977,16 @@ namespace SPMod
                     AddGoldObtained(__instance, Add);
                     UseCoinToExp(__instance, Add);
                 }
+            }
+
+            static IEnumerator AddReturnCoin(UnitAvatar Player, int AddValue)
+            {
+                yield return null; // 等一帧
+                Player.AddMoney(AddValue);
+                AddGoldObtained(Player, AddValue);
+                UseCoinToExp(Player, AddValue);
+                Player.TargetSendCustomMessage(Player.connectionToClient, "TradeMoneyAdded/" + AddValue.ToString() + "/ReturnGold");
+                Player.AddCustomStatUnsafe(TextFile.ReturnCoin, -1);
             }
 
             private static void AddGoldObtained(UnitAvatar __instance, int Value)
@@ -1081,15 +1107,19 @@ namespace SPMod
             }
         }
 
-        public static IEnumerator DeleteUnintentionalItems(PlayerAvatar Player, List<int>? StartItemId = null)
+        public static IEnumerator DeleteUnintentionalItems(PlayerAvatar Player)
         {
             yield return new WaitForSeconds(0.5f);
-            foreach (PlayerSpawner Spawner in PlayerSpawner.MultiplayerList)
+            if (ModConfig.Instance.ModifyCharm)
             {
-                if (Spawner.PlayerAvatar == Player)
+                foreach (PlayerSpawner Spawner in PlayerSpawner.MultiplayerList)
                 {
-                    foreach (int Item in DisableCharm) Spawner.unlockedCharms.Remove(Item);
-                    break;
+                    if (Spawner.PlayerAvatar == Player)
+                    {
+                        foreach (int Item in DisableCharm)
+                            Spawner.unlockedCharms.Remove(Item);
+                        break;
+                    }
                 }
             }
             if (ModConfig.Instance.EnableCostumeModifier)
@@ -1100,33 +1130,16 @@ namespace SPMod
                     int MaxCount = 0;
                     if (Tools.CostumeSkinUse(Player.Name, "Fox_2", false) || Tools.CostumeSkinUse(Player.Name, "Skeleton_2", false))
                         MaxCount += 1;
-                    foreach (StoneTablet Tablet in Player.Inventory.stoneTablets.Values)
+                    foreach (StoneTablet Tablet in Player.Inventory.stoneTablets.Values.ToList())
                     {
                         var Item = Player.Inventory.FindItem(Tablet.xIdx, Tablet.yIdx);
+                        if (Item == null || Item.Entity == null) continue;
                         if (Item.Entity.id == 12000 || Item.Entity.id == 2099)
                         {
                             if (Count < MaxCount)
                                 Count += 1;
                             else
                                 Player.Inventory.ForceRemoveItem(Tablet.xIdx, Tablet.yIdx);
-                        }
-                    }
-                    if (MaxCount <= 0)
-                    {
-                        if (StartItemId != null)
-                        {
-                            MaxCount = StartItemId.Count;
-                            foreach (NewItemOwnInstance NewItem in Player.Inventory.inventoryMatrix.Values)
-                            {
-                                var Item = Player.Inventory.FindItem(NewItem.Position);
-                                if (StartItemId.Contains(Item.Entity.id))
-                                {
-                                    if (Count < MaxCount)
-                                        Count += 1;
-                                    else
-                                        Player.Inventory.ForceRemoveItem(NewItem.Position);
-                                }
-                            }
                         }
                     }
                 }
@@ -1696,7 +1709,7 @@ namespace SPMod
                                 Debug.LogError($"[CostumeEquipEffect]找不到组件: {costumeEntity.networkEffectPrefab}");
                             }
                         }
-                        __instance.StartCoroutine(DeleteUnintentionalItems(__instance, NewStartingItem));
+                        __instance.StartCoroutine(DeleteUnintentionalItems(__instance));
                     }
                     UseCostomEffect[__instance.Name] = false;
                     var Field = OnCostumeChangedClientsideField;
@@ -2403,6 +2416,61 @@ namespace SPMod
             }
         }
 
+        [HarmonyPatch(typeof(MiracleSelector2))]
+        public static class MiracleSelector2_Patch
+        {
+            [HarmonyPatch("RequestReroll")]
+            [HarmonyPrefix]
+            static void Prefix(MiracleSelector2 __instance, MiracleController miracleController, out int __state)
+            {
+                __state = -1;
+                if (__instance == null || miracleController == null) return;
+                if (!miracleController.TryGetComponent<PlayerAvatar>(out PlayerAvatar Player)) return;
+                __state = Player.rerollDice;
+                if (__instance.isServer && ModConfig.ExtremeSimulation && __state <= 0)
+                    Player.AddDice(1);
+            }
+
+            [HarmonyPatch("RequestReroll")]
+            [HarmonyPostfix]
+            static void Postfix(MiracleSelector2 __instance, MiracleController miracleController, int __state)
+            {
+                Refund(__instance, miracleController, __state);
+            }
+
+            internal static void Refund(MiracleSelector2 Instance, MiracleController Controller, int State)
+            {
+                if (!Instance.isServer || State < 0 || !ModConfig.ExtremeSimulation) return;
+                if (Controller == null) return;
+                if (!Controller.TryGetComponent<PlayerAvatar>(out PlayerAvatar Player)) return;
+                if (State <= 0)
+                {
+                    if (Player.rerollDice == 1) Player.AddDice(-1);
+                    return;
+                }
+                if (Player.rerollDice == State - 1) Player.AddDice(1);
+            }
+
+            [HarmonyPatch("UserCode_CmdRequestReroll__MiracleController")]
+            [HarmonyPrefix]
+            static void UserCode_CmdRequestReroll__MiracleController_Prefix(MiracleSelector2 __instance, MiracleController miracleController, out int __state)
+            {
+                __state = -1;
+                if (__instance == null || miracleController == null) return;
+                if (!miracleController.TryGetComponent<PlayerAvatar>(out PlayerAvatar Player)) return;
+                __state = Player.rerollDice;
+                if (__instance.isServer && ModConfig.ExtremeSimulation && __state <= 0)
+                    Player.AddDice(1);
+            }
+
+            [HarmonyPatch("UserCode_CmdRequestReroll__MiracleController")]
+            [HarmonyPostfix]
+            static void UserCode_CmdRequestReroll__MiracleController_Postfix(MiracleSelector2 __instance, MiracleController miracleController, int __state)
+            {
+                Refund(__instance, miracleController, __state);
+            }
+        }
+
         public static Sephirite.Type CurrentSephiriteType { get; set; } = Sephirite.Type.NORMAL;
         public static event Action<Sephirite, UnitAvatar>? OnGenerateItemsList;
 
@@ -2475,7 +2543,7 @@ namespace SPMod
                                         Random random = new(__instance.CurrentSeed + 1999);
                                         EItemRarity key = Sephirite.RarityDice(__instance.type, random, Player.GetCustomStatUnsafe(TextFile.Luck) * 0.01f);
                                         if (!StoneList.TryGetValue(key, out WeightedItemSelector? Selector) || Selector == null)
-                                            Selector = StoneList.Values.FirstOrDefault();   // 该稀有度没有可用石板时退回任意有货稀有度
+                                            Selector = StoneList.Values.FirstOrDefault();
                                         if (Selector != null)
                                         {
                                             WeightedItem TargetItem = Selector.GetRandom(random);
@@ -2496,6 +2564,11 @@ namespace SPMod
 
                     i += 1;
                     if (i > 10) break;
+                }
+
+                if (ModConfig.ExtremeSimulation)
+                {
+                    __instance.NetworkfreeRerolledCounter = 0;
                 }
             }
         }
@@ -2549,26 +2622,22 @@ namespace SPMod
                 }
                 __result = Stack;
             }
-        }
 
-        [HarmonyPatch(typeof(HardModeManager))]
-        public static class HardModeManager_Patch
-        {
-            [HarmonyPatch("ActivateHardModeOnServer")]
+            [HarmonyPatch("RestockStartingItem")]
             [HarmonyPrefix]
-            public static void ActivateHardModeOnServer_Prefix(HardModeManager __instance)
+            static bool RestockStartingItem_Prefix(GridInventory __instance, int playerIdx)
             {
-                foreach (HardModeShardEntity hardModeShardEntity in HardModeDatebase.GetAll())
+                foreach (ItemMetadata Starting in __instance.startingItems)
                 {
-                    if (hardModeShardEntity.isActive)
-                    {
-                        int HardLevel = SaveManager.Current.GetInt("HardModeShard_" + hardModeShardEntity.shardKey + "_Level", 0);
-                        if (HardLevel > hardModeShardEntity.effectPerLevel.Length)
-                        {
-                            SaveManager.Current.SetInt("HardModeShard_" + hardModeShardEntity.shardKey + "_Level", hardModeShardEntity.effectPerLevel.Length);
-                        }
-                    }
+                    // 已存在的起始物品不再补发。RestartNewGame 的 Initialize 里刚加过，
+                    // 原版这里会再 AddItem 一次，instanceID 相同但 LocalAddItem 不会去重。
+                    NewItemOwnInstance? Existing = __instance.FindItemByInstanceID(Starting.instanceID);
+                    if (Existing != null) continue;
+                    __instance.AddItem(Starting, 0, notification: false);
+                    DungeonManager.Instance.BoundOnServer(Starting.instanceID, playerIdx);
+                    DungeonManager.Instance.OwnRestrictionOnServer(Starting.instanceID, ERestrictedOwnType.StartingItem);
                 }
+                return false;
             }
         }
 
@@ -2603,33 +2672,33 @@ namespace SPMod
             [HarmonyPostfix]
             public static void OnStartServer_Postfix(PlayerSpawner __instance)
             {
-                foreach (int DisableId in DisableCharm)
-                {
-                    __instance.unlockedCharms.Remove(DisableId);
-                }
-                foreach (ModItem Data in ModItemEntityData)
-                {
-                    ItemEntity? ModItem = Data.Item;
-                    if (ModItem == null) continue;
-                    if (ModItem.activeType == EItemActiveType.Hidden) continue;
-                    switch (ModItem.type)
-                    {
-                        case EItemType.Potion:
-                            if (!__instance.unlockedPotions.Contains(ModItem.id))
-                                __instance.unlockedPotions.Add(ModItem.id);
-                            break;
-                        case EItemType.StoneTablet:
-                            if (!__instance.unlockedStoneTablets.Contains(ModItem.id))
-                                __instance.unlockedStoneTablets.Add(ModItem.id);
-                            break;
-                        default:
-                            if (!__instance.unlockedCharms.Contains(ModItem.id))
-                                __instance.unlockedCharms.Add(ModItem.id);
-                            break;
-                    }
-                }
                 if (ModConfig.Instance.ModifyCharm)
                 {
+                    foreach (int DisableId in DisableCharm)
+                    {
+                        __instance.unlockedCharms.Remove(DisableId);
+                    }
+                    foreach (ModItem Data in ModItemEntityData)
+                    {
+                        ItemEntity? ModItem = Data.Item;
+                        if (ModItem == null) continue;
+                        if (ModItem.activeType == EItemActiveType.Hidden) continue;
+                        switch (ModItem.type)
+                        {
+                            case EItemType.Potion:
+                                if (!__instance.unlockedPotions.Contains(ModItem.id))
+                                    __instance.unlockedPotions.Add(ModItem.id);
+                                break;
+                            case EItemType.StoneTablet:
+                                if (!__instance.unlockedStoneTablets.Contains(ModItem.id))
+                                    __instance.unlockedStoneTablets.Add(ModItem.id);
+                                break;
+                            default:
+                                if (!__instance.unlockedCharms.Contains(ModItem.id))
+                                    __instance.unlockedCharms.Add(ModItem.id);
+                                break;
+                        }
+                    }
                     foreach (int ID in BondingItems)
                     {
                         if (ItemDatabase.FindItemById(ID).isDual) continue;
