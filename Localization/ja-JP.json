@@ -1,4 +1,10 @@
 ﻿{
+  "TrainingWindSword_Menu": "訓練アイテム",
+  "TrainingWindSword_Reset": "練習用の風の剣のルーンをリセット",
+  "TrainingWindSword_Clear": "訓練アイテムを消去",
+  "TrainingWindSword_Cancel": "キャンセル",
+  "TrainingWindSword_Formal": "練習用ルーンには訓練カタログの練習用の風の剣が必要です。",
+  "TrainingWindSword_NeedSword": "ルーンを使う前に練習用の風の剣を装備してください。",
   "Miracle_Bard": "吟遊詩人",
   "Miracle_SwordDancer": "剣舞者",
   "Miracle_Shaman": "シャーマン",

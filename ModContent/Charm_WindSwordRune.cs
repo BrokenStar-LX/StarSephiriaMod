@@ -1,4 +1,4 @@
-using Mirror;
+using System.Linq;
 using UnityEngine;
 
 namespace SPMod.ModContent
@@ -25,6 +25,11 @@ namespace SPMod.ModContent
         protected override void FireCastingServer(Vector3 aimedPosition, UnitAvatar aimedTarget)
         {
             if (NetworkAvatar is not PlayerAvatar Player) return;
+            if (WindSwordTraining.CanPractice(Player) && WindSwordTraining.IsPracticeItem(this))
+            {
+                CastPracticeRune(Player);
+                return;
+            }
             if (Player.isInDungeon <= 0) return;
 
             Charm_WindSword? WindSword = null;
@@ -43,6 +48,32 @@ namespace SPMod.ModContent
             {
                 Player.Inventory.ForceRemoveItem(Item.XIdx, Item.YIdx);
             }
+        }
+
+        private void CastPracticeRune(PlayerAvatar Player)
+        {
+            if (!isServer || Item is not { } Rune || string.IsNullOrEmpty(EffectKeyword) || Value == 0) return;
+            GridInventory Inventory = Player.Inventory;
+            sbyte X = Rune.XIdx;
+            sbyte Y = Rune.YIdx;
+            if (Inventory.FindItem(X, Y)?.Charm != this) return;
+            var Swords = Inventory.charms.Values.OfType<Charm_WindSword>().ToArray();
+            var PracticeSword = Swords.FirstOrDefault(Sword =>
+                Sword != null && Sword.IsEffectEnabled && WindSwordTraining.IsPracticeItem(Sword));
+            if (PracticeSword == null)
+            {
+                bool HasOnlyFormalSword = Swords.Any(Sword => Sword != null) &&
+                    !Swords.Any(Sword => Sword != null && WindSwordTraining.IsPracticeItem(Sword));
+                WindSwordTraining.Message(HasOnlyFormalSword ? "TrainingWindSword_Formal" : "TrainingWindSword_NeedSword");
+                return;
+            }
+
+            using (new GridInventory.Permission(Inventory))
+            {
+                Inventory.ForceRemoveItem(X, Y);
+            }
+            if (Inventory.FindItem(X, Y)?.Charm != this)
+                PracticeSword.AddRune(EffectKeyword, Value);
         }
 
         public override bool Weaved()

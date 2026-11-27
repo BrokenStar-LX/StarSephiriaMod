@@ -99,6 +99,26 @@ namespace SPMod.ModContent
             return false;
         }
 
+        private static bool FindSwordToRetire(PlayerAvatar Player, ItemEntity WindSword, out sbyte X, out sbyte Y)
+        {
+            GridInventory Inventory = Player.Inventory;
+            if (!Inventory.HasItem(WindSword, out X, out Y, out _)) return false;
+            var Match = Inventory.FindItem(X, Y);
+            if (Match == null || !GridInventory.IsDestructibleItem(Match.InstanceID) ||
+                !WindSwordTraining.CanPractice(Player)) return true;
+
+            foreach (var Position in Inventory.inventoryMatrix.Keys)
+            {
+                var Item = Inventory.FindItem(Position.x, Position.y);
+                if (Item == null || Item.EntityID != WindSword.id || GridInventory.IsDestructibleItem(Item.InstanceID))
+                    continue;
+                X = Item.XIdx;
+                Y = Item.YIdx;
+                return true;
+            }
+            return false;
+        }
+
         private static IEnumerator RemoveRoutine(ComboEffect_WindSword Effect, PlayerAvatar Player, string CategoryName, float Delay)
         {
             try
@@ -115,7 +135,7 @@ namespace SPMod.ModContent
 
                 using (new GridInventory.Permission(Inventory))
                 {
-                    if (Inventory.HasItem(WindSword, out sbyte X, out sbyte Y, out _))
+                    if (FindSwordToRetire(Player, WindSword, out sbyte X, out sbyte Y))
                         Inventory.ForceRemoveItem(X, Y);
                 }
                 foreach (KeyValuePair<sbyte, ItemMetadata> SubBag in new List<KeyValuePair<sbyte, ItemMetadata>>(Inventory.subBagMatrix))

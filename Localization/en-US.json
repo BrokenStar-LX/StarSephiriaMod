@@ -1,4 +1,10 @@
 ﻿{
+  "TrainingWindSword_Menu": "Training inventory",
+  "TrainingWindSword_Reset": "Reset practice Wind Sword runes",
+  "TrainingWindSword_Clear": "Clear training items",
+  "TrainingWindSword_Cancel": "Cancel",
+  "TrainingWindSword_Formal": "These runes require a practice Wind Sword from the training catalog.",
+  "TrainingWindSword_NeedSword": "Equip a practice Wind Sword before using these runes.",
   "Miracle_Bard": "Bard",
   "Miracle_SwordDancer": "Sword Dancer",
   "Miracle_Shaman": "Shaman",

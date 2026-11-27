@@ -262,6 +262,7 @@ namespace SPMod.ModContent
 
         public override void SaveItemOnServer(ISaveData saveData)
         {
+            if (WindSwordTraining.IsPracticeItem(this)) return;
             base.SaveItemOnServer(saveData);
             string Prefix = GetRuneSavePrefix();
             saveData.SetInt($"{Prefix}_Count", RuneOrder.Count);
@@ -274,6 +275,7 @@ namespace SPMod.ModContent
 
         public override void LoadItemOnServer(ISaveData saveData)
         {
+            if (WindSwordTraining.IsPracticeItem(this)) return;
             base.LoadItemOnServer(saveData);
             string Prefix = GetRuneSavePrefix();
             RuneBonuses.Clear();
@@ -292,6 +294,16 @@ namespace SPMod.ModContent
         {
             int PlayerIdx = NetworkAvatar is PlayerAvatar Player && Player.spawner != null ? Player.spawner.currentPlayerIdxForSave : 0;
             return $"CharmSaveData_WindSword_{PlayerIdx}";
+        }
+
+        internal bool HasPracticeRunes => WindSwordTraining.IsPracticeItem(this) && RuneOrder.Count != 0;
+
+        internal void ResetPracticeRunes()
+        {
+            if (!isServer || !HasPracticeRunes) return;
+            RuneBonuses.Clear();
+            RuneOrder.Clear();
+            ApplyRuneStatuses();
         }
 
         private void ApplyRuneStatuses()

@@ -1,4 +1,10 @@
 ﻿{
+  "TrainingWindSword_Menu": "훈련 아이템",
+  "TrainingWindSword_Reset": "연습용 바람의 칼날 룬 초기화",
+  "TrainingWindSword_Clear": "훈련 아이템 비우기",
+  "TrainingWindSword_Cancel": "취소",
+  "TrainingWindSword_Formal": "연습용 룬에는 훈련 목록의 연습용 바람의 칼날이 필요합니다.",
+  "TrainingWindSword_NeedSword": "룬을 사용하려면 연습용 바람의 칼날을 먼저 장착하세요.",
   "Miracle_Bard": "음유시인",
   "Miracle_SwordDancer": "검무자",
   "Miracle_Shaman": "주술사",

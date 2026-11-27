@@ -1,4 +1,10 @@
 {
+  "TrainingWindSword_Menu": "训练物品",
+  "TrainingWindSword_Reset": "重置练习风之刃符文",
+  "TrainingWindSword_Clear": "清空训练物品",
+  "TrainingWindSword_Cancel": "取消",
+  "TrainingWindSword_Formal": "练习符文需要训练目录中的练习风之刃。",
+  "TrainingWindSword_NeedSword": "请先装备练习风之刃，再使用练习符文。",
   "Miracle_Bard": "吟游诗人",
   "Miracle_SwordDancer": "剑舞者",
   "Miracle_Shaman": "萨满",
