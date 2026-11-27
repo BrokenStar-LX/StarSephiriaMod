@@ -170,7 +170,7 @@ namespace SPMod
                     NoAddExp[Player] = [];
                     if (UseName == "LocalMoveFloor")
                     {
-                        PlayerSp.PlayerAvatar.AddOrphanedStatusInstance(StatusDatabase.CreateStatusEntity("INVENTORY_SLOT/10"));
+                        BossRushFirstFloorStorage.Grant(PlayerSp);
                     }
                     StarSephiriaMod.LogInfoDungeon($"初始化{Player}的数据");
                 }
