@@ -27,6 +27,21 @@ namespace SPMod
 {
     public class StarSephiriaMod : WorkshopModBase
     {
+        /// <summary>
+        /// 每轮 SPMod 内容注册流程结束后触发。订阅者需自行检查所需条目是否已注册。
+        /// </summary>
+        /// <remarks>
+        /// <see cref="OnAllDatabasesReady"/> 在数据库重新初始化后可再次调用，每次完成时都会通知当前订阅者。
+        /// 请在模组加载时订阅，再检查 <see cref="IsContentReady"/>，以处理本轮已经完成的情况。
+        /// 补订阅时不会重放本轮通知。请在模组卸载时取消订阅。
+        /// </remarks>
+        public static event Action? OnContentReady;
+
+        /// <summary>
+        /// 本轮 SPMod 内容注册流程是否已结束。开始加载物品库或卸载 SPMod 时重置。
+        /// </summary>
+        public static bool IsContentReady { get; private set; }
+
         public static Dictionary<string, int> AddPassivePoint = [];
         public static Dictionary<string, int> WeaponType = [];
 
@@ -102,6 +117,7 @@ namespace SPMod
             HorayModAPI.OnLocalizationReady -= OnLocalizationInit;
             HorayModAPI.OnLoadPassiveDatabase -= OnLoadPassiveDatabase;
             HorayModAPI.OnAllDatabasesReady -= OnAllDatabasesReady;
+            IsContentReady = false;
             HorayModAPI.OnPlayerAvatarSpawnedServerside -= OnPlayerAvatarSpawnedServerside;
             HorayModAPI.OnPlayerAvatarSpawnedClientside -= CostumeTransmog_Patch.OnPlayerAvatarSpawnedClientside;
             HorayModAPI.OnUnitDespawnedServerside -= ModNetwork.OnUnitDespawnedServerside;
@@ -1432,6 +1448,7 @@ namespace SPMod
 
         public static void OnLoadItemDatabase()
         {
+            IsContentReady = false;
             CreateModItems();
             AddWindDamageToRandomPotions();
             if (ModConfig.Instance.ModifyMerchant)
@@ -2006,6 +2023,26 @@ namespace SPMod
             ModFxPool.RegisterFromPath("WindyWeatherParticle", "Bullet", 8, 32, 12f, false, "FX", 0,
                 "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
                 "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5");
+            NotifyContentReady();
+        }
+
+        private static void NotifyContentReady()
+        {
+            IsContentReady = true;
+            Action? callbacks = OnContentReady;
+            if (callbacks == null) return;
+
+            foreach (Action callback in callbacks.GetInvocationList())
+            {
+                try
+                {
+                    callback();
+                }
+                catch (Exception ex)
+                {
+                    LogError($"[StarSephiria] 内容就绪回调失败: {ex}");
+                }
+            }
         }
 
         public static void InitializeModStat(string Name)
