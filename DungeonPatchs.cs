@@ -137,8 +137,9 @@ namespace SPMod
                 DefeatBoss.Clear();
                 foreach (PlayerSpawner PlayerSp in PlayerSpawner.MultiplayerList)
                 {
+                    if (PlayerSp == null) continue;
                     PlayerAvatar Player = PlayerSp.PlayerAvatar;
-                    DungeonManager.Instance.StartCoroutine(DeleteUnintentionalItems(Player));
+                    if (Player != null) DungeonManager.Instance.StartCoroutine(DeleteUnintentionalItems(Player));
                 }
             }
             else
@@ -166,13 +167,12 @@ namespace SPMod
 
                 foreach (PlayerSpawner PlayerSp in PlayerSpawner.MultiplayerList)
                 {
-                    string Player = PlayerSp.PlayerAvatar.Name;
-                    NoAddExp[Player] = [];
+                    if (PlayerSp == null) continue;
+                    var Avatar = PlayerSp.PlayerAvatar;
+                    if (Avatar != null) NoAddExp[Avatar.Name] = [];
                     if (UseName == "LocalMoveFloor")
-                    {
                         BossRushFirstFloorStorage.Grant(PlayerSp);
-                    }
-                    StarSephiriaMod.LogInfoDungeon($"初始化{Player}的数据");
+                    if (Avatar != null) StarSephiriaMod.LogInfoDungeon($"初始化{Avatar.Name}的数据");
                 }
                 UseSpawnerMoleElite = false;
                 LastFloor = false;
