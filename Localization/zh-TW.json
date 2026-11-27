@@ -785,7 +785,9 @@
   "TrainingMainBag_Reset": "還原訓練擴充",
   "TrainingMainBag_Leave": "離開訓練場",
   "TrainingMainBag_Cancel": "取消",
-  "TrainingMainBag_Occupied": "請移走擴充格內的物品再還原。",
+  "ModOption_TrainingMainBag": "訓練場主背包",
+  "TrainingMainBag_Position": "第 {0} 欄第 {1} 列",
+  "TrainingMainBag_Occupied": "請先移走這些格內的物品：{0}。",
   "TrainingMainBag_Claimed": "主背包：{0}/{1} 格。",
   "TrainingMainBag_ResetDone": "已還原訓練擴充。主背包：{0} 格。",
   "TrainingMainBag_Unavailable": "未能增加主背包格子。"

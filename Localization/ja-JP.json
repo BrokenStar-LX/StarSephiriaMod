@@ -785,7 +785,9 @@
   "TrainingMainBag_Reset": "訓練用の拡張を戻す",
   "TrainingMainBag_Leave": "訓練場を出る",
   "TrainingMainBag_Cancel": "キャンセル",
-  "TrainingMainBag_Occupied": "追加したマスのアイテムを移動してから戻してください。",
+  "ModOption_TrainingMainBag": "訓練場のメインバッグ",
+  "TrainingMainBag_Position": "{0} 列目・{1} 行目",
+  "TrainingMainBag_Occupied": "先に次のマスからアイテムを移動してください：{0}。",
   "TrainingMainBag_Claimed": "メインバッグ：{0}/{1} マス。",
   "TrainingMainBag_ResetDone": "訓練用の拡張を戻しました。メインバッグ：{0} マス。",
   "TrainingMainBag_Unavailable": "メインバッグを拡張できませんでした。"

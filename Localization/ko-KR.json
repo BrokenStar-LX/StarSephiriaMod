@@ -785,7 +785,9 @@
   "TrainingMainBag_Reset": "훈련용 가방 확장 초기화",
   "TrainingMainBag_Leave": "훈련장 나가기",
   "TrainingMainBag_Cancel": "취소",
-  "TrainingMainBag_Occupied": "초기화하려면 추가 칸의 아이템을 옮기세요.",
+  "ModOption_TrainingMainBag": "훈련장 주 가방",
+  "TrainingMainBag_Position": "{0}열 {1}행",
+  "TrainingMainBag_Occupied": "먼저 다음 칸의 아이템을 옮기세요: {0}.",
   "TrainingMainBag_Claimed": "주 가방: {0}/{1}칸.",
   "TrainingMainBag_ResetDone": "훈련용 확장이 초기화되었습니다. 주 가방: {0}칸.",
   "TrainingMainBag_Unavailable": "주 가방 칸을 추가할 수 없습니다."

@@ -785,7 +785,9 @@
   "TrainingMainBag_Reset": "Reset training slots",
   "TrainingMainBag_Leave": "Leave the training school",
   "TrainingMainBag_Cancel": "Cancel",
-  "TrainingMainBag_Occupied": "Move items out of the extra slots before resetting.",
+  "ModOption_TrainingMainBag": "Training main backpack",
+  "TrainingMainBag_Position": "column {0}, row {1}",
+  "TrainingMainBag_Occupied": "Move items out of these cells first: {0}.",
   "TrainingMainBag_Claimed": "Main backpack: {0}/{1} slots.",
   "TrainingMainBag_ResetDone": "Training slots removed. Main backpack: {0} slots.",
   "TrainingMainBag_Unavailable": "Could not add a main backpack slot."

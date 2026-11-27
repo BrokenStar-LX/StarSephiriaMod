@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using Mirror;
@@ -14,12 +13,11 @@ namespace SPMod
     [HarmonyPatch]
     internal static class TrainingMainBag
     {
-        private const int Limit = GridInventory.MaxWidth * GridInventory.MaxHeight;
+        private const int Limit = 30;
         private const string SlotId = "INVENTORY_SLOT";
         private const string SaveKey = "[Star's Sephiria Mod]TrainingMainBag";
         private static readonly object Ownership = new();
         private static readonly ConditionalWeakTable<StatusInstance, object> ClaimedSlots = new();
-        private static readonly PropertyInfo? StatusTarget = AccessTools.Property(typeof(StatusInstance), "CurrentTarget");
         private static bool Leaving;
 
         private static bool CanUse(PlayerAvatar? Player)
@@ -38,9 +36,11 @@ namespace SPMod
         private static StatusInstance[] Owned(PlayerAvatar Player) =>
             Player.orphanedStatusInstancesServerside.Where(Status => ClaimedSlots.TryGetValue(Status, out _)).ToArray();
 
-        private static bool TailIsEmpty(GridInventory Inventory, int Capacity) =>
-            !Inventory.inventoryMatrix.Keys.Any(Position => Position.x >= 0 && Position.y is >= 0 and < 100 &&
-                Inventory.PosToIdx(Position) >= Capacity);
+        private static string[] OccupiedTail(GridInventory Inventory, int Capacity) =>
+            Inventory.inventoryMatrix.Where(Row => Row.Value != null && Row.Key.x >= 0 && Row.Key.y is >= 0 and < 100 &&
+                Inventory.PosToIdx(Row.Key) >= Capacity)
+                .OrderBy(Row => Inventory.PosToIdx(Row.Key))
+                .Select(Row => Text("Position", Row.Key.x + 1, Row.Key.y + 1)).ToArray();
 
         private static string Text(string Key, params object[] Args) =>
             string.Format(Tools.GetLocalization("TrainingMainBag_" + Key), Args);
@@ -59,6 +59,7 @@ namespace SPMod
             Player.AddOrphanedStatusInstance(Slot);
             if (Inventory.CurrentInventoryStorage != Before + 1)
             {
+                if (Inventory.CurrentInventoryStorage != Before) Slot.RemoveStatus();
                 ClaimedSlots.Remove(Slot);
                 Player.orphanedStatusInstancesServerside.Remove(Slot);
                 Slot.ClearTarget();
@@ -68,19 +69,26 @@ namespace SPMod
             Message("Claimed", Inventory.CurrentInventoryStorage, Limit);
         }
 
-        private static void Reset(PlayerAvatar Player)
+        private static bool Reset(PlayerAvatar Player, bool Notify)
         {
             var Slots = Owned(Player);
-            if (Slots.Length == 0) return;
+            if (Slots.Length == 0) return true;
             var Inventory = Player.Inventory;
             int Capacity = Inventory.CurrentInventoryStorage - Slots.Length;
-            if (!HasNativeGrid(Inventory) || Capacity <= 0 || !TailIsEmpty(Inventory, Capacity))
+            if (!HasNativeGrid(Inventory) || Capacity <= 0)
             {
-                Message("Occupied");
-                return;
+                Message("Unavailable");
+                return false;
+            }
+            var Occupied = OccupiedTail(Inventory, Capacity);
+            if (Occupied.Length != 0)
+            {
+                Message("Occupied", string.Join(", ", Occupied));
+                return false;
             }
             foreach (var Slot in Slots) Revoke(Player, Slot);
-            Message("ResetDone", Inventory.CurrentInventoryStorage);
+            if (Notify) Message("ResetDone", Inventory.CurrentInventoryStorage);
+            return true;
         }
 
         private static void Revoke(PlayerAvatar Player, StatusInstance Slot)
@@ -100,17 +108,20 @@ namespace SPMod
         {
             if (Leaving || __0 == null || !__0.TryGetComponent<PlayerAvatar>(out var Player) || !CanUse(Player))
                 return true;
+            if (!ModConfig.Instance.EnableTrainingMainBag)
+                return Reset(Player, Notify: false);
             var Menu = UIManager.Instance?.GetElement<UI_MessageBox_List>();
-            if (Menu == null) return true;
+            if (Menu == null) return Reset(Player, Notify: false);
             var Inventory = Player.Inventory;
             var Options = new List<(string Label, Action Apply)>();
             if (HasNativeGrid(Inventory) && Inventory.CurrentInventoryStorage < Limit)
                 Options.Add((Text("Claim"), () => Claim(Player)));
             if (HasNativeGrid(Inventory) && Owned(Player).Length != 0)
-                Options.Add((Text("Reset"), () => Reset(Player)));
-            if (Options.Count == 0) return true;
+                Options.Add((Text("Reset"), () => Reset(Player, Notify: true)));
+            if (Options.Count == 0) return Reset(Player, Notify: false);
             Options.Add((Text("Leave"), () =>
             {
+                if (!Reset(Player, Notify: false)) return;
                 Leaving = true;
                 try { __instance.MoveTo(__0); }
                 finally { Leaving = false; }
@@ -122,6 +133,7 @@ namespace SPMod
             Menu.Open(Text("Menu", Inventory.CurrentInventoryStorage, Limit), Choice =>
             {
                 if (Used || __instance == null || __0 == null || !CanUse(Player) ||
+                    !ModConfig.Instance.EnableTrainingMainBag ||
                     Player.currentFloorGuid != Floor || Choice < 0 || Choice >= Options.Count) return;
                 Used = true;
                 Options[Choice].Apply();
@@ -135,43 +147,18 @@ namespace SPMod
         private static StatusInstance[] NativeSlots(PlayerAvatar Player) => Player.orphanedStatusInstancesServerside
             .Where(Status => Status is StatusInstance_InventorySlot && Status.ID == SlotId).ToArray();
 
-        [HarmonyPatch(typeof(StatusInstance_InventorySlot), "ApplyStatusInner")]
-        [HarmonyPrefix]
-        private static void BeforeNativeUpgrade(StatusInstance_InventorySlot __instance,
-            out (PlayerAvatar Player, int Before)? __state)
-        {
-            __state = null;
-            if (ClaimedSlots.TryGetValue(__instance, out _) || __instance.Value <= 0 ||
-                StatusTarget?.GetValue(__instance) is not PlayerAvatar Player || Player == null || !Player.isServer ||
-                Player.Inventory == null || !HasNativeGrid(Player.Inventory)) return;
-            __state = (Player, Player.Inventory.CurrentInventoryStorage);
-        }
+        private static int SaveVersion(SaveData Run) => Run.GetInt("SaveVersion", 0);
 
-        [HarmonyPatch(typeof(StatusInstance_InventorySlot), "ApplyStatusInner")]
-        [HarmonyPostfix]
-        private static void AfterNativeUpgrade((PlayerAvatar Player, int Before)? __state)
-        {
-            if (__state is not { } State) return;
-            var Inventory = State.Player.Inventory;
-            int Capacity = Inventory.CurrentInventoryStorage;
-            if (Capacity <= Limit || Capacity <= State.Before) return;
-
-            // A normal upgrade earns its full capacity. It can replace overlapping practice cells.
-            var Overlap = Owned(State.Player).Take(Math.Min(Capacity - Limit, Capacity - State.Before)).ToArray();
-            if (Overlap.Length == 0 || !TailIsEmpty(Inventory, Capacity - Overlap.Length)) return;
-            foreach (var Slot in Overlap) Revoke(State.Player, Slot);
-        }
-
-        [HarmonyPatch(typeof(PlayerSpawner), nameof(PlayerSpawner.SaveCurrentSessionData))]
+        [HarmonyPatch(typeof(PlayerSpawner), nameof(PlayerSpawner.SaveCurrentSessionData), new Type[] { })]
         [HarmonyPostfix]
         private static void SaveOwnership(PlayerSpawner __instance, bool __runOriginal)
         {
             var Player = __instance.PlayerAvatar;
             var Run = SaveManager.CurrentRun;
             int Index = __instance.currentPlayerIdxForSave;
-            int Version = SaveManager.SaveVersion;
-            if (!__runOriginal || Player == null || !Player.isServer || !Player.isLocalPlayer || Run == null ||
-                Version != 0 && Index < 0) return;
+            if (!__runOriginal || Player == null || !Player.isServer || !Player.isLocalPlayer || Run == null) return;
+            int Version = SaveVersion(Run);
+            if (Version != 0 && Index < 0) return;
             string Prefix = SlotPrefix(Version, Index);
             string Key = SaveKey + Prefix;
             var Slots = NativeSlots(Player);
@@ -184,7 +171,8 @@ namespace SPMod
                 Run.RemoveKey(Key);
         }
 
-        [HarmonyPatch(typeof(PlayerSpawner), "Initialize")]
+        [HarmonyPatch(typeof(PlayerSpawner), "Initialize",
+            new[] { typeof(int), typeof(string), typeof(string), typeof(int), typeof(ERestartPlacement) })]
         [HarmonyPostfix]
         [HarmonyPriority(Priority.Last)]
         private static void LoadOwnership(PlayerSpawner __instance, bool __result)
@@ -192,7 +180,7 @@ namespace SPMod
             var Run = SaveManager.CurrentRun;
             var Player = __instance.PlayerAvatar;
             if (!__result || Player == null || !Player.isServer || Player.Inventory == null || Run == null) return;
-            int Version = Run.GetInt("SaveVersion", 0);
+            int Version = SaveVersion(Run);
             int Index = __instance.currentPlayerIdxForSave;
             if (Version != 0 && Index < 0) return;
             string Prefix = SlotPrefix(Version, Index);

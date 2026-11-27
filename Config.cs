@@ -15,6 +15,7 @@ public class ModConfigData
     public bool EnableCostumeTransmog { get; set; } = true;
     public bool EnableWeaponModifier { get; set; } = true;
     public bool EnableDamageStatistics { get; set; } = true;
+    public bool EnableTrainingMainBag { get; set; } = false;
 
     private int _monochromeMode = 0;
     public int MonochromeMode
@@ -140,6 +141,7 @@ public static class ModConfig
         AddToggle(o, "enable_costume_modifier", "ModOption_CostumeModifier", () => Instance.EnableCostumeModifier, v => Instance.EnableCostumeModifier = v);
         AddToggle(o, "enable_costume_transmog", "ModOption_CostumeTransmog", () => Instance.EnableCostumeTransmog, v => Instance.EnableCostumeTransmog = v);
         AddToggle(o, "enable_damage_statistics", "ModOption_DamageStatistics", () => Instance.EnableDamageStatistics, v => Instance.EnableDamageStatistics = v);
+        AddToggle(o, "enable_training_main_bag", "ModOption_TrainingMainBag", () => Instance.EnableTrainingMainBag, v => Instance.EnableTrainingMainBag = v);
 
         AddToggle(o, "modify_defense_formula", "ModOption_DefenseFormula", () => Instance.ModifyDefenseFormula, v => Instance.ModifyDefenseFormula = v);
         AddToggle(o, "modify_evasion_formula", "ModOption_EvasionFormula", () => Instance.ModifyEvasionFormula, v => Instance.ModifyEvasionFormula = v);
@@ -189,6 +191,7 @@ public static class ModConfig
         Instance.EnableCostumeModifier = _options.GetBool("enable_costume_modifier", Instance.EnableCostumeModifier);
         Instance.EnableCostumeTransmog = _options.GetBool("enable_costume_transmog", Instance.EnableCostumeTransmog);
         Instance.EnableDamageStatistics = _options.GetBool("enable_damage_statistics", Instance.EnableDamageStatistics);
+        Instance.EnableTrainingMainBag = _options.GetBool("enable_training_main_bag", Instance.EnableTrainingMainBag);
 
         Instance.ModifyDefenseFormula = _options.GetBool("modify_defense_formula", Instance.ModifyDefenseFormula);
         Instance.ModifyEvasionFormula = _options.GetBool("modify_evasion_formula", Instance.ModifyEvasionFormula);
