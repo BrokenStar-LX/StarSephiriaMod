@@ -106,6 +106,11 @@ namespace SPMod.Tool
             if (bullet != null && bullet.speedScale != Scale) bullet.speedScale = Scale;
         }
     }
+    /// <summary>子弹模板的伤害统计 ID；Bullet.Initialize 之后由补丁覆盖。</summary>
+    public class ModBulletDamageId : MonoBehaviour
+    {
+        public string DamageId = "";
+    }
     public class ModSpriteMap : MonoBehaviour
     {
         public string Key = "";
@@ -288,9 +293,7 @@ namespace SPMod.Tool
             public void GetAttack(UnitAvatar Target)
             {
                 float BaseDamage = Tools.BaseStatToMax(Player) * 5f;
-                BaseDamage *= 1f - EffectTimer.Ratio;
-                float Mult = 1f + Player.GetCustomStatUnsafe(TextFile.FinalWeaponDamage) * 0.01f;
-                Mult *= Player.GetSpecialAttackMultiplier();
+                float Mult = Player.GetSpecialAttackMultiplier(true, true, true);
                 Mult *= 1f + Player.GetCustomStatUnsafe(TextFile.MPSkillDamage) * 0.01f;
                 float Damage = BaseDamage * Mult;
                 var Dam = DamageInstance.GetDamage(Player, DamageId, Target.transform.position, 4294967295L, Damage, EDamageType.Slice, EDamageFromType.DirectAttack, Vector2.zero, 0, 0f);
@@ -868,6 +871,26 @@ namespace SPMod.Tool
                 return SpriteMaps.TryGetValue(key, out map!);
             }
 
+            /// <summary>查找某把武器上光箭类附加组件使用的子弹预制体。</summary>
+            public static GameObject? FindLightArrowBulletPrefab(int WeaponId)
+            {
+                WeaponEntity? Entity = WeaponDatabase.FindWeaponById(WeaponId);
+                WeaponSimple? Simple = Entity?.mainWeaponPrefab?.GetComponent<WeaponSimple>();
+                if (Simple == null) return null;
+                foreach (WeaponAddon Addon in Simple.addons)
+                {
+                    if (Addon is not WeaponAddonCrossbow_LightArrow Light) continue;
+                    return Light.lightArrowFireData switch
+                    {
+                        NewWeaponFireData_Bullet BulletData => BulletData.bulletPrefab,
+                        NewWeaponFireData_BulletSpread SpreadData => SpreadData.bulletPrefab,
+                        NewWeaponFireData_BulletBurst BurstData => BurstData.bulletPrefab,
+                        _ => null,
+                    };
+                }
+                return null;
+            }
+
             public string Name;
             public Bullet? BulletComp;
             public bool SpriteDebug = false;
@@ -875,6 +898,33 @@ namespace SPMod.Tool
             private readonly List<Action<GameObject>> Builders = [];
             private GameObject? _template;
             public GameObject Template => _template ??= Create();
+
+            /// <summary>第一个可用的移动尾迹 FX，用于给没有尾迹的子弹补一个。</summary>
+            public GameObject? FirstTailFx
+            {
+                get
+                {
+                    Bullet? Comp = Template.GetComponent<Bullet>();
+                    if (Comp?.MoveModule == null) return null;
+                    object Module = Comp.MoveModule;
+                    foreach (FieldInfo Field in Module.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance))
+                    {
+                        if (Field.FieldType == typeof(GameObject[]) &&
+                            (Field.Name == "tailFxPrefabs" || Field.Name == "moveFxPrefabs"))
+                        {
+                            if (Field.GetValue(Module) is GameObject[] Prefabs)
+                                foreach (GameObject Prefab in Prefabs)
+                                    if (Prefab != null) return Prefab;
+                        }
+                        else if (Field.FieldType == typeof(GameObject) &&
+                            (Field.Name == "tailFxPrefab" || Field.Name == "moveFxPrefab"))
+                        {
+                            if (Field.GetValue(Module) is GameObject Prefab && Prefab != null) return Prefab;
+                        }
+                    }
+                    return null;
+                }
+            }
 
             public ModBullet(string name, GameObject copyTarget)
                 : this(name, () => copyTarget)
@@ -947,6 +997,8 @@ namespace SPMod.Tool
                 StarSephiriaMod.RegisterModPrefab(Result);
                 AllBullets.Add(this);
                 TryRegisterToPool();
+                // 模板可能是在游戏中途才懒加载创建的，新建的 FX 要立刻补登记进当前池子
+                if (SpriteFx.Pool != null) RegisterPendingFxToPool();
                 return Result;
             }
 
@@ -978,6 +1030,86 @@ namespace SPMod.Tool
                     ModBulletSpeed Speed = T.GetComponent<ModBulletSpeed>();
                     if (Speed == null) Speed = T.AddComponent<ModBulletSpeed>();
                     Speed.Scale = scale;
+                });
+            }
+
+            /// <summary>子弹贴图是否跟随移动方向旋转（false = 保持预制体自身朝向）。</summary>
+            public ModBullet SetLookAtDirection(bool Enable)
+            {
+                return Then(T =>
+                {
+                    Bullet? Comp = T.GetComponent<Bullet>();
+                    if (Comp == null) return;
+                    switch (Comp.MoveModule)
+                    {
+                        case BulletMoveModule_UniformVector2 Uniform:
+                            Uniform.lookAtDirection = Enable;
+                            break;
+                        case BulletMoveModule_AccelerationVector3 Accel:
+                            Accel.lookAtDirection = Enable;
+                            break;
+                        case BulletMoveModule_LightArrow Arrow:
+                            Arrow.lookAtDirection = Enable;
+                            break;
+                    }
+                });
+            }
+
+            /// <summary>打开并统一染色 TrailRenderer；模板没有时新建一条。</summary>
+            public ModBullet SetTrailRendererColor(Color Color)
+            {
+                return Then(T =>
+                {
+                    if (T.GetComponentsInChildren<TrailRenderer>(true).Length == 0)
+                    {
+                        Bullet? Comp = T.GetComponent<Bullet>();
+                        // 挂到 body 上，跟子弹贴图一样的视觉高度
+                        Transform Parent = Comp?.TopdownActor?.body != null ? Comp.TopdownActor.body : T.transform;
+                        GameObject TrailObject = new("ModTrail");
+                        TrailObject.transform.SetParent(Parent, false);
+
+                        TrailRenderer Trail = TrailObject.AddComponent<TrailRenderer>();
+                        Shader? Shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                            ?? Shader.Find("Sprites/Default");
+                        if (Shader != null) Trail.material = new Material(Shader);
+                        Trail.time = 0.18f;
+                        Trail.startWidth = 0.15f;
+                        Trail.endWidth = 0f;
+                        Trail.minVertexDistance = 0.05f;
+                        Trail.numCapVertices = 2;
+                        Trail.numCornerVertices = 2;
+                        Trail.textureMode = LineTextureMode.Stretch;
+
+                        SpriteRenderer? Renderer = Comp?.TopdownActor?.bodyRenderer
+                            ?? T.GetComponentInChildren<SpriteRenderer>(true);
+                        if (Renderer != null)
+                        {
+                            Trail.sortingLayerID = Renderer.sortingLayerID;
+                            Trail.sortingOrder = Renderer.sortingOrder;
+                        }
+                    }
+
+                    foreach (TrailRenderer Trail in T.GetComponentsInChildren<TrailRenderer>(true))
+                    {
+                        Gradient Fade = new();
+                        Fade.SetKeys(
+                            [new GradientColorKey(Color, 0f), new GradientColorKey(Color, 1f)],
+                            [new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f)]);
+                        Trail.colorGradient = Fade;
+                        Trail.emitting = true;
+                        Trail.enabled = true;
+                    }
+                });
+            }
+
+            /// <summary>设置该模板的伤害统计 ID；生成时由 Bullet.Initialize 后处理覆盖传入的 damageId。</summary>
+            public ModBullet SetDamageId(string Id)
+            {
+                return Then(T =>
+                {
+                    ModBulletDamageId Marker = T.GetComponent<ModBulletDamageId>();
+                    if (Marker == null) Marker = T.AddComponent<ModBulletDamageId>();
+                    Marker.DamageId = Id;
                 });
             }
 
@@ -1122,12 +1254,60 @@ namespace SPMod.Tool
                 });
             }
 
-            /// <summary>克隆命中成功 FX 并替换其中的 sprite（按原版 sprite 名匹配）。</summary>
+            /// <summary>克隆命中成功 FX，并按传入顺序强制替换动画帧（不依赖原版 sprite 名）。</summary>
             public ModBullet SetAttackSucceededFxSprites(string path, params string[] spriteNames)
             {
-                Dictionary<string, string> NameToFile = new(StringComparer.OrdinalIgnoreCase);
-                foreach (string SpriteName in spriteNames) NameToFile[SpriteName] = SpriteName;
-                return SetAttackSucceededFxSprites(path, NameToFile);
+                return SetAttackSucceededFxSpritesInternal(path, null, spriteNames);
+            }
+
+            /// <summary>命中成功 FX：模板没有现成 FX 时，先用 Fallback 提供的 FX 补一个再替换贴图。</summary>
+            public ModBullet SetAttackSucceededFxSprites(string path, Func<GameObject?> Fallback, params string[] spriteNames)
+            {
+                return SetAttackSucceededFxSpritesInternal(path, Fallback, spriteNames);
+            }
+
+            private ModBullet SetAttackSucceededFxSpritesInternal(string path, Func<GameObject?>? Fallback, string[] spriteNames)
+            {
+                return Then(T =>
+                {
+                    Bullet? Comp = T.GetComponent<Bullet>();
+                    if (Comp == null) return;
+
+                    List<Sprite> Frames = [];
+                    foreach (string SpriteName in spriteNames)
+                    {
+                        Sprite? Frame = Tools.LoadModSpriteForPath(path, SpriteName);
+                        if (Frame != null) Frames.Add(Frame);
+                    }
+                    if (Frames.Count == 0)
+                    {
+                        StarSephiriaMod.LogError($"[ModBullet]{Name} FX 没有加载到任何贴图");
+                        return;
+                    }
+
+                    GameObject? Source = Comp.attackSucceededFxPrefab;
+                    if (Source == null)
+                    {
+                        Source = Fallback?.Invoke();
+                        if (Source == null)
+                        {
+                            StarSephiriaMod.LogError($"[ModBullet]{Name} 没有命中成功 FX（attackSucceededFxPrefab 为空）");
+                            return;
+                        }
+                    }
+
+                    GameObject Clone = CloneFx(Source);
+                    Sprite[] FrameArray = Frames.ToArray();
+                    bool Replaced = ApplyFramesToAnimationSets(Clone, FrameArray);
+                    Replaced |= ApplyDirectFrames(Clone, FrameArray);
+                    if (!Replaced)
+                    {
+                        StarSephiriaMod.LogError($"[ModBullet]{Name} 命中 FX 上未找到可换帧的动画组件，贴图未替换");
+                        Object.Destroy(Clone);
+                        return;
+                    }
+                    Comp.attackSucceededFxPrefab = Clone;
+                });
             }
 
             /// <summary>同上，但可以给同名原版 sprite 指定不同的替换文件（NameToFile: 原版 sprite 名 → 内嵌 PNG 名）。</summary>
@@ -1172,37 +1352,70 @@ namespace SPMod.Tool
 
             public ModBullet SetTailFxSprites(string path, params string[] spriteNames)
             {
-                Dictionary<string, string> NameToFile = new(StringComparer.OrdinalIgnoreCase);
-                foreach (string SpriteName in spriteNames) NameToFile[SpriteName] = SpriteName;
-                return SetTailFxSprites(path, NameToFile);
+                return SetTailFxSpritesInternal(path, null, spriteNames);
+            }
+
+            /// <summary>移动尾迹 FX：模板没有现成尾迹时，先用 Fallback 提供的 FX 补一个再替换贴图。</summary>
+            public ModBullet SetTailFxSprites(string path, Func<GameObject?> Fallback, params string[] spriteNames)
+            {
+                return SetTailFxSpritesInternal(path, Fallback, spriteNames);
             }
 
             public ModBullet SetTailFxSprites(string path, Dictionary<string, string> NameToFile)
+            {
+                return SetTailFxSpritesInternal(path, null, NameToFile);
+            }
+
+            private ModBullet SetTailFxSpritesInternal(string path, Func<GameObject?>? Fallback, params string[] spriteNames)
+            {
+                Dictionary<string, string> NameToFile = new(StringComparer.OrdinalIgnoreCase);
+                foreach (string SpriteName in spriteNames) NameToFile[SpriteName] = SpriteName;
+                return SetTailFxSpritesInternal(path, Fallback, NameToFile);
+            }
+
+            private ModBullet SetTailFxSpritesInternal(string path, Func<GameObject?>? Fallback, Dictionary<string, string> NameToFile)
             {
                 return Then(T =>
                 {
                     Bullet? Comp = T.GetComponent<Bullet>();
                     if (Comp?.MoveModule == null) return;
                     object Module = Comp.MoveModule;
+                    FieldInfo? Slot = null;
+                    bool HasAny = false;
                     foreach (FieldInfo Field in Module.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance))
                     {
-                        if (Field.FieldType == typeof(GameObject[]) &&
-                            (Field.Name == "tailFxPrefabs" || Field.Name == "moveFxPrefabs"))
+                        bool IsArray = Field.FieldType == typeof(GameObject[]);
+                        bool IsSingle = Field.FieldType == typeof(GameObject);
+                        if (!(IsArray && (Field.Name == "tailFxPrefabs" || Field.Name == "moveFxPrefabs")) &&
+                            !(IsSingle && (Field.Name == "tailFxPrefab" || Field.Name == "moveFxPrefab"))) continue;
+                        Slot ??= Field;
+
+                        if (IsArray && Field.GetValue(Module) is GameObject[] Prefabs)
                         {
-                            if (Field.GetValue(Module) is GameObject[] Prefabs)
+                            for (int i = 0; i < Prefabs.Length; i++)
                             {
-                                for (int i = 0; i < Prefabs.Length; i++)
-                                    if (Prefabs[i] != null)
-                                        Prefabs[i] = CloneFxWithMap(Prefabs[i], path, NameToFile);
+                                if (Prefabs[i] == null) continue;
+                                HasAny = true;
+                                Prefabs[i] = CloneFxWithMap(Prefabs[i], path, NameToFile);
                             }
                         }
-                        else if (Field.FieldType == typeof(GameObject) &&
-                            (Field.Name == "tailFxPrefab" || Field.Name == "moveFxPrefab"))
+                        else if (IsSingle && Field.GetValue(Module) is GameObject Prefab && Prefab != null)
                         {
-                            if (Field.GetValue(Module) is GameObject Prefab && Prefab != null)
-                                Field.SetValue(Module, CloneFxWithMap(Prefab, path, NameToFile));
+                            HasAny = true;
+                            Field.SetValue(Module, CloneFxWithMap(Prefab, path, NameToFile));
                         }
                     }
+
+                    // 模板完全没有尾迹：用备用 FX 补一个
+                    if (Slot == null || HasAny) return;
+                    GameObject? Donor = Fallback?.Invoke();
+                    if (Donor == null)
+                    {
+                        StarSephiriaMod.LogError($"[ModBullet]{Name} 没有移动尾迹 FX，且备用 FX 为空");
+                        return;
+                    }
+                    GameObject Clone = CloneFxWithMap(Donor, path, NameToFile);
+                    Slot.SetValue(Module, Slot.FieldType == typeof(GameObject[]) ? new[] { Clone } : Clone);
                 });
             }
 
@@ -1211,6 +1424,69 @@ namespace SPMod.Tool
                 Dictionary<string, string> NameToFile = new(StringComparer.OrdinalIgnoreCase);
                 foreach (string SpriteName in spriteNames) NameToFile[SpriteName] = SpriteName;
                 return CloneFxWithMap(Source, path, NameToFile);
+            }
+
+            private GameObject CloneFx(GameObject Source)
+            {
+                GameObject Clone = Object.Instantiate(Source);
+                FxCounter++;
+                Clone.name = $"ModFx_{Name}_{FxCounter}";
+                Clone.SetActive(false);
+                Object.DontDestroyOnLoad(Clone);
+                PendingPoolFx.Add(Clone);
+                return Clone;
+            }
+
+            /// <summary>按顺序强制替换 Animator2D_Basic（SpriteFx 命中特效常用）的 AnimationSet 帧。</summary>
+            private static bool ApplyFramesToAnimationSets(GameObject Root, Sprite[] Frames)
+            {
+                bool Replaced = false;
+                Dictionary<AnimationSet, AnimationSet> Cache = [];
+                foreach (Animator2D_Basic Animator in Root.GetComponentsInChildren<Animator2D_Basic>(true))
+                {
+                    if (Animator == null || Animator.currentSet == null) continue;
+
+                    AnimationSet Original = Animator.currentSet;
+                    if (!Cache.TryGetValue(Original, out AnimationSet? Set) || Set == null)
+                    {
+                        Set = Object.Instantiate(Original);
+                        Cache[Original] = Set;
+                    }
+
+                    foreach (AnimationSet.StateInfo State in Set.sprites)
+                    {
+                        if (State?.timeline == null || State.timeline.Count == 0) continue;
+
+                        List<AnimationSet.StateInfo.SpriteKeyFrame> Timeline = State.timeline.OrderBy(Frame => Frame.frameIdx).ToList();
+                        int ReplaceCount = Mathf.Min(Timeline.Count, Frames.Length);
+                        for (int i = 0; i < ReplaceCount; i++)
+                        {
+                            Timeline[i].sprite = Timeline[i].sprite != null
+                                ? Skin.FixPivot(Timeline[i].sprite, Frames[i])
+                                : Frames[i];
+                        }
+
+                        if (Frames.Length > Timeline.Count)
+                        {
+                            Sprite? LastOrigin = Timeline.Count > 0 ? Timeline[^1].sprite : null;
+                            int MaxIdx = Timeline.Count > 0 ? Timeline.Max(Frame => Frame.frameIdx) : -1;
+                            for (int i = Timeline.Count; i < Frames.Length; i++)
+                            {
+                                MaxIdx++;
+                                State.timeline.Add(new AnimationSet.StateInfo.SpriteKeyFrame
+                                {
+                                    frameIdx = MaxIdx,
+                                    sprite = LastOrigin != null ? Skin.FixPivot(LastOrigin, Frames[i]) : Frames[i]
+                                });
+                            }
+                        }
+                        Replaced = true;
+                    }
+
+                    Animator.currentSet = Set;
+                    if (Animator.IsReady && AnimatorManager.Instance != null) Animator.Initialize(Set);
+                }
+                return Replaced;
             }
 
             private GameObject CloneFxWithMap(GameObject Source, string path, Dictionary<string, string> NameToFile)
@@ -1457,9 +1733,12 @@ namespace SPMod.Tool
         {
             public const string IDPrefix = "[Star's Sephiria Mod]";
             private static readonly Dictionary<DamageIdEntity.ECategory, Sprite?> VanillaIcons = [];
+            private static Sprite? DefaultWeaponIcon;
+            private static bool DefaultWeaponIconLoaded;
             public string ID;//填的伤害ID，不带前缀
             public DamageIdEntity.ECategory Category;//伤害统计里括号显示的类型
-            public Sprite? Icon = null;//不填则按类型取原版图标
+            public Sprite? Icon = null;//不填则按类型取默认图标
+            public int SourceWeaponId = -1;//伤害来源武器，填了就用该武器图标
             public ModDamageKey(string id, DamageIdEntity.ECategory category, string icon = "")
             {
                 ID = id;
@@ -1472,6 +1751,11 @@ namespace SPMod.Tool
                 Icon = Tools.LoadModSprite(icon);
                 return this;
             }
+            public ModDamageKey SetSourceWeapon(int weaponId)
+            {
+                SourceWeaponId = weaponId;
+                return this;
+            }
             public DamageIdEntity EndCreate()
             {
                 DamageIdEntity Entity = ScriptableObject.CreateInstance<DamageIdEntity>();
@@ -1479,8 +1763,26 @@ namespace SPMod.Tool
                 Entity.id = DamageId;
                 Entity.aName = new LocalizedString($"ModDamageKey_{ID}");
                 Entity.category = Category;
-                Entity.icon = Icon != null ? Icon : GetVanillaIcon(Category);
+                Entity.icon = Icon != null ? Icon : GetDefaultIcon();
                 return Entity;
+            }
+            private Sprite? GetDefaultIcon()
+            {
+                if (SourceWeaponId >= 0)
+                {
+                    Sprite? WeaponIcon = WeaponDatabase.FindWeaponById(SourceWeaponId)?.icon;
+                    if (WeaponIcon != null) return WeaponIcon;
+                }
+                if (Category == DamageIdEntity.ECategory.Weapon)
+                {
+                    if (!DefaultWeaponIconLoaded)
+                    {
+                        DefaultWeaponIcon = Tools.LoadModSprite("DamageKey_Weapon");
+                        DefaultWeaponIconLoaded = true;
+                    }
+                    if (DefaultWeaponIcon != null) return DefaultWeaponIcon;
+                }
+                return GetVanillaIcon(Category);
             }
             private static Sprite? GetVanillaIcon(DamageIdEntity.ECategory category)
             {

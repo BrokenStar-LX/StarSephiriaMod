@@ -52,6 +52,15 @@ namespace SPMod.ModContent
         public string TurbulenceSwordSprite = "Item_WindSword_Entity3"; // 湍流状态的剑贴图
         public string TurbulenceIconSprite = "Item_WindSword_Icon3";    // 湍流状态的物品图标
 
+        [Header("引灵（引灵弩）")]
+        public float SpiritDrawDistance = 0.55f;        // 第一支箭离玩家的距离
+        public float SpiritDrawSpacing = 0.3f;          // 箭与箭之间的间隔（比普通形态紧凑）
+        public float SpiritDrawFloatY = 0.35f;          // 整排箭的高度
+        public float SpiritDrawScale = 0.6f;            // 箭体缩放（比普通剑身小40%）
+        public float SpiritDrawCooldown = 3f;           // 单支风灵箭的冷却（秒，受攻速影响）
+        public string SpiritDrawSwordSprite = "Item_WindSword_Entity4"; // 引灵状态的箭身贴图
+        public string SpiritDrawIconSprite = "Item_WindSword_Icon4";    // 引灵状态的物品图标
+
         [Header("外观扩展（供其他模组）")]
         /// <summary>可选：覆盖所有形态的剑身贴图；为 null 时使用形态默认贴图。</summary>
         public Sprite? SwordSpriteOverride;
@@ -99,6 +108,7 @@ namespace SPMod.ModContent
         private const byte EventSwordsReset = 2;
         private const byte EventSwordAttack = 4;
         private const byte EventPhantomAttack = 8;
+        private const byte EventSpiritArrowUsed = 16;
 
         private const int SwordSlot = 0;
         private const int SwordFadeOut = 1;
@@ -154,6 +164,7 @@ namespace SPMod.ModContent
         private readonly List<float> SwordTimers = [];
         private readonly List<bool> SwordBusy = [];
         private readonly List<int> TurbulenceQueue = [];
+        private readonly List<float> SpiritDrawCooldowns = [];
         private float TurbulenceNextAttackAt;
         private bool InCombat;
         private float RagingTideEnergy;
@@ -197,12 +208,13 @@ namespace SPMod.ModContent
             ];
         }
 
-        /// <summary>风之刃形态：普通 / 镇风·狂澜 / 匕首·湍流。</summary>
+        /// <summary>风之刃形态：普通 / 镇风·狂澜 / 匕首·湍流 / 引灵·风灵箭。</summary>
         public enum SwordForm
         {
             Normal,
             RagingTide,
             Turbulence,
+            SpiritDraw,
         }
 
         /// <summary>一次攻击的形态档案：攻击类型、范围、速度、伤害倍率与判定。</summary>
@@ -219,12 +231,13 @@ namespace SPMod.ModContent
         /// <summary>当前持有者的风之刃形态。供外部模组查询。</summary>
         public SwordForm Form => GetForm(NetworkAvatar);
 
-        /// <summary>查询指定角色的风之刃形态（普通 / 狂澜 / 湍流）。</summary>
+        /// <summary>查询指定角色的风之刃形态（普通 / 狂澜 / 湍流 / 风灵箭）。</summary>
         public static SwordForm GetForm(UnitAvatar? avatar)
         {
             if (avatar == null) return SwordForm.Normal;
             if (avatar.GetCustomStatUnsafe(TextFile.WindSwordGreatSword) > 0) return SwordForm.RagingTide;
             if (avatar.GetCustomStatUnsafe(TextFile.WindSwordTurbulence) > 0) return SwordForm.Turbulence;
+            if (avatar.GetCustomStatUnsafe(TextFile.WindSwordSpiritDraw) > 0) return SwordForm.SpiritDraw;
             return SwordForm.Normal;
         }
 
@@ -233,6 +246,9 @@ namespace SPMod.ModContent
 
         /// <summary>当前是否为湍流形态：风之刃展开成翅膀，只进行冲刺攻击，狂怒时立刻追击。</summary>
         public bool IsTurbulence => Form == SwordForm.Turbulence;
+
+        /// <summary>当前是否为引灵·风灵箭形态：箭排停在身后，不进行被动攻击，特殊攻击时消耗一支。</summary>
+        public bool IsSpiritDraw => Form == SwordForm.SpiritDraw;
 
         /// <summary>当前参与攻击的剑数（天丛云剑神击时后半数剑不参与）。</summary>
         public int ActiveSwordCount => GetActiveSwordCount(GetSwordCount(NetworkAvatar));
@@ -271,6 +287,7 @@ namespace SPMod.ModContent
         {
             SwordForm.RagingTide => RagingTideSwordSprite,
             SwordForm.Turbulence => TurbulenceSwordSprite,
+            SwordForm.SpiritDraw => SpiritDrawSwordSprite,
             _ => SwordSprite,
         };
 
@@ -279,6 +296,7 @@ namespace SPMod.ModContent
         {
             SwordForm.RagingTide => RagingTideIconSprite,
             SwordForm.Turbulence => TurbulenceIconSprite,
+            SwordForm.SpiritDraw => SpiritDrawIconSprite,
             _ => "",
         };
 
@@ -342,6 +360,7 @@ namespace SPMod.ModContent
             SwordTimers.Clear();
             SwordBusy.Clear();
             TurbulenceQueue.Clear();
+            SpiritDrawCooldowns.Clear();
             TurbulenceNextAttackAt = 0f;
             SendSwordsReset();
         }
@@ -356,6 +375,7 @@ namespace SPMod.ModContent
             SwordTimers.Clear();
             SwordBusy.Clear();
             TurbulenceQueue.Clear();
+            SpiritDrawCooldowns.Clear();
             TurbulenceNextAttackAt = 0f;
             SendSwordsReset();
         }
@@ -408,9 +428,41 @@ namespace SPMod.ModContent
             }
         }
 
-        private string GetRuneSavePrefix()
+        /// <summary>清除当前风之剑的符文（服务器执行），并清掉 run 存档中的符文数据。</summary>
+        public void ClearRunes()
         {
-            int PlayerIdx = NetworkAvatar is PlayerAvatar Player && Player.spawner != null ? Player.spawner.currentPlayerIdxForSave : 0;
+            if (!isServer || NetworkAvatar == null) return;
+            RuneOrder.Clear();
+            RuneBonuses.Clear();
+            DisplayBonuses.Clear();
+            ClearRuneStatuses();
+            BroadcastValues();
+            itemUpdateDirtyBit = true;
+            ClearSavedRunes(NetworkAvatar, SaveManager.CurrentRun);
+        }
+
+        /// <summary>清除指定玩家在 run 存档中的风之剑符文数据。</summary>
+        public static void ClearSavedRunes(UnitAvatar? Avatar, ISaveData? Save)
+        {
+            if (Save == null) return;
+            string Prefix = GetRuneSavePrefix(Avatar);
+            int Count = Save.GetInt($"{Prefix}_Count", 0);
+            if (Save is SaveData Data)
+            {
+                for (int i = 0; i < Count; i++)
+                {
+                    Data.RemoveKey($"{Prefix}_{i}_Keyword");
+                    Data.RemoveKey($"{Prefix}_{i}_Value");
+                }
+            }
+            Save.SetInt($"{Prefix}_Count", 0);
+        }
+
+        private string GetRuneSavePrefix() => GetRuneSavePrefix(NetworkAvatar);
+
+        private static string GetRuneSavePrefix(UnitAvatar? Avatar)
+        {
+            int PlayerIdx = Avatar is PlayerAvatar Player && Player.spawner != null ? Player.spawner.currentPlayerIdxForSave : 0;
             return $"CharmSaveData_WindSword_{PlayerIdx}";
         }
 
@@ -497,6 +549,7 @@ namespace SPMod.ModContent
                     Visual.Timer = 0f;
                     Visual.Fade = 0f;
                 }
+                for (int i = 0; i < SpiritDrawCooldowns.Count; i++) SpiritDrawCooldowns[i] = 0f;
                 ClearPhantoms();
             }
             else if (Event == EventSwordAttack)
@@ -554,6 +607,15 @@ namespace SPMod.ModContent
                 S.Fade = 0f;
                 Phantoms.Add(S);
             }
+            else if (Event == EventSpiritArrowUsed)
+            {
+                string[] Parts = S1.Split('|');
+                if (Parts.Length < 2) return;
+                if (!int.TryParse(Parts[0], out int Index)) return;
+                if (!float.TryParse(Parts[1], out float Cooldown)) return;
+                while (SpiritDrawCooldowns.Count <= Index) SpiritDrawCooldowns.Add(0f);
+                if (Index >= 0) SpiritDrawCooldowns[Index] = Mathf.Max(0f, Cooldown);
+            }
         }
 
         private static Vector2 ParseSpawnDir(string S2)
@@ -590,6 +652,14 @@ namespace SPMod.ModContent
             if (Form == SwordForm.RagingTide)
             {
                 InCombat = false;
+                return;
+            }
+
+            // 引灵：不再进行被动攻击，只推进每支箭的冷却
+            if (Form == SwordForm.SpiritDraw)
+            {
+                InCombat = false;
+                TickSwordTimers(ActiveCount);
                 return;
             }
 
@@ -767,10 +837,16 @@ namespace SPMod.ModContent
             ControllerEventsSubscribed = false;
         }
 
-        /// <summary>狂澜充能：普通攻击每命中 1 个敌人积蓄能量，满 100% 后挥出一击并清空。</summary>
+        /// <summary>普通攻击命中：狂澜积蓄能量；引灵从最前的风之刃发射「曲」。</summary>
         private void OnBasicAttackUnit(CombatBehaviour victim, DamageInstance damage, ProjectileBase projectile)
         {
-            if (!isServer || !IsEffectEnabled || !IsRagingTide || NetworkAvatar == null) return;
+            if (!isServer || !IsEffectEnabled || NetworkAvatar == null) return;
+            if (IsSpiritDraw)
+            {
+                if (victim != null) TryFireSpiritMelody(victim);
+                return;
+            }
+            if (!IsRagingTide) return;
             if (victim is not UnitAvatar Target || Target.IsDead) return;
 
             float Gain = RagingTideChargePerHit * Mathf.Max(0.1f, GetAttackSpeedMult(NetworkAvatar));
@@ -779,6 +855,48 @@ namespace SPMod.ModContent
             if (!TryPrepareRagingTideSlot()) return;
 
             StartRagingTideAttack(Target);
+        }
+
+        /// <summary>引灵·曲：让最前一支未冷却的风之刃进入冷却，并从该箭的位置射出一发曲。</summary>
+        private void TryFireSpiritMelody(CombatBehaviour Victim)
+        {
+            // 先确认模板可用，避免模板缺失时白白消耗一支箭
+            GameObject? Template = LoadModContent.SpiritDrawMelodyBullet.Template;
+            if (Template == null) return;
+            if (!TryConsumeFrontSpiritArrow(out Vector3 FirePos, out Vector2 Back)) return;
+            UnitAvatar Avatar = NetworkAvatar!;
+
+            float Mult = 0.5f + 0.01f * (Avatar.GetCustomStatUnsafe(TextFile.AttackSpeed) / 3f);
+            float Damage = CalculateDamage(this) * Mult;
+            Damage *= Avatar.GetSpecialAttackMultiplier(true, false, false);
+            Damage *= 1f + 0.1f * Avatar.GetCustomStatUnsafe(TextFile.ScoreCount);
+
+            // 子弹实体挂在地面位置，用 height 抬高到剑所在的视觉高度，避免判定整体上移
+            Vector3 PlayerPos = Avatar.transform.position;
+            Vector3 GroundPos = new(FirePos.x, PlayerPos.y, PlayerPos.z);
+            float Height = Mathf.Max(0f, FirePos.y - PlayerPos.y);
+            Vector2 Aim = (Vector2)Victim.transform.position - (Vector2)GroundPos;
+            if (Aim.sqrMagnitude < 0.0001f) Aim = Vector2.up;
+            Aim.Normalize();
+
+            // 和光轮一样：起始方向在玩家身后 180° 内随机，再由光箭的追踪模块转向目标
+            float BackAngle = Mathf.Atan2(Back.y, Back.x) * Mathf.Rad2Deg;
+            float LaunchAngle = BackAngle + Random.Range(-90f, 90f);
+            float LaunchRad = LaunchAngle * Mathf.Deg2Rad;
+            Vector2 LaunchDir = new(Mathf.Cos(LaunchRad), Mathf.Sin(LaunchRad));
+
+            Bullet? Projectile = Bullet.Pool.Spawn(Template, GroundPos, true, EDamageFromType.DirectAttack,
+                "[Star's Sephiria Mod]WindSpiritArrow", Damage, 0, 0f, Avatar,
+                Avatar.GetHostileFactionLayers(EDamageFromType.DirectAttack), Height,
+                GroundPos, GroundPos + (Vector3)(LaunchDir * 2f), null, null, 0f, EffectConstant.Wind);
+            if (Projectile == null) return;
+
+            Projectile.swingId = "[Star's Sephiria Mod]WindSpiritArrow";
+            int Crit = Avatar.GetCustomStatUnsafe(TextFile.WindSwordCritDamage);
+            if (Crit != 0) Projectile.additionalCriticalDamageRate += Crit;
+
+            if (Projectile.MoveModule is BulletMoveModule_LightArrow LightArrow)
+                LightArrow.SetChase(Victim as UnitAvatar, LaunchDir, WeaponAddonCrossbow_LightArrow.GetSideTurnSign(LaunchDir, Aim));
         }
 
         /// <summary>湍流：使用狂怒（特殊攻击 0）时，所有风之刃立刻追击一次；正忙的剑缓存到本次刺击结束后。</summary>
@@ -806,6 +924,47 @@ namespace SPMod.ModContent
                 // 每把剑缓存一次追击；正忙的剑等本次刺击结束后再加入队列
                 if (TurbulenceQueue[i] < TurbulenceMaxQueue) TurbulenceQueue[i] += 1;
             }
+        }
+
+        /// <summary>
+        /// 取最前一支未冷却的风之刃（服务器执行）：令其进入冷却，并返回该箭在槽位上的世界坐标和玩家身后的方向。
+        /// </summary>
+        private bool TryConsumeFrontSpiritArrow(out Vector3 FirePosition, out Vector2 Back)
+        {
+            FirePosition = default;
+            Back = Vector2.left;
+            if (!isServer || !IsEffectEnabled || NetworkAvatar == null || NetworkAvatar.IsDead) return false;
+            if (Form != SwordForm.SpiritDraw) return false;
+            int Count = GetSwordCount(NetworkAvatar);
+            if (Count <= 0) return false;
+            SyncSwordLists(Count);
+
+            int Index = -1;
+            for (int i = 0; i < Count; i++)
+            {
+                if (SwordBusy[i] || SwordTimers[i] > 0f) continue;
+                Index = i;
+                break;
+            }
+            if (Index < 0) return false;
+
+            // 发射位置和客户端该支箭的悬停槽位一致
+            Vector2 PlayerPos = NetworkAvatar.transform.position;
+            float Sign = 1f;
+            if (NetworkAvatar is PlayerAvatar PlayerAvatar && PlayerAvatar.NetworkaimObject != null)
+            {
+                Vector2 ToAim = (Vector2)PlayerAvatar.NetworkaimObject.transform.position - PlayerPos;
+                if (Mathf.Abs(ToAim.x) > 0.01f) Sign = Mathf.Sign(ToAim.x);
+            }
+            Back = new Vector2(-Sign, 0f);
+            Vector2 Slot = GetIdleSlotPos(SwordForm.SpiritDraw, Index, Count, PlayerPos, Back);
+            FirePosition = new Vector3(Slot.x, Slot.y, NetworkAvatar.transform.position.z);
+
+            float Cooldown = Mathf.Max(0.05f, SpiritDrawCooldown / GetAttackSpeedMult(NetworkAvatar));
+            SwordTimers[Index] = Cooldown;
+            if (isClient && Index < SpiritDrawCooldowns.Count) SpiritDrawCooldowns[Index] = Cooldown;
+            ModNetwork.SendEvent(netId, EventSpiritArrowUsed, NetworkAvatar.transform.position, $"{Index}|{Cooldown:F3}");
+            return true;
         }
 
         /// <summary>攻击结束后如果还有 >=100 的存量能量，自动再挥一次，避免能量闲置。</summary>
@@ -1030,10 +1189,14 @@ namespace SPMod.ModContent
                 DestroyVisual(Swords[Last]);
                 Swords.RemoveAt(Last);
             }
+            while (SpiritDrawCooldowns.Count < Count) SpiritDrawCooldowns.Add(0f);
+            while (SpiritDrawCooldowns.Count > Count) SpiritDrawCooldowns.RemoveAt(SpiritDrawCooldowns.Count - 1);
 
             // 按形态换剑身贴图；万象的临时剑走 Phantoms，不受影响
             Sprite? Want = SwordSpriteOverride ?? Tools.LoadModSprite(GetFormSwordSprite());
-            Vector3 Scale = Vector3.one * SwordScale;
+            // 引灵形态的箭体额外缩小
+            float FormScale = SwordScale * (Form == SwordForm.SpiritDraw ? SpiritDrawScale : 1f);
+            Vector3 Scale = Vector3.one * FormScale;
             foreach (SwordVisual S in Swords)
             {
                 if (S.Sword == null) continue;
@@ -1129,6 +1292,14 @@ namespace SPMod.ModContent
             SwordForm CurrentForm = GetForm(Avatar);
             float SpeedMult = Mathf.Max(0.01f, GetAttackSpeedMult(Avatar));
 
+            // 风灵箭冷却推进：和服务器一致，狂澜形态暂停；死亡时也暂停
+            if (!Avatar.IsDead && CurrentForm != SwordForm.RagingTide)
+            {
+                float Delta = Time.deltaTime;
+                for (int i = 0; i < SpiritDrawCooldowns.Count; i++)
+                    SpiritDrawCooldowns[i] = Mathf.Max(0f, SpiritDrawCooldowns[i] - Delta);
+            }
+
             // 天丛云剑神击：后半数剑渐隐（不参与自动攻击由服务端处理）
             int ActiveCount = Swords.Count;
             if (WeaponPatch.KusanagiState.IsDivineStrike(Avatar, Swords.Count))
@@ -1170,13 +1341,22 @@ namespace SPMod.ModContent
             return Center + new Vector2(Mathf.Cos(Rad), Mathf.Sin(Rad)) * (TurbulenceArcRadius + Bob);
         }
 
+        /// <summary>引灵待机：在玩家身后排成一列，间距比普通形态更紧凑。</summary>
+        private Vector2 GetSpiritDrawSlotPos(int Index, Vector2 PlayerPos, Vector2 Back, float Bob = 0f)
+        {
+            return PlayerPos + Back * (SpiritDrawDistance + Index * SpiritDrawSpacing) + Vector2.up * (SpiritDrawFloatY + Bob);
+        }
+
         private Vector2 GetIdleSlotPos(SwordForm CurrentForm, int Index, int Count, Vector2 PlayerPos, Vector2 Back, float Bob = 0f)
         {
             if (IdlePositionProvider != null)
                 return IdlePositionProvider(Index, Count, PlayerPos, Back) + IdlePositionOffset;
-            Vector2 BasePos = CurrentForm == SwordForm.Turbulence
-                ? GetTurbulenceSlotPos(Index, Count, PlayerPos, Back, Bob)
-                : GetSlotPos(Index, PlayerPos, Back, Bob);
+            Vector2 BasePos = CurrentForm switch
+            {
+                SwordForm.Turbulence => GetTurbulenceSlotPos(Index, Count, PlayerPos, Back, Bob),
+                SwordForm.SpiritDraw => GetSpiritDrawSlotPos(Index, PlayerPos, Back, Bob),
+                _ => GetSlotPos(Index, PlayerPos, Back, Bob),
+            };
             return BasePos + IdlePositionOffset;
         }
 
@@ -1191,6 +1371,12 @@ namespace SPMod.ModContent
 
         private void UpdateSlotSword(SwordVisual S, SwordForm CurrentForm, int Index, Vector2 PlayerPos, Vector2 Back, float SpeedMult, bool Inactive = false)
         {
+            // 引灵形态：箭排固定朝下，冷却中的箭隐身
+            if (CurrentForm == SwordForm.SpiritDraw)
+            {
+                UpdateSpiritDrawSlotSword(S, Index, PlayerPos, Back, SpeedMult);
+                return;
+            }
             // 剑悬停在玩家左侧时水平翻转贴图，让剑身朝向一致
             S.Sword.flipX = Back.x < 0f;
             if (Inactive)
@@ -1226,6 +1412,32 @@ namespace SPMod.ModContent
 
             // 待机渐入同样受攻速影响
             float FadeIn = FadeInTime / SpeedMult;
+            SetFade(S, Mathf.MoveTowards(S.Fade, 1f, Time.deltaTime / Mathf.Max(0.01f, FadeIn)));
+        }
+
+        /// <summary>引灵待机：箭头朝下排成一列；被消耗的箭在冷却期间隐身，冷却结束后渐入。</summary>
+        private void UpdateSpiritDrawSlotSword(SwordVisual S, int Index, Vector2 PlayerPos, Vector2 Back, float SpeedMult)
+        {
+            S.Sword.flipX = false;
+            float Cooldown = Index >= 0 && Index < SpiritDrawCooldowns.Count ? SpiritDrawCooldowns[Index] : 0f;
+            if (Cooldown > 0f)
+            {
+                S.Sword.transform.position = GetIdleSlotPos(SwordForm.SpiritDraw, Index, Swords.Count, PlayerPos, Back);
+                S.Placed = true;
+                SetFade(S, 0f);
+                return;
+            }
+            if (!S.Placed)
+            {
+                S.Sword.transform.position = GetIdleSlotPos(SwordForm.SpiritDraw, Index, Swords.Count, PlayerPos, Back);
+                S.Placed = true;
+            }
+            float Bob = Mathf.Sin(Time.time * 2.4f + Index * 0.8f) * 0.05f;
+            Vector2 Pos = GetIdleSlotPos(SwordForm.SpiritDraw, Index, Swords.Count, PlayerPos, Back, Bob);
+            S.Sword.transform.position = Vector3.Lerp(S.Sword.transform.position, Pos, 0.3f);
+            // 箭身固定朝下，不跟随剑柄瞄准点旋转
+            S.Sword.transform.rotation = Quaternion.identity;
+            float FadeIn = FadeInTime / Mathf.Max(0.01f, SpeedMult);
             SetFade(S, Mathf.MoveTowards(S.Fade, 1f, Time.deltaTime / Mathf.Max(0.01f, FadeIn)));
         }
 

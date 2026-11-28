@@ -7,6 +7,8 @@ namespace SPMod.ModContent
     public abstract class Charm_EnergyCrystalBase : Charm_StatusInstance
     {
         private const string WindSwordDamageId = "[Star's Sephiria Mod]WindSword";
+        private const string KusanagiDamageId = "[Star's Sephiria Mod]Kusanagi";
+        private const string WindSpiritArrowDamageId = "[Star's Sephiria Mod]WindSpiritArrow";
 
         public float GainInterval = 0.1f;   // 两次能量获取的最小间隔
 
@@ -75,11 +77,15 @@ namespace SPMod.ModContent
             ApplyWindSwordDamage(damage);
         }
 
-        /// <summary>风之刃伤害；天丛云剑神击的普攻伤害同样视为风之刃伤害。</summary>
+        /// <summary>风之刃伤害：风之刃本体、天丛云剑神击、引灵的风灵箭统一用伤害标记识别。</summary>
         private static bool IsWindSwordDamage(DamageInstance damage)
         {
-            if (damage.flag == WindSwordDamageId || damage.id == WindSwordDamageId) return true;
-            return damage.id == "Weapon_BasicAttack" && damage.origin is UnitAvatar Attacker && WeaponPatch.KusanagiState.IsStuck(Attacker);
+            return damage.flag == WindSwordDamageId
+                || damage.id == WindSwordDamageId
+                || damage.flag == KusanagiDamageId
+                || damage.id == KusanagiDamageId
+                || damage.flag == WindSpiritArrowDamageId
+                || damage.id == WindSpiritArrowDamageId;
         }
 
         private void OnSpecialAttackHit(CombatBehaviour victim, DamageInstance damage, ProjectileBase projectile)

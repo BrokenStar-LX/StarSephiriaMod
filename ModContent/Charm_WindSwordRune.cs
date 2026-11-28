@@ -1,4 +1,5 @@
 using Mirror;
+using SPMod.Tool;
 using UnityEngine;
 
 namespace SPMod.ModContent
@@ -25,17 +26,8 @@ namespace SPMod.ModContent
         protected override void FireCastingServer(Vector3 aimedPosition, UnitAvatar aimedTarget)
         {
             if (NetworkAvatar is not PlayerAvatar Player) return;
-            if (Player.isInDungeon <= 0) return;
 
-            Charm_WindSword? WindSword = null;
-            foreach (Charm_Basic Charm in Player.Inventory.charms.Values)
-            {
-                if (Charm is Charm_WindSword Target && Target.IsEffectEnabled)
-                {
-                    WindSword = Target;
-                    break;
-                }
-            }
+            Charm_WindSword? WindSword = Player.FindPlayerCharm<Charm_WindSword>();
             if (WindSword == null) return;//没有风之刃就不消耗
 
             WindSword.AddRune(EffectKeyword, Value);

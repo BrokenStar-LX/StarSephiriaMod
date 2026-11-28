@@ -86,9 +86,14 @@ namespace SPMod.ModContent
         public bool IsDependencyValid(Charm_Basic request)
         {
             if (request == this) return false;
-            if (request is IAttackableCharm Attackable)
-                return request is not Charm_Magic && Attackable.IsAttackableCharm() && request.maxLevel > 0;
-            return false;
+            return CanEnhance(request);
+        }
+
+        /// <summary>下方神器是否可强化（有等级、非魔法、攻击型）。</summary>
+        private static bool CanEnhance(Charm_Basic? Charm)
+        {
+            if (Charm == null || Charm is Charm_Magic || Charm.maxLevel <= 0) return false;
+            return Charm is IAttackableCharm Attackable && Attackable.IsAttackableCharm();
         }
 
         private ItemPosition GetTargetPosition()
@@ -104,8 +109,7 @@ namespace SPMod.ModContent
 
             NewItemOwnInstance? Item = Inventory.FindItem(GetTargetPosition());
             if (Item == null || Item.Charm == null) return false;
-            if (Item.Charm is Charm_Magic) return false;
-            if (Item.Charm is not IAttackableCharm Attackable || !Attackable.IsAttackableCharm()) return false;
+            if (!CanEnhance(Item.Charm)) return false;
 
             Target = Item.Charm;
             Position = Item.Position;

@@ -41,12 +41,14 @@
     <None Remove="Sprites\Item_WindSword_Entity.png" />
     <None Remove="Sprites\Item_WindSword_Entity2.png" />
     <None Remove="Sprites\Item_WindSword_Entity3.png" />
+    <None Remove="Sprites\Item_WindSword_Entity4.png" />
     <None Remove="Sprites\Item_WindSword_Icon2.png" />
     <None Remove="Sprites\Item_CrystalShard.png" />
     <None Remove="Sprites\Item_RunesAccurate.png" />
     <None Remove="Sprites\Item_RunesSharp.png" />
     <None Remove="Sprites\Item_RunesRapidly.png" />
     <None Remove="Sprites\Item_WindSword_Icon3.png" />
+    <None Remove="Sprites\Item_WindSword_Icon4.png" />
     <None Remove="Sprites\KeywordIcon_WindSword.png" />
     <None Remove="Sprites\Miracle_SwordDancer.png" />
     <None Remove="Sprites\ModEffectHUD_YuisShortDagger.png" />
@@ -170,6 +172,7 @@
     <EmbeddedResource Include="Sprites\Categories\Fruits_Lime0.png" />
     <EmbeddedResource Include="Sprites\Categories\Fruits_Lime1.png" />
     <EmbeddedResource Include="Sprites\CharacterDebuff_WindErosion.png" />
+    <EmbeddedResource Include="Sprites\DamageKey_Weapon.png" />
     <EmbeddedResource Include="Sprites\HardIcon.png" />
     <EmbeddedResource Include="Sprites\Item_ArcaneBookMark.png" />
     <EmbeddedResource Include="Sprites\Item_AtmosClock.png" />
@@ -221,6 +224,7 @@
     <EmbeddedResource Include="Sprites\Item_WindSword_Entity.png" />
     <EmbeddedResource Include="Sprites\Item_WindSword_Entity2.png" />
     <EmbeddedResource Include="Sprites\Item_WindSword_Entity3.png" />
+    <EmbeddedResource Include="Sprites\Item_WindSword_Entity4.png" />
     <EmbeddedResource Include="Sprites\Item_WindSword_Icon2.png" />
     <EmbeddedResource Include="Sprites\Item_CrystalShard.png" />
     <EmbeddedResource Include="Sprites\Item_RunesAccurate.png" />
@@ -230,6 +234,7 @@
     <EmbeddedResource Include="Sprites\Item_EnergyStorageMagicCrystal.png" />
     <EmbeddedResource Include="Sprites\Item_NaturalMagicCrystal.png" />
     <EmbeddedResource Include="Sprites\Item_WindSword_Icon3.png" />
+    <EmbeddedResource Include="Sprites\Item_WindSword_Icon4.png" />
     <EmbeddedResource Include="Sprites\KeywordIcon_WindSword.png" />
     <EmbeddedResource Include="Sprites\Miracle_SwordDancer.png" />
     <EmbeddedResource Include="Sprites\ModEffectHUD_YuisShortDagger.png" />

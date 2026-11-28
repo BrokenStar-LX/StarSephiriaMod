@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Mirror;
+using SPMod.ModContent;
 using SPMod.Tool;
 using System;
 using System.Collections;
@@ -17,10 +18,18 @@ namespace SPMod
     public static class DungeonPatchs
     {
         public static int NumberofReincarnations = 0;
+        public static event Action? OnEnterDungeonFromTown;
         public static readonly FieldInfo eachStageHeadsField = AccessTools.Field(typeof(DungeonManager), "eachStageHeads");
         private static readonly FieldInfo? stageOrderField = AccessTools.Field(typeof(DungeonManager), "stageOrder");
         private static Coroutine? AllTeleport = null;
         private static readonly List<PlayerAvatar> TeleportPlayerList = [];
+
+        static DungeonPatchs()
+        {
+            OnEnterDungeonFromTown += InitializeModGameDataOnEnter;
+            OnEnterDungeonFromTown += GrantBossRushFirstFloorSlots;
+            OnEnterDungeonFromTown += ClearWindSwordRunesOnEnter;
+        }
 
         public static float Seed = 0;
         public static Dictionary<string, List<string>> NoAddExp = [];
@@ -36,7 +45,6 @@ namespace SPMod
         const string HomeFloor = "Grasstown_Chapter4_Dark";
         const string MultiZoneFloor = "MultiZone";
 
-        const string FirstFloor = "Moleland_EntranceC6";
         const string MolelandRestFloor = "Moleland_Station";
         const string MolelandBOSS1Floor = "Moleland_Boss2";
         const string MolelandBOSS2Floor = "Moleland_Boss_Bomb";
@@ -137,8 +145,9 @@ namespace SPMod
                 DefeatBoss.Clear();
                 foreach (PlayerSpawner PlayerSp in PlayerSpawner.MultiplayerList)
                 {
-                    PlayerAvatar Player = PlayerSp.PlayerAvatar;
-                    DungeonManager.Instance.StartCoroutine(DeleteUnintentionalItems(Player));
+                    if (PlayerSp == null) continue;
+                    PlayerAvatar? Player = PlayerSp.PlayerAvatar;
+                    if (Player != null) DungeonManager.Instance.StartCoroutine(DeleteUnintentionalItems(Player));
                 }
             }
             else
@@ -166,13 +175,11 @@ namespace SPMod
 
                 foreach (PlayerSpawner PlayerSp in PlayerSpawner.MultiplayerList)
                 {
-                    string Player = PlayerSp.PlayerAvatar.Name;
-                    NoAddExp[Player] = [];
-                    if (UseName == "LocalMoveFloor")
-                    {
-                        PlayerSp.PlayerAvatar.AddOrphanedStatusInstance(StatusDatabase.CreateStatusEntity("INVENTORY_SLOT/10"));
-                    }
-                    StarSephiriaMod.LogInfoDungeon($"初始化{Player}的数据");
+                    if (PlayerSp == null) continue;
+                    PlayerAvatar? Avatar = PlayerSp.PlayerAvatar;
+                    if (Avatar == null) continue;
+                    NoAddExp[Avatar.Name] = [];
+                    StarSephiriaMod.LogInfoDungeon($"初始化{Avatar.Name}的数据");
                 }
                 UseSpawnerMoleElite = false;
                 LastFloor = false;
@@ -213,6 +220,55 @@ namespace SPMod
                 SaveManager.CurrentRun.SetInt("[Star's Sephiria Mod]InfiniteMode_NumberofReincarnations", NumberofReincarnations);
             }
         }
+
+        private static void InitializeModGameDataOnEnter()
+        {
+            if (NumberofReincarnations > 0) return;
+            // 城镇→地牢是明确的新一轮地牢初始化；LoadDungeon 留下的阻断标记不应影响这里
+            bool Previous = NoInitialization;
+            NoInitialization = false;
+            try
+            {
+                InitializationModGameData("LocalMoveFloor");
+            }
+            finally
+            {
+                NoInitialization = Previous;
+            }
+        }
+
+        private static void ClearWindSwordRunesOnEnter()
+        {
+            foreach (PlayerSpawner PlayerSp in PlayerSpawner.MultiplayerList)
+            {
+                if (PlayerSp == null) continue;
+                PlayerAvatar? Player = PlayerSp.PlayerAvatar;
+                if (Player == null) continue;
+                Charm_WindSword? Sword = Player.FindPlayerCharm<Charm_WindSword>();
+                if (Sword != null)
+                    Sword.ClearRunes();
+                else
+                    Charm_WindSword.ClearSavedRunes(Player, SaveManager.CurrentRun);
+            }
+        }
+
+        private static void GrantBossRushFirstFloorSlots()
+        {
+            if (SaveManager.Current == null) return;
+            if (SaveManager.Current.GetInt("HardModeShard_[Star's Sephiria Mod]BossRushMode_Level", 0) != 1) return;
+
+            foreach (PlayerSpawner PlayerSp in PlayerSpawner.MultiplayerList)
+            {
+                if (PlayerSp == null) continue;
+                PlayerAvatar? Player = PlayerSp.PlayerAvatar;
+                if (Player == null || !Player.isServer) continue;
+                if (Player.orphanedStatusInstancesServerside.Any(Status => Status is StatusInstance_InventorySlot && Status.ID == "INVENTORY_SLOT" && Status.Value == 10)) continue;
+
+                StatusInstance? Instance = StatusDatabase.CreateStatusEntity("INVENTORY_SLOT/10");
+                if (Instance != null) Player.AddOrphanedStatusInstance(Instance);
+            }
+        }
+
         public static void LoadModData()
         {
             try
@@ -243,7 +299,6 @@ namespace SPMod
                     AllTeleport = null;
                     TeleportPlayerList.Clear();
 
-                    // 旧存档的 BossRush_Player 只用于单人存档；进度现在统一存在 PartyKey 下
                     string Player = PartyKey;
                     UseSpawnerMoleElite = SaveManager.CurrentRun.GetBool("[Star's Sephiria Mod]BossRush_MoleList_MoleElite", false);
                     StarSephiriaMod.LogInfoDungeon($"是否已生成精英鼹鼠：{UseSpawnerMoleElite}");
@@ -574,6 +629,9 @@ namespace SPMod
             static void LoadStageAndMove_Prefix(DungeonManager __instance, string stageName)
             {
                 StarSephiriaMod.LogInfoDungeon($"传送名：{stageName}");
+                // 前缀时 IsInDungeon 仍是进入前的值；地牢内读档恢复时为 1，城镇进入时为 0
+                if (__instance.isServer && __instance.dungeonEnvironment.GetValueOrDefault("IsInDungeon", 0) <= 0)
+                    OnEnterDungeonFromTown?.Invoke();
             }
 
             [HarmonyPatch("LoadDungeon")]
@@ -602,7 +660,6 @@ namespace SPMod
                     if (kvp.Key == floorGuid) FloorName = kvp.Value.name;
                 }
                 StarSephiriaMod.LogInfoDungeon($"玩家 {avatar.Name} 目标楼层：{FloorName} UID：{floorGuid} 生成点：{spawnPoint}");
-                if (FloorName == FirstFloor && NumberofReincarnations <= 0 && avatar == PlayerSpawner.MultiplayerList[0].PlayerAvatar) InitializationModGameData("LocalMoveFloor");
                 NoInitialization = false;
                 if (!ModConfig.BossRushMode && !ModConfig.InfiniteMode)
                 {
@@ -855,7 +912,6 @@ namespace SPMod
             }
         }
 
-        /// <summary>Boss Rush 地图节点固定成商店，RedMerchant 环境下换成红色商人。</summary>
         private static void SetMerchantType(FloorData Target)
         {
             if ((bool)DungeonManager.Instance && DungeonManager.Instance.dungeonEnvironment.TryGetValue("RedMerchant", out var value) && value > 0)

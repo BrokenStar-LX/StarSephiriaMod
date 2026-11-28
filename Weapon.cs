@@ -423,7 +423,7 @@ namespace SPMod
                     if(Player.GetCustomStatUnsafe(TextFile.ScaleOfTheAstralSeaEffect) < 10)
                         Player.AddCustomStatUnsafe(TextFile.ScaleOfTheAstralSeaEffect, 1);
                 }//圣海碎片
-                if (Player.IsWeaponUseNet(BlindingSilence) && __instance.entityId == BlindingSilence)
+                if (__instance.entityId == BlindingSilence && Player.IsWeaponUseNet(BlindingSilence))
                 {
                     if (victim is UnitAvatar Target)
                         Target.ApplyDebuff(CombatManager.Instance.electricDebuffPrefab, Player);
@@ -920,7 +920,6 @@ namespace SPMod
                 Katana.Networkowner?.SetAnimationBool(AnimHashContainer.Instance.AlwaysSheathHash, Active);
             }
 
-            /// <summary>神击伤害：扣除数量 × 风之刃伤害。返回是否为神击攻击。</summary>
             public static bool ApplyDamage(UnitAvatar Owner, NewWeaponFireData_MeleeAttack FireData, ref float Damage)
             {
                 if (FireData.damageMultiplier != LoadModContent.WindKatana_Kusanagi.Data.damageMultiplier) return false;
@@ -968,7 +967,6 @@ namespace SPMod
             private static readonly Dictionary<WeaponSimple_Katana, bool> KusanagiPrevGuard = [];
             private static readonly Dictionary<WeaponSimple_Katana, int> KusanagiExitFrame = [];
 
-            /// <summary>退出神击：拔刀动作结束，切回普通攻击。</summary>
             private static void FinishKusanagiExit(WeaponSimple_Katana __instance)
             {
                 if (__instance.Networkowner == null) return;
@@ -1391,11 +1389,9 @@ namespace SPMod
                     YuisShortDaggerMagic[Player] = 0;
 
                     if (!YuisShortDaggerEffect.ContainsKey(Player))
-                    {
-                        YuisShortDaggerEffect.Add(Player, new(Player, Value));
                         Player.CreateEffectHUD("YuisShortDagger", "YuisShortDagger_EnchantedBlade");
-                        Player.SetEffectHUDValue("YuisShortDagger_EnchantedBlade", Value.ToString());
-                    }
+                    YuisShortDaggerEffect[Player] = new(Player, Value);
+                    Player.SetEffectHUDValue("YuisShortDagger_EnchantedBlade", Value.ToString());
                 }
             }
 
@@ -1840,7 +1836,7 @@ namespace SPMod
                     {
                         __instance.infiniteAmmoDuringBuff = true;
                     }//速冻结晶
-                    if (Player.IsWeapon(SolisIubar))
+                    if (__instance.entityId == SolisIubar && Player.IsWeapon(SolisIubar))
                     {
                         if (SolisIubarEffect.TryGetValue(Player, out int Value) && Value > 0)
                         {
@@ -4037,6 +4033,10 @@ namespace SPMod
                     }
                     if (owner.GetWeaponTypeAndData(out int Type, out (string AttackType, int Idx) Data))
                     {
+                        if (Type == SpiritDraw)
+                        {
+                            damage *= 1f + 0.1f * owner.GetCustomStatUnsafe(TextFile.ScoreCount);
+                        }//引灵
                         if (Type == PurpleJacket)
                         {
                             elementalType = EDamageElementalType.Chaos;
@@ -4505,16 +4505,17 @@ namespace SPMod
                         if (Type == Kusanagi && __instance.damageElementalType == EffectConstant.Wind && KusanagiState.ApplyDamage(owner, __instance, ref damage))
                         {
                             int Crit = owner.GetCustomStatUnsafe(TextFile.WindSwordCritDamage);
-                            if (Crit != 0)
+                            Action<int, ProjectileBase> OriginalCreate = onCreateAttack;
+                            onCreateAttack = (Idx, Projectile) =>
                             {
-                                Action<int, ProjectileBase> OriginalCreate = onCreateAttack;
-                                onCreateAttack = (Idx, Projectile) =>
+                                if (Projectile is MeleeCollision Melee)
                                 {
-                                    if (Projectile is MeleeCollision Melee)
+                                    Melee.damageId = "[Star's Sephiria Mod]Kusanagi";
+                                    if (Crit != 0)
                                         Melee.additionalCriticalDamageRate += Crit;
-                                    OriginalCreate?.Invoke(Idx, Projectile);
-                                };
-                            }
+                                }
+                                OriginalCreate?.Invoke(Idx, Projectile);
+                            };
                         }//天丛云剑
                         if (Type == CarrotSword2 && Data.AttackType == "Basic")
                         {

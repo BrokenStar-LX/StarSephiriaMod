@@ -218,6 +218,8 @@ namespace SPMod.ModContent
             new ModKeyWord("ModWeaponEffect_Negligence", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_Moment", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_AirValve", true, WeaponColor),
+            new ModKeyWord("ModWeaponEffect_SpiritDraw", true, WindColor),
+            new ModKeyWord("ModWeaponEffect_SpiritDraw_WindArrow", true, WeaponColor),
             new ModKeyWord("ModWeaponEffect_Vortex", true, WindColor),
             new ModKeyWord("ModWeaponEffect_Turbulence", true, WindColor),
             new ModKeyWord("ModWeaponEffect_Tornado", true, WeaponColor),
@@ -261,20 +263,23 @@ namespace SPMod.ModContent
 
             //武器
             new ModDamageKey("IceCrystal", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("IceBlade", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("GlacierSwordQi", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("CarrotMissile", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("Thunderhead", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("FlyingShield", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("Rend", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("ShadowThorns", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("FallingRock", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("LightningStrike", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("Vortex", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("IceSpike", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("IceBlade", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.FrozenSmelt),
+            new ModDamageKey("GlacierSwordQi", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.GlacialBlade),
+            new ModDamageKey("CarrotMissile", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.CarrotSword2),
+            new ModDamageKey("Thunderhead", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.BlindingSilence),
+            new ModDamageKey("FlyingShield", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.GuardiansReturn),
+            new ModDamageKey("Rend", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.CrimsonVortex),
+            new ModDamageKey("ShadowThorns", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.LightlessBlade),
+            new ModDamageKey("FallingRock", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.StoneSword),
+            new ModDamageKey("LightningStrike", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.LightningGreatSwordS3G),
+            new ModDamageKey("Vortex", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.Vortex),
+            new ModDamageKey("IceSpike", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.IcicleSword),
             new ModDamageKey("AdditionalWeaponDamageWind", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("PoisonDetonation", DamageIdEntity.ECategory.Weapon),
-            new ModDamageKey("EnchantedBlade", DamageIdEntity.ECategory.Weapon),
+            new ModDamageKey("Kusanagi", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.Kusanagi),
+            new ModDamageKey("WindSpiritArrow", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.SpiritDraw),
+            new ModDamageKey("WindSong", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.SpiritDraw),
+            new ModDamageKey("PoisonDetonation", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.PurpleJacket),
+            new ModDamageKey("EnchantedBlade", DamageIdEntity.ECategory.Weapon).SetSourceWeapon(WeaponIDs.YuisShortDagger),
 
             //能力
             new ModDamageKey("KingsPower", DamageIdEntity.ECategory.Ability),
@@ -1837,8 +1842,8 @@ namespace SPMod.ModContent
             Action.speedScale *= 1.5f;
         })
         .SetSpriteSet("Bullet", "PoisonBolt_00", "PoisonBolt_01", "PoisonBolt_02")
-        .SetAttackSucceededFxSprites("EffectFx", "JellyFish_Bullet_FX0", "JellyFish_Bullet_FX1", "JellyFish_Bullet_FX2",
-            "JellyFish_Bullet_FX3", "JellyFish_Bullet_FX4", "JellyFish_Bullet_FX5", "JellyFish_Bullet_FX6")
+        .SetAttackSucceededFxSprites("EffectFx", "WindAttackSucceededFx0", "WindAttackSucceededFx1", "WindAttackSucceededFx2",
+            "WindAttackSucceededFx3", "WindAttackSucceededFx4", "WindAttackSucceededFx5", "WindAttackSucceededFx6")
         .SetDestroyFxSprites("Bullet", "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
             "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5")
         .SetTailFxSprites("Bullet", "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
@@ -1846,7 +1851,7 @@ namespace SPMod.ModContent
 
         public static readonly ModBullet AirArrow = new ModBullet("AirArrow", () =>
         {
-            WeaponEntity? Entity = WeaponDatabase.FindWeaponById(WeaponIDs.PurpleJacket);
+            WeaponEntity? Entity = WeaponDatabase.FindWeaponById(WeaponIDs.ColossalCrossbow);
             WeaponSimple? Simple = Entity?.mainWeaponPrefab?.GetComponent<WeaponSimple>();
             if (Simple == null || Simple.specialAttacks.Length == 0) return null;
             return (Simple.specialAttacks[0] as NewWeaponFireData_Bullet)?.bulletPrefab;
@@ -1854,17 +1859,57 @@ namespace SPMod.ModContent
         .SetBullet(Action =>
         {
             Action.pierceCreatureCount = 1;
-            Action.speedScale *= 2f;
-            if (Action.bulletChildParticle != null)
+            if (Action.bulletChildParticle != null && Action.bulletChildParticle.TryGetComponent(out ParticleSystem Particle))
             {
-                Action.bulletChildParticle.gameObject.SetActive(false);
-                Action.bulletChildParticle = null;
+                ParticleSystem.MainModule Main = Particle.main;
+                Main.startColor = WindColor;
             }
         })
         .SetSpriteSet("Bullet", "Bolt_Special_Poison0", "Bolt_Special_Poison1", "Bolt_Special_Poison2",
             "Bolt_Special_Poison3", "Bolt_Special_Poison4", "Bolt_Special_Poison5")
-        .SetAttackSucceededFxSprites("EffectFx", "JellyFish_Bullet_FX0", "JellyFish_Bullet_FX1", "JellyFish_Bullet_FX2",
-            "JellyFish_Bullet_FX3", "JellyFish_Bullet_FX4", "JellyFish_Bullet_FX5", "JellyFish_Bullet_FX6");
+        .SetAttackSucceededFxSprites("EffectFx", "WindAttackSucceededFx0", "WindAttackSucceededFx1", "WindAttackSucceededFx2",
+            "WindAttackSucceededFx3", "WindAttackSucceededFx4", "WindAttackSucceededFx5", "WindAttackSucceededFx6");
+
+        public static readonly ModBullet SpiritDrawSongBullet = new ModBullet("SpiritDrawSong", () =>
+        {
+            WeaponEntity? Entity = WeaponDatabase.FindWeaponById(WeaponIDs.PurpleJacket);
+            WeaponSimple? Simple = Entity?.mainWeaponPrefab?.GetComponent<WeaponSimple>();
+            if (Simple == null || Simple.basicComboAttacks.Length == 0) return null;
+            return (Simple.basicComboAttacks[0] as NewWeaponFireData_Bullet)?.bulletPrefab;
+        })
+        .SetBullet(Action =>
+        {
+            Action.pierceCreatureCount = 3;
+        })
+        .SetLookAtDirection(false)
+        .SetDamageId("[Star's Sephiria Mod]WindSong")
+        .SetSpriteFrames("Bullet", "WindSpirit_Bullet1")
+        .SetAttackSucceededFxSprites("EffectFx",
+            "WindAttackSucceededFx0", "WindAttackSucceededFx1", "WindAttackSucceededFx2",
+            "WindAttackSucceededFx3", "WindAttackSucceededFx4", "WindAttackSucceededFx5", "WindAttackSucceededFx6")
+        .SetDestroyFxSprites("Bullet", "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
+            "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5")
+        .SetTailFxSprites("Bullet", "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
+            "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5");
+
+        public static readonly ModBullet SpiritDrawMelodyBullet = new ModBullet("SpiritDrawMelody", () => ModBullet.FindLightArrowBulletPrefab(WeaponIDs.RadiantDial))
+        .SetBullet(Action =>
+        {
+            Action.transform.localScale *= 0.6f;
+            if (Action.MoveModule is BulletMoveModule_LightArrow LightArrow)
+                LightArrow.tailFxPrefab = null;
+        })
+        .SetTrailRendererColor(WindColor)
+        .SetLookAtDirection(false)
+        .SetDamageId("[Star's Sephiria Mod]WindSpiritArrow")
+        .SetSpriteFrames("Bullet", "WindSpirit_Bullet0")
+        .SetAttackSucceededFxSprites("EffectFx",
+            () => SpiritDrawSongBullet.Template.GetComponent<Bullet>()?.attackSucceededFxPrefab,
+            "WindAttackSucceededFx0", "WindAttackSucceededFx1", "WindAttackSucceededFx2",
+            "WindAttackSucceededFx3", "WindAttackSucceededFx4", "WindAttackSucceededFx5", "WindAttackSucceededFx6")
+        .SetTailFxSprites("Bullet", () => SpiritDrawSongBullet.FirstTailFx,
+            "JellyFish_BulletParticle0", "JellyFish_BulletParticle1", "JellyFish_BulletParticle2",
+            "JellyFish_BulletParticle3", "JellyFish_BulletParticle4", "JellyFish_BulletParticle5");
 
         public static readonly ModBullet VacuumBurstBullet = new ModBullet("VacuumBurstBullet", () =>
         {
@@ -1893,10 +1938,10 @@ namespace SPMod.ModContent
         })
         .SetBullet(Action =>
         {
-            if (Action.bulletChildParticle != null)
+            if (Action.bulletChildParticle != null && Action.bulletChildParticle.TryGetComponent(out ParticleSystem Particle))
             {
-                Action.bulletChildParticle.gameObject.SetActive(false);
-                Action.bulletChildParticle = null;
+                ParticleSystem.MainModule Main = Particle.main;
+                Main.startColor = EffectConstant.WindColor;
             }
         })
         .SetSpeedScale(1.5f)
@@ -2062,7 +2107,7 @@ namespace SPMod.ModContent
                  Data.attackDashTime = 0f;
              });
 
-        public static ModFireData WindCrossbow_Basic = ModFireData.Basic(WeaponIDs.ColossalCrossbow, 0).SetDamage(0.8f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
+        public static ModFireData WindCrossbow_Basic = ModFireData.Basic(WeaponIDs.ColossalCrossbow, 0).SetDamage(0.8f).SetElement(Wind).SetRelatedStat(TextFile.WindDamage)
             .CustomSet(Data =>
             {
                 if (Data is NewWeaponFireData_Bullet BulletData)
@@ -2070,12 +2115,21 @@ namespace SPMod.ModContent
                     BulletData.bulletPrefab = WindArrow.Template;
                 }
             });
-        public static ModFireData WindCrossbow_AirValve = ModFireData.Special(WeaponIDs.ColossalCrossbow, 0).SetDamage(4f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
+        public static ModFireData WindCrossbow_AirValve = ModFireData.Special(WeaponIDs.ColossalCrossbow, 0).SetDamage(4f).SetElement(Wind).SetRelatedStat(TextFile.WindDamage)
             .CustomSet(Data =>
             {
                 if (Data is NewWeaponFireData_Bullet BulletData)
                 {
                     BulletData.bulletPrefab = AirArrow.Template;
+                }
+            });
+
+        public static ModFireData SpiritDraw_Basic = ModFireData.Basic(WeaponIDs.ColossalCrossbow, 0).SetDamage(1.6f).SetElement(Wind).SetRelatedStat(TextFile.WindDamage)
+            .CustomSet(Data =>
+            {
+                if (Data is NewWeaponFireData_Bullet BulletData)
+                {
+                    BulletData.bulletPrefab = SpiritDrawSongBullet.Template;
                 }
             });
 
@@ -2097,6 +2151,7 @@ namespace SPMod.ModContent
         public static ModFireData WindKatana_Moment2 = ModFireData.Basic(WeaponIDs.Helbanus, 0).SetDamage(1.32f)
             .SetElement(Wind).SetRelatedStat("WINDDAMAGE").SetSwingSpriteFolder("Weapon.Katana_Wind");
         public static ModFireData WindKatana_Kusanagi = ModFireData.Special(WeaponIDs.Helbanus, 1).SetDamage(0.4f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
+            .SetSwingID("[Star's Sephiria Mod]Kusanagi")
             .SetMeleeSwingSpriteFolder("Weapon.Katana_Kusanagi", "", true, new Vector2(0.8f, 0.8f), new Vector2(1.2f, 0.72f))
             .CustomSet(Action =>
             {
@@ -2105,6 +2160,7 @@ namespace SPMod.ModContent
                 Action.attackDashTime = WindKatana_Basic[2].Data.attackDashTime;
             });
         public static ModFireData WindKatana_Kusanagi_2 = ModFireData.Special(WeaponIDs.Helbanus, 0).SetDamage(0.4f).SetElement(Wind).SetRelatedStat("WINDDAMAGE")
+            .SetSwingID("[Star's Sephiria Mod]Kusanagi")
             .SetMeleeSwingSpriteFolder("Weapon.Katana_Kusanagi", "", true, new Vector2(0.8f, 0.8f), new Vector2(1.2f, 0.72f)).SetFinalCombo()
             .CustomSet(Action =>
             {
@@ -2502,6 +2558,40 @@ namespace SPMod.ModContent
                 WeaponAddonCommon_StatusUnsafe Effect2 = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
                 Effect2.parent = Weapon;
                 Effect2.effectText = new LocalizedString("ModWeapon_AirValve_Effect");
+                Addons.Add(Effect2);
+                Weapon.addons = Addons.ToArray();
+            }),
+
+            new ModWeapon("SpiritDraw", WeaponIDs.SpiritDraw, WeaponIDs.ColossalCrossbow)
+            .SetEnhanceFrom(WeaponIDs.WindCrossbow)
+            .SetSprite("Crossbow_Tier1_0", "ModWeapon_SpiritDraw_0", "Weapon")
+            .SetSprite("Crossbow_Tier1_1", "ModWeapon_SpiritDraw_1", "Weapon")
+            .SetSprite("Crossbow_Tier1_2", "ModWeapon_SpiritDraw_2", "Weapon")
+            .SetSprite("Crossbow_Tier1_3", "ModWeapon_SpiritDraw_3", "Weapon")
+            .SetBasicAttack(0, SpiritDraw_Basic)
+            .SetBasicAttack(1, SpiritDraw_Basic)
+            .SetCrossBowValue(0.4f, 1, 1, 10)
+            .CustomCreateWeapon(Weapon =>
+            {
+                List<WeaponAddon> Addons = [];
+                WeaponAddonCommon_StatusUnsafe Effect = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect.parent = Weapon;
+                Effect.effectText = new LocalizedString("ModWeapon_WindCrossbow_Effect");
+                Addons.Add(Effect);
+
+                WeaponAddonCommon_StatusUnsafe Effect2 = Weapon.gameObject.AddComponent<WeaponAddonCommon_StatusUnsafe>();
+                Effect2.parent = Weapon;
+                Effect2.effectText = new LocalizedString("ModWeapon_SpiritDraw_Effect");
+                Effect2.status =
+                [
+                    new()
+                    {
+                        statId = TextFile.WindSwordSpiritDraw,
+                        value = 1,
+                        displayMultiplier = 1f,
+                        displaySymbol = "",
+                    },
+                ];
                 Addons.Add(Effect2);
                 Weapon.addons = Addons.ToArray();
             }),

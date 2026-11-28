@@ -2980,6 +2980,16 @@ namespace SPMod
                     }
                 }
             }
+
+            [HarmonyPatch("Initialize")]
+            [HarmonyPostfix]
+            static void Initialize_Postfix(Bullet __instance)
+            {
+                if (__instance == null) return;
+                ModBulletDamageId? Marker = __instance.GetComponent<ModBulletDamageId>();
+                if (Marker != null && !string.IsNullOrEmpty(Marker.DamageId))
+                    __instance.damageId = Marker.DamageId;
+            }
         }
 
         [HarmonyPatch(typeof(MeleeCollision))]

@@ -159,6 +159,7 @@ namespace SPMod.Tool
 
         public const int WindCrossbow = ModWeaponId + 100;          // 重型弩：穿风刺
         public const int AirValve = ModWeaponId + 101;              // 重型弩：气阀
+        public const int SpiritDraw = ModWeaponId + 102;            // 重型弩：引灵
 
         // 太刀系列
         public const int Blade = 400;                               // 刀
