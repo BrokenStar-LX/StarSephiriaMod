@@ -166,11 +166,24 @@ namespace SPMod
         [HarmonyPrefix]
         private static bool OpenMenu(TrainingSchoolLeaveDoor __instance, GameObject __0)
         {
-            if (Leaving || ModConfig.Instance?.EnableTrainingMainBag != true || __0 == null ||
-                !__0.TryGetComponent<PlayerAvatar>(out var Player) || !CanUse(Player))
+            try
+            {
+                if (Leaving || ModConfig.Instance?.EnableTrainingMainBag != true || __0 == null ||
+                    !__0.TryGetComponent<PlayerAvatar>(out var Player) || !CanUse(Player))
+                    return true;
+                return OpenTrainingMenu(__instance, __0, Player);
+            }
+            catch (Exception Error)
+            {
+                Warn("could not open the training menu; using the stock exit: " + Error.Message);
                 return true;
+            }
+        }
+
+        private static bool OpenTrainingMenu(TrainingSchoolLeaveDoor Door, GameObject Actor, PlayerAvatar Player)
+        {
             var Menu = UIManager.Instance?.GetElement<UI_MessageBox_List>();
-            if (Menu == null) return BeforeDeparture(Player);
+            if (Menu == null) return true;
             var Inventory = Player.Inventory;
             var Options = new List<(string Label, Action Apply)>();
             if (HasNativeGrid(Inventory) && Inventory.CurrentInventoryStorage < Limit)
@@ -182,7 +195,7 @@ namespace SPMod
             {
                 if (!BeforeDeparture(Player)) return;
                 Leaving = true;
-                try { __instance.MoveTo(__0); }
+                try { Door.MoveTo(Actor); }
                 finally { Leaving = false; }
             }));
             Options.Add((Text("Cancel"), () => { }));
@@ -191,7 +204,7 @@ namespace SPMod
             bool Used = false;
             Menu.Open(Text("Menu", Inventory.CurrentInventoryStorage, Limit), Choice =>
             {
-                if (Used || __instance == null || __0 == null || !CanUse(Player) ||
+                if (Used || Door == null || Actor == null || !CanUse(Player) ||
                     !ModConfig.Instance.EnableTrainingMainBag ||
                     Player.currentFloorGuid != Floor || Choice < 0 || Choice >= Options.Count) return;
                 Used = true;
