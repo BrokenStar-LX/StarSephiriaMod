@@ -790,5 +790,6 @@
   "TrainingMainBag_Occupied": "Move items out of these cells first: {0}.",
   "TrainingMainBag_Claimed": "Main backpack: {0}/{1} slots.",
   "TrainingMainBag_ResetDone": "Training slots removed. Main backpack: {0} slots.",
-  "TrainingMainBag_Unavailable": "Could not add a main backpack slot."
+  "TrainingMainBag_Unavailable": "Could not add a main backpack slot.",
+  "TrainingMainBag_ResetFailed": "Could not reclaim the training backpack slots."
 }

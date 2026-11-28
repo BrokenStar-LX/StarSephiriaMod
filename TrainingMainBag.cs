@@ -16,19 +16,27 @@ namespace SPMod
         private const int Limit = 30;
         private const string SlotId = "INVENTORY_SLOT";
         private const string SaveKey = "[Star's Sephiria Mod]TrainingMainBag";
+        private const string TrainingFloorName = "TrainingSchool";
         private static readonly object Ownership = new();
         private static readonly ConditionalWeakTable<StatusInstance, object> ClaimedSlots = new();
         private static bool Leaving;
 
         private static bool CanUse(PlayerAvatar? Player)
         {
-            if (!NetworkServer.active || Player == null || !Player.isServer || !Player.isLocalPlayer ||
-                Player.Inventory == null || !Player.Inventory.isServer || Player.Inventory.UnitAvatar != Player ||
-                GameCamera.Instance == null || GameCamera.Instance.Observer != Player)
+            if (Player == null || !HasHostInventory(Player) || GameCamera.Instance == null ||
+                GameCamera.Instance.Observer != Player)
                 return false;
             var Floor = FloorGenerator.FindByGuid(Player.currentFloorGuid);
             return Floor != null && Floor.isTrainingFloor && Floor.aName.key == "Floor_TrainingSchool";
         }
+
+        private static bool HasHostInventory(PlayerAvatar Player) =>
+            NetworkServer.active && Player.isServer && Player.isLocalPlayer && Player.Inventory != null &&
+            Player.Inventory.isServer && Player.Inventory.UnitAvatar == Player;
+
+        private static bool IsOutsideTraining(DungeonManager Dungeon, string FloorGuid) =>
+            !string.IsNullOrEmpty(FloorGuid) &&
+            Dungeon.generatedFloors.TryGetValue(FloorGuid, out var Floor) && Floor.name != TrainingFloorName;
 
         private static bool HasNativeGrid(GridInventory Inventory) =>
             Inventory.Width == GridInventory.MaxWidth && Inventory.CurrentInventoryStorage > 0;
@@ -77,7 +85,7 @@ namespace SPMod
             int Capacity = Inventory.CurrentInventoryStorage - Slots.Length;
             if (!HasNativeGrid(Inventory) || Capacity <= 0)
             {
-                Message("Unavailable");
+                Message("ResetFailed");
                 return false;
             }
             var Occupied = OccupiedTail(Inventory, Capacity);
@@ -86,14 +94,24 @@ namespace SPMod
                 Message("Occupied", string.Join(", ", Occupied));
                 return false;
             }
-            foreach (var Slot in Slots) Revoke(Player, Slot);
+            foreach (var Slot in Slots)
+            {
+                int Before = Inventory.CurrentInventoryStorage;
+                Slot.RemoveStatus();
+                if (Inventory.CurrentInventoryStorage != Before - 1)
+                {
+                    Warn("native capacity did not decrease by one during reset");
+                    Message("ResetFailed");
+                    return false;
+                }
+                Forget(Player, Slot);
+            }
             if (Notify) Message("ResetDone", Inventory.CurrentInventoryStorage);
             return true;
         }
 
-        private static void Revoke(PlayerAvatar Player, StatusInstance Slot)
+        private static void Forget(PlayerAvatar Player, StatusInstance Slot)
         {
-            Slot.RemoveStatus();
             Slot.ClearTarget();
             Player.orphanedStatusInstancesServerside.Remove(Slot);
             ClaimedSlots.Remove(Slot);
@@ -102,26 +120,67 @@ namespace SPMod
         private static void Message(string Key, params object[] Args) =>
             UIManager.Instance?.GetElement<UI_SystemMessage>()?.Open(Text(Key, Args), 4f, false);
 
+        private static void Warn(string Reason) => Debug.LogWarning("[SPMod] Training main backpack: " + Reason);
+
+        private static bool BeforeDeparture(PlayerAvatar Player)
+        {
+            try { return Reset(Player, Notify: false); }
+            catch (Exception Error)
+            {
+                Warn("could not reclaim training slots before moving: " + Error.Message);
+                return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(DungeonManager), "LocalMoveFloor", new[] { typeof(PlayerAvatar), typeof(string),
+            typeof(string), typeof(int), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool),
+            typeof(Vector3?) })]
+        [HarmonyPrefix]
+        [HarmonyPriority(Priority.First)]
+        private static bool ReclaimBeforeTravel(DungeonManager __instance, PlayerAvatar __0, string __1) =>
+            __0 == null || !HasHostInventory(__0) || !IsOutsideTraining(__instance, __1) || BeforeDeparture(__0);
+
+        // Initialize queues travel before replaying saved statuses and loading inventory.
+        // Check again at arrival so resumed claims use the actual destination and restored items.
+        [HarmonyPatch(typeof(PlayerAvatar), "set_NetworkcurrentFloorGuid", new[] { typeof(string) })]
+        [HarmonyPostfix]
+        private static void ReclaimAfterArrival(PlayerAvatar __instance, string __0)
+        {
+            var Dungeon = DungeonManager.Instance;
+            if (Dungeon != null && HasHostInventory(__instance) && IsOutsideTraining(Dungeon, __0) &&
+                !BeforeDeparture(__instance))
+                Warn("training slots still hold items or could not be reclaimed on arrival");
+        }
+
+        [HarmonyPatch(typeof(DungeonManager), nameof(DungeonManager.LoadStageAndMove), new[] { typeof(string) })]
+        [HarmonyPrefix]
+        [HarmonyPriority(Priority.First)]
+        private static bool ReclaimBeforeDungeon()
+        {
+            // Starting a dungeon commits run state before it queues the floor move.
+            var Player = GameCamera.Instance?.Observer;
+            return Player == null || !HasHostInventory(Player) || BeforeDeparture(Player);
+        }
+
         [HarmonyPatch(typeof(TrainingSchoolLeaveDoor), nameof(TrainingSchoolLeaveDoor.MoveTo), new[] { typeof(GameObject) })]
         [HarmonyPrefix]
         private static bool OpenMenu(TrainingSchoolLeaveDoor __instance, GameObject __0)
         {
-            if (Leaving || __0 == null || !__0.TryGetComponent<PlayerAvatar>(out var Player) || !CanUse(Player))
+            if (Leaving || ModConfig.Instance?.EnableTrainingMainBag != true || __0 == null ||
+                !__0.TryGetComponent<PlayerAvatar>(out var Player) || !CanUse(Player))
                 return true;
-            if (!ModConfig.Instance.EnableTrainingMainBag)
-                return Reset(Player, Notify: false);
             var Menu = UIManager.Instance?.GetElement<UI_MessageBox_List>();
-            if (Menu == null) return Reset(Player, Notify: false);
+            if (Menu == null) return BeforeDeparture(Player);
             var Inventory = Player.Inventory;
             var Options = new List<(string Label, Action Apply)>();
             if (HasNativeGrid(Inventory) && Inventory.CurrentInventoryStorage < Limit)
                 Options.Add((Text("Claim"), () => Claim(Player)));
             if (HasNativeGrid(Inventory) && Owned(Player).Length != 0)
                 Options.Add((Text("Reset"), () => Reset(Player, Notify: true)));
-            if (Options.Count == 0) return Reset(Player, Notify: false);
+            if (Options.Count == 0) return true;
             Options.Add((Text("Leave"), () =>
             {
-                if (!Reset(Player, Notify: false)) return;
+                if (!BeforeDeparture(Player)) return;
                 Leaving = true;
                 try { __instance.MoveTo(__0); }
                 finally { Leaving = false; }
@@ -168,7 +227,11 @@ namespace SPMod
             if (Ordinals.Length != 0 && MatchesNativeSave(Run, Prefix, Slots))
                 Run.SetString(Key, string.Join(",", Ordinals));
             else
+            {
+                if (Ordinals.Length != 0)
+                    Warn("could not save training ownership because the native slot list changed");
                 Run.RemoveKey(Key);
+            }
         }
 
         [HarmonyPatch(typeof(PlayerSpawner), "Initialize",
@@ -182,18 +245,22 @@ namespace SPMod
             if (!__result || Player == null || !Player.isServer || Player.Inventory == null || Run == null) return;
             int Version = SaveVersion(Run);
             int Index = __instance.currentPlayerIdxForSave;
-            if (Version != 0 && Index < 0) return;
+            // The legacy save uses one shared key. A remote avatar cannot own it.
+            if (Version == 0 ? !__instance.isOwned : Index < 0) return;
             string Prefix = SlotPrefix(Version, Index);
             string Stored = Run.GetString(SaveKey + Prefix, "");
             if (Stored.Length == 0) return;
             var Slots = NativeSlots(Player);
-            if (!MatchesNativeSave(Run, Prefix, Slots)) return;
             var Ordinals = Stored.Split(',').Select(Value =>
                 int.TryParse(Value, NumberStyles.None, CultureInfo.InvariantCulture, out int Ordinal) ? Ordinal : -1)
                 .ToArray();
-            if (Ordinals.Distinct().Count() != Ordinals.Length ||
+            if (!MatchesNativeSave(Run, Prefix, Slots) || Ordinals.Distinct().Count() != Ordinals.Length ||
                 Ordinals.Length >= Player.Inventory.CurrentInventoryStorage ||
-                Ordinals.Any(Ordinal => Ordinal < 0 || Ordinal >= Slots.Length || Slots[Ordinal].Value != 1)) return;
+                Ordinals.Any(Ordinal => Ordinal < 0 || Ordinal >= Slots.Length || Slots[Ordinal].Value != 1))
+            {
+                Warn("could not verify saved training ownership against replayed slots. Existing slots were preserved");
+                return;
+            }
             foreach (int Ordinal in Ordinals) ClaimedSlots.GetValue(Slots[Ordinal], _ => Ownership);
         }
 

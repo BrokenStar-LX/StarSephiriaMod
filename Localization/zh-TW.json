@@ -790,5 +790,6 @@
   "TrainingMainBag_Occupied": "請先移走這些格內的物品：{0}。",
   "TrainingMainBag_Claimed": "主背包：{0}/{1} 格。",
   "TrainingMainBag_ResetDone": "已還原訓練擴充。主背包：{0} 格。",
-  "TrainingMainBag_Unavailable": "未能增加主背包格子。"
+  "TrainingMainBag_Unavailable": "未能增加主背包格子。",
+  "TrainingMainBag_ResetFailed": "未能收回訓練場領取的主背包格子。"
 }

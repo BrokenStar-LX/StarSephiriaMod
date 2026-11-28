@@ -790,5 +790,6 @@
   "TrainingMainBag_Occupied": "먼저 다음 칸의 아이템을 옮기세요: {0}.",
   "TrainingMainBag_Claimed": "주 가방: {0}/{1}칸.",
   "TrainingMainBag_ResetDone": "훈련용 확장이 초기화되었습니다. 주 가방: {0}칸.",
-  "TrainingMainBag_Unavailable": "주 가방 칸을 추가할 수 없습니다."
+  "TrainingMainBag_Unavailable": "주 가방 칸을 추가할 수 없습니다.",
+  "TrainingMainBag_ResetFailed": "훈련용으로 추가한 가방 칸을 되돌릴 수 없습니다."
 }
